@@ -14,7 +14,166 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cases: {
+        Row: {
+          created_at: string
+          description: string | null
+          dispute_type: Database["public"]["Enums"]["dispute_type"]
+          id: string
+          opposing_party: string | null
+          status: Database["public"]["Enums"]["case_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          dispute_type: Database["public"]["Enums"]["dispute_type"]
+          id?: string
+          opposing_party?: string | null
+          status?: Database["public"]["Enums"]["case_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          dispute_type?: Database["public"]["Enums"]["dispute_type"]
+          id?: string
+          opposing_party?: string | null
+          status?: Database["public"]["Enums"]["case_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          case_id: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_size?: number
+          id?: string
+          mime_type?: string | null
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_size?: number
+          id?: string
+          mime_type?: string | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          location: string | null
+          notes: string | null
+          occurred_at: string
+          title: string
+          updated_at: string
+          user_id: string
+          what_happened: string
+          who_involved: string | null
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          occurred_at?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          what_happened: string
+          who_involved?: string | null
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          occurred_at?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          what_happened?: string
+          who_involved?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          case_package_credits: number
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          subscription_tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at: string
+        }
+        Insert: {
+          case_package_credits?: number
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+        }
+        Update: {
+          case_package_credits?: number
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +182,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      case_status: "active" | "resolved" | "archived"
+      dispute_type:
+        | "landlord_tenant"
+        | "employer_employee"
+        | "neighbor"
+        | "other"
+      subscription_tier: "free" | "monthly" | "annual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +315,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      case_status: ["active", "resolved", "archived"],
+      dispute_type: [
+        "landlord_tenant",
+        "employer_employee",
+        "neighbor",
+        "other",
+      ],
+      subscription_tier: ["free", "monthly", "annual"],
+    },
   },
 } as const
