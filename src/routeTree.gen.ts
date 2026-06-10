@@ -9,13 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases_.new'
+import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -45,19 +52,29 @@ const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
   path: '/cases/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCasesCaseIdRoute =
+  AuthenticatedCasesCaseIdRouteImport.update({
+    id: '/$caseId',
+    path: '/$caseId',
+    getParentRoute: () => AuthenticatedCasesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/cases': typeof AuthenticatedCasesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/cases': typeof AuthenticatedCasesRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/cases': typeof AuthenticatedCasesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/cases': typeof AuthenticatedCasesRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
 }
 export interface FileRoutesById {
@@ -65,22 +82,40 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/cases': typeof AuthenticatedCasesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/cases': typeof AuthenticatedCasesRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/_authenticated/cases_/new': typeof AuthenticatedCasesNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/cases' | '/dashboard' | '/cases/new'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/cases'
+    | '/dashboard'
+    | '/cases/$caseId'
+    | '/cases/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/cases' | '/dashboard' | '/cases/new'
+  to:
+    | '/'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/cases'
+    | '/dashboard'
+    | '/cases/$caseId'
+    | '/cases/new'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/sitemap.xml'
     | '/_authenticated/cases'
     | '/_authenticated/dashboard'
+    | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases_/new'
   fileRoutesById: FileRoutesById
 }
@@ -88,10 +123,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -134,17 +177,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cases/$caseId': {
+      id: '/_authenticated/cases/$caseId'
+      path: '/$caseId'
+      fullPath: '/cases/$caseId'
+      preLoaderRoute: typeof AuthenticatedCasesCaseIdRouteImport
+      parentRoute: typeof AuthenticatedCasesRoute
+    }
   }
 }
 
+interface AuthenticatedCasesRouteChildren {
+  AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
+}
+
+const AuthenticatedCasesRouteChildren: AuthenticatedCasesRouteChildren = {
+  AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
+}
+
+const AuthenticatedCasesRouteWithChildren =
+  AuthenticatedCasesRoute._addFileChildren(AuthenticatedCasesRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedCasesRoute: typeof AuthenticatedCasesRoute
+  AuthenticatedCasesRoute: typeof AuthenticatedCasesRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedCasesRoute: AuthenticatedCasesRoute,
+  AuthenticatedCasesRoute: AuthenticatedCasesRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,
 }
@@ -156,6 +217,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
