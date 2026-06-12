@@ -10,11 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, Trash2, FileText, Sparkles, Lock } from "lucide-react";
+import { ArrowLeft, Plus, Upload, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
-
-import { FREE_STORAGE_BYTES } from "@/lib/constants";
+import { AiTab } from "@/components/ai-tab";
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
