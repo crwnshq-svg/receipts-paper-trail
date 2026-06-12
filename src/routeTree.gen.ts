@@ -14,6 +14,7 @@ import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases_.new'
@@ -41,6 +42,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/api/chat': typeof ApiChatRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/api/chat': typeof ApiChatRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/api/chat': typeof ApiChatRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/_authenticated/cases_/new': typeof AuthenticatedCasesNewRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/get-started'
     | '/sitemap.xml'
     | '/dashboard'
+    | '/api/chat'
     | '/cases/$caseId'
     | '/cases/new'
     | '/cases/'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/get-started'
     | '/sitemap.xml'
     | '/dashboard'
+    | '/api/chat'
     | '/cases/$caseId'
     | '/cases/new'
     | '/cases'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/get-started'
     | '/sitemap.xml'
     | '/_authenticated/dashboard'
+    | '/api/chat'
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases_/new'
     | '/_authenticated/cases/'
@@ -137,6 +149,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   GetStartedRoute: typeof GetStartedRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiChatRoute: typeof ApiChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/dashboard': {
@@ -230,6 +250,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   GetStartedRoute: GetStartedRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiChatRoute: ApiChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
