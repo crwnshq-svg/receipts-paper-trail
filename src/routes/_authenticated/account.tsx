@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Disclaimer } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
@@ -17,8 +18,11 @@ import {
   LogOut,
   AlertTriangle,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import { FREE_STORAGE_BYTES, STORAGE_WARNING_BYTES, FREE_AI_QUESTIONS } from "@/lib/constants";
+import { updateAiTone } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/account")({
   head: () => ({ meta: [{ title: "Account — Receipts" }] }),

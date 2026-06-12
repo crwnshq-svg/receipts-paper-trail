@@ -1,21 +1,28 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Send, Sparkles, Lock, FileText, Download, Mail, Loader2, ArrowLeft } from "lucide-react";
+import {
+  Send, Sparkles, Lock, FileText, Download, Mail, Loader2, ArrowLeft,
+  ArrowRight, ExternalLink, Phone, BadgeCheck, FileSearch,
+} from "lucide-react";
 import { toast } from "sonner";
 import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
 
-const DISCLAIMER_LINE = "Receipts does not provide legal advice. Nothing generated constitutes an attorney-client relationship.";
+const DISCLAIMER_LINE =
+  "Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
 
 const DOCUMENT_TYPES = [
   "Demand Letter",
@@ -30,6 +37,43 @@ const DOCUMENT_TYPES = [
 ];
 
 const RECIPIENTS = ["Court", "HR Department", "Labor Board", "Housing Authority", "Other"];
+
+// ============================== Structured response types ==============================
+
+type StructuredAction = {
+  type: "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource";
+  label: string;
+};
+type StructuredResource = { name: string; url: string; description?: string };
+type StructuredPartner = {
+  id?: string; name: string; specialty?: string; location?: string | null; contact?: string | null;
+};
+type Structured = {
+  message: string;
+  actions?: StructuredAction[];
+  resources?: StructuredResource[];
+  partners?: StructuredPartner[];
+  document_refs?: string[];
+  suggestions?: string[];
+};
+
+function tryParseStructured(raw: string): Structured | null {
+  if (!raw) return null;
+  let text = raw.trim();
+  // Strip ```json fences if present
+  const fence = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fence) text = fence[1].trim();
+  if (!text.startsWith("{")) return null;
+  // Only attempt parse when it looks like a complete object
+  if (!text.endsWith("}")) return null;
+  try {
+    const obj = JSON.parse(text);
+    if (typeof obj?.message !== "string") return null;
+    return obj as Structured;
+  } catch { return null; }
+}
+
+// ============================== Top-level tab ==============================
 
 export function AiTab({ caseId, isPaid, questionsUsed }: {
   caseId: string; isPaid: boolean; questionsUsed: number;
@@ -56,7 +100,7 @@ export function AiTab({ caseId, isPaid, questionsUsed }: {
             <DialogTitle>Upgrade to keep going</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            You've used your 3 free AI questions. Upgrade to get unlimited AI chat,
+            You've used your 3 free AI questions. Upgrade for unlimited AI chat,
             document generation, and a court-ready Case Package.
           </p>
           <ul className="text-sm space-y-1 mt-2">
@@ -74,18 +118,17 @@ export function AiTab({ caseId, isPaid, questionsUsed }: {
   );
 }
 
+// ============================== Chat ==============================
+
 function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
   caseId: string; isPaid: boolean; remaining: number;
   onConsumed: (used: number) => void; onLimitHit: () => void;
 }) {
-  const [token, setToken] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const consume = useServerFn(consumeAiQuestion);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
-    // Pick up insight follow-up context stashed by InsightModal
     const key = `receipts:insight-followup:${caseId}`;
     const raw = sessionStorage.getItem(key);
     if (raw) {
@@ -107,7 +150,6 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
       const { data } = await supabase.auth.getSession();
       const headers = new Headers(init?.headers);
       if (data.session?.access_token) headers.set("Authorization", `Bearer ${data.session.access_token}`);
-      // attach caseId to body
       let body = init?.body;
       if (typeof body === "string") {
         const parsed = JSON.parse(body);
@@ -129,10 +171,9 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, status]);
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text || isLoading) return;
+  async function doSend(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || isLoading) return;
     try {
       const result = await consume();
       onConsumed(typeof result.used === "number" ? result.used : 0);
@@ -145,7 +186,12 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
       return;
     }
     setInput("");
-    await sendMessage({ text });
+    await sendMessage({ text: trimmed });
+  }
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    await doSend(input);
   }
 
   return (
@@ -163,17 +209,18 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
         </div>
       </div>
 
-      <div ref={scrollRef} className="h-[420px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
+      <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
         {messages.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10">
             Ask anything about your case. The AI has your incidents and documents as context.
             <div className="mt-3 grid gap-2 max-w-md mx-auto text-left">
               {[
                 "What are my strongest pieces of evidence?",
+                "What laws apply to my situation?",
+                "Who can help me with this?",
                 "What should I document next?",
-                "Help me understand my options.",
               ].map((s) => (
-                <button key={s} onClick={() => setInput(s)}
+                <button key={s} onClick={() => doSend(s)}
                   className="rounded-md border bg-background p-2 text-xs hover:border-accent text-left">
                   {s}
                 </button>
@@ -182,24 +229,9 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
           </div>
         )}
 
-        {messages.map((m: UIMessage) => {
-          const text = m.parts.map((p: any) => p.type === "text" ? p.text : "").join("");
-          const isUser = m.role === "user";
-          return (
-            <div key={m.id} className={isUser ? "flex justify-end" : ""}>
-              <div className={isUser
-                ? "max-w-[85%] rounded-2xl bg-primary text-primary-foreground px-4 py-2 text-sm whitespace-pre-wrap"
-                : "max-w-[95%] text-sm whitespace-pre-wrap"}>
-                {text}
-                {!isUser && text && (
-                  <div className="mt-3 pt-2 border-t border-border/60 text-[11px] text-muted-foreground italic">
-                    {DISCLAIMER_LINE}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {messages.map((m: UIMessage) => (
+          <ChatMessage key={m.id} message={m} caseId={caseId} onTapSuggestion={doSend} />
+        ))}
 
         {status === "submitted" && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -225,13 +257,188 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
   );
 }
 
+// ============================== Structured message renderer ==============================
+
+function ChatMessage({ message, caseId, onTapSuggestion }: {
+  message: UIMessage; caseId: string; onTapSuggestion: (text: string) => void;
+}) {
+  const text = message.parts.map((p: any) => p.type === "text" ? p.text : "").join("");
+  const isUser = message.role === "user";
+
+  if (isUser) {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[85%] rounded-2xl bg-primary text-primary-foreground px-4 py-2 text-sm whitespace-pre-wrap">
+          {text}
+        </div>
+      </div>
+    );
+  }
+
+  const structured = tryParseStructured(text);
+
+  if (!structured) {
+    // Plain-text fallback (or still-streaming). Never show JSON errors.
+    const looksLikeJsonStart = text.trim().startsWith("{");
+    const display = looksLikeJsonStart ? "" : text;
+    return (
+      <div className="max-w-[95%] text-sm space-y-2">
+        <div className="whitespace-pre-wrap">{display || <span className="text-muted-foreground italic">Composing…</span>}</div>
+        {display && (
+          <div className="pt-2 border-t border-border/60 text-[11px] text-muted-foreground italic">
+            {DISCLAIMER_LINE}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-[95%] text-sm space-y-3">
+      <MessageBody markdown={structured.message} />
+      {structured.actions && structured.actions.length > 0 && (
+        <ActionCards actions={structured.actions} />
+      )}
+      {structured.partners && structured.partners.length > 0 && (
+        <div className="space-y-2">
+          {structured.partners.map((p, i) => <PartnerCard key={i} partner={p} />)}
+        </div>
+      )}
+      {structured.resources && structured.resources.length > 0 && (
+        <div className="grid gap-2">
+          {structured.resources.map((r, i) => <ResourceCard key={i} resource={r} />)}
+        </div>
+      )}
+      {structured.document_refs && structured.document_refs.length > 0 && (
+        <DocumentRefList caseId={caseId} ids={structured.document_refs} />
+      )}
+      {structured.suggestions && structured.suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {structured.suggestions.map((s, i) => (
+            <button key={i} onClick={() => onTapSuggestion(s)}
+              className="rounded-full bg-secondary hover:bg-secondary/70 text-xs px-3 py-1.5 text-foreground/80">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MessageBody({ markdown }: { markdown: string }) {
+  // Render plain text, with **bold** inline replacement, preserving disclaimer at bottom.
+  const paragraphs = markdown.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <div className="space-y-2 whitespace-pre-wrap leading-relaxed">
+      {paragraphs.map((p, i) => <p key={i} dangerouslySetInnerHTML={{ __html: renderInline(p) }} />)}
+    </div>
+  );
+}
+
+function renderInline(text: string) {
+  const esc = text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
+  return esc.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+function ActionCards({ actions }: { actions: StructuredAction[] }) {
+  return (
+    <div className="grid gap-2">
+      {actions.map((a, i) => (
+        <button key={i}
+          className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left">
+          <span>{a.label}</span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ResourceCard({ resource }: { resource: StructuredResource }) {
+  return (
+    <a href={resource.url} target="_blank" rel="noopener noreferrer"
+      className="group flex items-start justify-between gap-3 rounded-lg border bg-background p-3 hover:border-accent">
+      <div className="min-w-0">
+        <div className="font-medium text-sm">{resource.name}</div>
+        {resource.description && (
+          <div className="text-xs text-muted-foreground mt-0.5">{resource.description}</div>
+        )}
+      </div>
+      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-accent shrink-0" />
+    </a>
+  );
+}
+
+function PartnerCard({ partner }: { partner: StructuredPartner }) {
+  const contact = partner.contact?.trim();
+  const isEmail = contact?.includes("@");
+  const isUrl = contact?.startsWith("http");
+  const href = contact
+    ? (isEmail ? `mailto:${contact}` : isUrl ? contact : `tel:${contact}`)
+    : null;
+  return (
+    <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 space-y-2">
+      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-accent">
+        <BadgeCheck className="h-3.5 w-3.5" /> Verified Receipts Partner
+      </div>
+      <div>
+        <div className="font-semibold text-sm">{partner.name}</div>
+        {partner.specialty && <div className="text-xs text-muted-foreground">{partner.specialty}</div>}
+        {partner.location && <div className="text-xs text-muted-foreground mt-0.5">{partner.location}</div>}
+      </div>
+      {href && (
+        <a href={href} target={isUrl ? "_blank" : undefined} rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
+            {isEmail ? <Mail className="h-3.5 w-3.5 mr-1" /> : isUrl ? <ExternalLink className="h-3.5 w-3.5 mr-1" /> : <Phone className="h-3.5 w-3.5 mr-1" />}
+            Contact
+          </Button>
+        </a>
+      )}
+    </div>
+  );
+}
+
+function DocumentRefList({ caseId, ids }: { caseId: string; ids: string[] }) {
+  const navigate = useNavigate();
+  const { data: docs } = useQuery({
+    queryKey: ["docs-by-ids", caseId, ids.join(",")],
+    queryFn: async () => {
+      if (ids.length === 0) return [];
+      const { data } = await supabase.from("documents").select("id,file_name").in("id", ids);
+      return data ?? [];
+    },
+    enabled: ids.length > 0,
+  });
+  if (!docs || docs.length === 0) return null;
+  return (
+    <div className="grid gap-1.5">
+      {docs.map((d) => (
+        <button key={d.id}
+          onClick={() => navigate({ to: "/cases/$caseId", params: { caseId }, search: { tab: "documents" } } as any)}
+          className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs hover:border-accent text-left">
+          <FileSearch className="h-3.5 w-3.5 text-accent shrink-0" />
+          <span className="truncate font-medium">{d.file_name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ============================== Document Generator ==============================
+
 function DocumentGenerator({ caseId, isPaid, onLocked }: {
   caseId: string; isPaid: boolean; onLocked: () => void;
 }) {
+  // step: pick type -> pick recipient -> build (selection) -> result
+  const [step, setStep] = useState<"type" | "recipient" | "build" | "result">("type");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [customType, setCustomType] = useState("");
   const [recipientType, setRecipientType] = useState<string>("");
   const [recipientName, setRecipientName] = useState("");
+  const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
+  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
+  const [keyFacts, setKeyFacts] = useState("");
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const generateFn = useServerFn(generateDocument);
@@ -239,25 +446,41 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
   function pickType(t: string) {
     if (!isPaid) { onLocked(); return; }
     setSelectedType(t);
-    setResult(null);
+    setStep("recipient");
   }
 
   function pickCustom() {
     if (!isPaid) { onLocked(); return; }
     if (!customType.trim()) { toast.error("Enter a document type"); return; }
     setSelectedType(customType.trim());
+    setStep("recipient");
+  }
+
+  function reset() {
+    setStep("type");
+    setSelectedType(null);
+    setRecipientType("");
+    setRecipientName("");
+    setSelectedIncidents([]);
+    setSelectedDocs([]);
+    setKeyFacts("");
     setResult(null);
   }
 
   async function handleGenerate() {
     if (!selectedType || !recipientType) return;
+    if (selectedIncidents.length === 0 && selectedDocs.length === 0) return;
     setGenerating(true);
     try {
       const res = await generateFn({ data: {
         caseId, documentType: selectedType, recipientType,
         recipientName: recipientName.trim() || undefined,
+        incidentIds: selectedIncidents,
+        documentIds: selectedDocs,
+        keyFacts: keyFacts.trim() || undefined,
       }});
       setResult(res.content);
+      setStep("result");
     } catch (err: any) {
       toast.error(err?.message ?? "Generation failed");
     } finally { setGenerating(false); }
@@ -265,7 +488,6 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
 
   function downloadPdf() {
     if (!result) return;
-    // Simple printable HTML -> user prints to PDF via browser
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.write(`<html><head><title>${selectedType}</title>
@@ -294,27 +516,48 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
         Pick a document type. We'll draft it using your case context.
       </p>
 
-      {result ? (
+      {step === "result" && result && (
         <ResultEditor
           docType={selectedType ?? "Document"}
           value={result}
           onChange={setResult}
-          onBack={() => { setResult(null); setSelectedType(null); }}
+          onBack={reset}
           onDownload={downloadPdf}
           onEmail={emailToMe}
         />
-      ) : selectedType ? (
+      )}
+
+      {step === "recipient" && selectedType && (
         <RecipientPicker
           docType={selectedType}
           recipientType={recipientType}
           setRecipientType={setRecipientType}
           recipientName={recipientName}
           setRecipientName={setRecipientName}
-          onBack={() => setSelectedType(null)}
+          onBack={() => setStep("type")}
+          onNext={() => setStep("build")}
+        />
+      )}
+
+      {step === "build" && selectedType && (
+        <BuildYourDocument
+          caseId={caseId}
+          docType={selectedType}
+          recipientType={recipientType}
+          recipientName={recipientName}
+          selectedIncidents={selectedIncidents}
+          setSelectedIncidents={setSelectedIncidents}
+          selectedDocs={selectedDocs}
+          setSelectedDocs={setSelectedDocs}
+          keyFacts={keyFacts}
+          setKeyFacts={setKeyFacts}
+          onBack={() => setStep("recipient")}
           onGenerate={handleGenerate}
           generating={generating}
         />
-      ) : (
+      )}
+
+      {step === "type" && (
         <>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {DOCUMENT_TYPES.map((t) => (
@@ -353,7 +596,7 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
 function RecipientPicker(props: {
   docType: string; recipientType: string; setRecipientType: (s: string) => void;
   recipientName: string; setRecipientName: (s: string) => void;
-  onBack: () => void; onGenerate: () => void; generating: boolean;
+  onBack: () => void; onNext: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -377,10 +620,158 @@ function RecipientPicker(props: {
         <Input value={props.recipientName} onChange={(e) => props.setRecipientName(e.target.value)}
           placeholder="e.g. ABC Property Management" />
       </div>
-      <Button onClick={props.onGenerate} disabled={!props.recipientType || props.generating}
+      <Button onClick={props.onNext} disabled={!props.recipientType}
         className="bg-primary text-primary-foreground hover:bg-accent w-full">
-        {props.generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating…</> : "Generate document"}
+        Next: Build your document <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
+    </div>
+  );
+}
+
+function BuildYourDocument(props: {
+  caseId: string;
+  docType: string; recipientType: string; recipientName: string;
+  selectedIncidents: string[]; setSelectedIncidents: (ids: string[]) => void;
+  selectedDocs: string[]; setSelectedDocs: (ids: string[]) => void;
+  keyFacts: string; setKeyFacts: (s: string) => void;
+  onBack: () => void; onGenerate: () => void; generating: boolean;
+}) {
+  const { data: incidents } = useQuery({
+    queryKey: ["build-incidents", props.caseId],
+    queryFn: async () => {
+      const { data } = await supabase.from("incidents").select("id,title,occurred_at,what_happened,location")
+        .eq("case_id", props.caseId).order("occurred_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+  const { data: docs } = useQuery({
+    queryKey: ["build-docs", props.caseId],
+    queryFn: async () => {
+      const { data } = await supabase.from("documents").select("id,file_name,mime_type,ai_summary")
+        .eq("case_id", props.caseId).order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  function toggleIncident(id: string) {
+    props.setSelectedIncidents(
+      props.selectedIncidents.includes(id)
+        ? props.selectedIncidents.filter((x) => x !== id)
+        : [...props.selectedIncidents, id],
+    );
+  }
+  function toggleDoc(id: string) {
+    props.setSelectedDocs(
+      props.selectedDocs.includes(id)
+        ? props.selectedDocs.filter((x) => x !== id)
+        : [...props.selectedDocs, id],
+    );
+  }
+
+  const incCount = props.selectedIncidents.length;
+  const docCount = props.selectedDocs.length;
+  const hasSelection = incCount + docCount > 0;
+
+  return (
+    <div className="space-y-5">
+      <button onClick={props.onBack} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-3 w-3" /> Back
+      </button>
+
+      <div>
+        <h4 className="font-serif text-xl font-semibold">Build Your Document</h4>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Drafting <strong>{props.docType}</strong> for <strong>{props.recipientType}</strong>
+          {props.recipientName ? ` (${props.recipientName})` : ""}
+        </p>
+      </div>
+
+      {/* Incidents */}
+      <section>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+          Incidents ({incCount}/{incidents?.length ?? 0})
+        </div>
+        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+          {(incidents ?? []).length === 0 && (
+            <p className="text-xs text-muted-foreground italic">No incidents logged yet.</p>
+          )}
+          {(incidents ?? []).map((inc) => {
+            const checked = props.selectedIncidents.includes(inc.id);
+            return (
+              <label key={inc.id}
+                className={`flex items-start gap-2 rounded-md border p-2.5 cursor-pointer ${checked ? "border-accent bg-accent/5" : "bg-background hover:border-muted-foreground/30"}`}>
+                <Checkbox checked={checked} onCheckedChange={() => toggleIncident(inc.id)} className="mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <span>{new Date(inc.occurred_at).toLocaleDateString()}</span>
+                    {inc.location && <span>· {inc.location}</span>}
+                  </div>
+                  <div className="text-sm font-medium truncate">{inc.title}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-1">{inc.what_happened}</div>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Documents */}
+      <section>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+          Documents ({docCount}/{docs?.length ?? 0})
+        </div>
+        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+          {(docs ?? []).length === 0 && (
+            <p className="text-xs text-muted-foreground italic">No documents uploaded yet.</p>
+          )}
+          {(docs ?? []).map((d) => {
+            const checked = props.selectedDocs.includes(d.id);
+            const firstSentence = d.ai_summary?.split(/(?<=[.!?])\s/)[0] ?? "";
+            return (
+              <label key={d.id}
+                className={`flex items-start gap-2 rounded-md border p-2.5 cursor-pointer ${checked ? "border-accent bg-accent/5" : "bg-background hover:border-muted-foreground/30"}`}>
+                <Checkbox checked={checked} onCheckedChange={() => toggleDoc(d.id)} className="mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">{d.file_name}</div>
+                  <div className="text-[11px] text-muted-foreground">{d.mime_type ?? "file"}</div>
+                  {firstSentence && (
+                    <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{firstSentence}</div>
+                  )}
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Key facts */}
+      <section className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Key Facts
+        </Label>
+        <Textarea
+          value={props.keyFacts}
+          onChange={(e) => props.setKeyFacts(e.target.value)}
+          placeholder="Add any context the AI should know — party names, amounts owed, specific demands, key dates, anything not captured in your incidents or documents."
+          rows={4}
+        />
+      </section>
+
+      {/* Summary + generate */}
+      <div className="border-t pt-4 space-y-2">
+        <div className="text-xs text-center text-muted-foreground">
+          Generating from <strong>{incCount}</strong> incident{incCount === 1 ? "" : "s"} and <strong>{docCount}</strong> document{docCount === 1 ? "" : "s"}.
+        </div>
+        {!hasSelection && (
+          <p className="text-xs text-center text-muted-foreground italic">
+            Select at least one incident or document to include.
+          </p>
+        )}
+        <Button onClick={props.onGenerate} disabled={!hasSelection || props.generating}
+          className="bg-primary text-primary-foreground hover:bg-accent w-full">
+          {props.generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating…</> : "Generate document"}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -389,6 +780,9 @@ function ResultEditor(props: {
   docType: string; value: string; onChange: (s: string) => void;
   onBack: () => void; onDownload: () => void; onEmail: () => void;
 }) {
+  // Ensure non-removable disclaimer footer
+  const FOOTER_MARKER = "---\nReceipts is a document preparation tool";
+  const hasFooter = props.value.includes(FOOTER_MARKER);
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -399,6 +793,11 @@ function ResultEditor(props: {
       </div>
       <Textarea value={props.value} onChange={(e) => props.onChange(e.target.value)}
         className="min-h-[400px] font-mono text-xs leading-relaxed" />
+      {!hasFooter && (
+        <p className="text-[11px] text-muted-foreground italic">
+          {DISCLAIMER_LINE}
+        </p>
+      )}
       <div className="flex gap-2">
         <Button onClick={props.onDownload} variant="outline" className="flex-1">
           <Download className="h-4 w-4 mr-1" /> Download PDF
