@@ -359,7 +359,8 @@ function DocumentsTab({ caseId, docs, isPaid, onChange, onConsumed, onLimitHit }
 
       {docs.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          Upload contracts, emails, photos, or screenshots. Stored privately in your vault.
+          Upload anything that matters. We keep it encrypted and organized until
+          you need it.&nbsp;
         </Card>
       ) : (
         <div className="grid gap-2">

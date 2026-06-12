@@ -78,11 +78,10 @@ function Landing() {
             <span className="text-accent">Start documenting.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-            Receipts turns the chaos of a dispute into a clear, timestamped
-            record — so the next conversation is on your terms.
+            Your evidence, organized. Your rights, explained. Your case, ready.
           </p>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
-            Built for tenants, workers, and anyone tired of being ignored.
+            Because the truth is stronger when it's documented.
           </p>
           <div className="mt-8">
             <Link to="/get-started">
@@ -94,7 +93,8 @@ function Landing() {
               </Button>
             </Link>
             <p className="mt-3 text-xs text-muted-foreground">
-              Free forever — 75MB secure storage.
+              Create your free account in 30 seconds. 75MB secure storage to
+              start.
             </p>
           </div>
         </section>
@@ -112,16 +112,16 @@ function Landing() {
                   title: "Start your case",
                   body: "Pick what kind of dispute it is and give it a name. Done in a minute.",
                 },
-                {
-                  n: "2",
-                  title: "Build your paper trail",
-                  body: "Upload documents, log incidents as they happen. We organize and timestamp it all.",
-                },
-                {
-                  n: "3",
-                  title: "Make them accountable",
-                  body: "Generate demand letters, formal complaints, and a court-ready case package.",
-                },
+                  {
+                    n: "2",
+                    title: "Build your paper trail",
+                    body: "Upload documents, log incidents as they happen. We organize, timestamp it all, and provide insights.",
+                  },
+                  {
+                    n: "3",
+                    title: "Make them accountable",
+                    body: "Generate documents, find resources, and decide your next move with confidence.\u00a0",
+                  },
               ].map((s) => (
                 <div key={s.n} className="text-center">
                   <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
@@ -142,17 +142,17 @@ function Landing() {
               {
                 icon: FolderLock,
                 title: "Store Everything",
-                body: "Contracts, emails, photos, screenshots — encrypted in one private vault.",
+                body: "Your evidence vault. Contracts, photos, Videos, emails. Store everything, because everything matters.\u00a0",
               },
               {
                 icon: Pencil,
                 title: "Log Every Incident",
-                body: "Type what happened in your own words. We format it for your case file.",
+                body: "Your running timeline. Every date, every detail, every ignored request captured so nothing gets forgotten.\u00a0",
               },
               {
                 icon: FileText,
                 title: "Generate Your Case",
-                body: "Demand letters, formal complaints, and a full case package on demand.",
+                body: "Our tools turn everything you have documented into letters, complaints, requests, and case packages that demand a response.",
               },
             ].map(({ icon: Icon, title, body }) => (
               <div
