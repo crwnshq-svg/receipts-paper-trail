@@ -14,36 +14,145 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_conversations: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          intake_completed: boolean
+          messages: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          intake_completed?: boolean
+          messages?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          intake_completed?: boolean
+          messages?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_packages: {
+        Row: {
+          case_id: string
+          content: string | null
+          created_at: string
+          id: string
+          pdf_url: string | null
+          personal_statement: string | null
+          recipient_type: string | null
+          regeneration_count: number
+          sections_included: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          pdf_url?: string | null
+          personal_statement?: string | null
+          recipient_type?: string | null
+          regeneration_count?: number
+          sections_included?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          pdf_url?: string | null
+          personal_statement?: string | null
+          recipient_type?: string | null
+          regeneration_count?: number
+          sections_included?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_packages_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
+          case_name: string | null
           created_at: string
+          custom_sub_type: string | null
           description: string | null
           dispute_type: Database["public"]["Enums"]["dispute_type"]
+          foundation_doc_pending: boolean
           id: string
+          module: Database["public"]["Enums"]["case_module"] | null
           opposing_party: string | null
+          start_date: string | null
           status: Database["public"]["Enums"]["case_status"]
+          strength_score: number
+          sub_type: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          case_name?: string | null
           created_at?: string
+          custom_sub_type?: string | null
           description?: string | null
           dispute_type: Database["public"]["Enums"]["dispute_type"]
+          foundation_doc_pending?: boolean
           id?: string
+          module?: Database["public"]["Enums"]["case_module"] | null
           opposing_party?: string | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["case_status"]
+          strength_score?: number
+          sub_type?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          case_name?: string | null
           created_at?: string
+          custom_sub_type?: string | null
           description?: string | null
           dispute_type?: Database["public"]["Enums"]["dispute_type"]
+          foundation_doc_pending?: boolean
           id?: string
+          module?: Database["public"]["Enums"]["case_module"] | null
           opposing_party?: string | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["case_status"]
+          strength_score?: number
+          sub_type?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -55,34 +164,61 @@ export type Database = {
           case_id: string
           created_at: string
           description: string | null
+          detected_type: string | null
+          exhibit_label: string | null
+          extracted_data: Json | null
           file_name: string
           file_size: number
+          file_type: string | null
+          file_url: string | null
+          flag_message: string | null
+          flag_type: string | null
           id: string
           mime_type: string | null
+          passive_ai_flagged: boolean
           storage_path: string
           user_id: string
+          user_note: string | null
         }
         Insert: {
           case_id: string
           created_at?: string
           description?: string | null
+          detected_type?: string | null
+          exhibit_label?: string | null
+          extracted_data?: Json | null
           file_name: string
           file_size?: number
+          file_type?: string | null
+          file_url?: string | null
+          flag_message?: string | null
+          flag_type?: string | null
           id?: string
           mime_type?: string | null
+          passive_ai_flagged?: boolean
           storage_path: string
           user_id: string
+          user_note?: string | null
         }
         Update: {
           case_id?: string
           created_at?: string
           description?: string | null
+          detected_type?: string | null
+          exhibit_label?: string | null
+          extracted_data?: Json | null
           file_name?: string
           file_size?: number
+          file_type?: string | null
+          file_url?: string | null
+          flag_message?: string | null
+          flag_type?: string | null
           id?: string
           mime_type?: string | null
+          passive_ai_flagged?: boolean
           storage_path?: string
           user_id?: string
+          user_note?: string | null
         }
         Relationships: [
           {
@@ -94,14 +230,71 @@ export type Database = {
           },
         ]
       }
+      generated_documents: {
+        Row: {
+          case_id: string
+          certified_mail_sent: boolean
+          content: string
+          created_at: string
+          document_type: string
+          id: string
+          recipient_address: string | null
+          recipient_type: string | null
+          tracking_number: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          certified_mail_sent?: boolean
+          content: string
+          created_at?: string
+          document_type: string
+          id?: string
+          recipient_address?: string | null
+          recipient_type?: string | null
+          tracking_number?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          certified_mail_sent?: boolean
+          content?: string
+          created_at?: string
+          document_type?: string
+          id?: string
+          recipient_address?: string | null
+          recipient_type?: string | null
+          tracking_number?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_documents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incidents: {
         Row: {
           case_id: string
+          category: string | null
           created_at: string
+          date_of_incident: string | null
+          flag_message: string | null
+          flag_type: string | null
+          formatted_entry: string | null
           id: string
           location: string | null
           notes: string | null
           occurred_at: string
+          passive_ai_flagged: boolean
+          raw_input: string | null
           title: string
           updated_at: string
           user_id: string
@@ -110,11 +303,18 @@ export type Database = {
         }
         Insert: {
           case_id: string
+          category?: string | null
           created_at?: string
+          date_of_incident?: string | null
+          flag_message?: string | null
+          flag_type?: string | null
+          formatted_entry?: string | null
           id?: string
           location?: string | null
           notes?: string | null
           occurred_at?: string
+          passive_ai_flagged?: boolean
+          raw_input?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -123,11 +323,18 @@ export type Database = {
         }
         Update: {
           case_id?: string
+          category?: string | null
           created_at?: string
+          date_of_incident?: string | null
+          flag_message?: string | null
+          flag_type?: string | null
+          formatted_entry?: string | null
           id?: string
           location?: string | null
           notes?: string | null
           occurred_at?: string
+          passive_ai_flagged?: boolean
+          raw_input?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -144,33 +351,98 @@ export type Database = {
           },
         ]
       }
+      passive_ai_flags: {
+        Row: {
+          case_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          flag_message: string
+          flag_type: string
+          full_explanation: string | null
+          id: string
+          is_dismissed: boolean
+          suggested_action: string | null
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          flag_message: string
+          flag_type: string
+          full_explanation?: string | null
+          id?: string
+          is_dismissed?: boolean
+          suggested_action?: string | null
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          flag_message?: string
+          flag_type?: string
+          full_explanation?: string | null
+          id?: string
+          is_dismissed?: boolean
+          suggested_action?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passive_ai_flags_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          ai_questions_used: number
           case_package_credits: number
           created_at: string
           email: string | null
+          first_name: string | null
           full_name: string | null
           id: string
+          stripe_customer_id: string | null
+          subscription_status: string
           subscription_tier: Database["public"]["Enums"]["subscription_tier"]
           updated_at: string
+          welcomed_at: string | null
         }
         Insert: {
+          ai_questions_used?: number
           case_package_credits?: number
           created_at?: string
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string
+          welcomed_at?: string | null
         }
         Update: {
+          ai_questions_used?: number
           case_package_credits?: number
           created_at?: string
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string
+          welcomed_at?: string | null
         }
         Relationships: []
       }
@@ -182,7 +454,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      case_status: "active" | "resolved" | "archived"
+      case_module: "landlord_tenant" | "employer_employee" | "other_general"
+      case_status: "active" | "resolved" | "archived" | "ongoing" | "escalated"
       dispute_type:
         | "landlord_tenant"
         | "employer_employee"
@@ -316,7 +589,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      case_status: ["active", "resolved", "archived"],
+      case_module: ["landlord_tenant", "employer_employee", "other_general"],
+      case_status: ["active", "resolved", "archived", "ongoing", "escalated"],
       dispute_type: [
         "landlord_tenant",
         "employer_employee",

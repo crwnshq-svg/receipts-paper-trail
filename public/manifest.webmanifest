@@ -1,12 +1,12 @@
 {
-  "name": "Receipts — Your Paper Trail",
+  "name": "Receipts — Pull Up Your Receipts",
   "short_name": "Receipts",
-  "description": "A personal legal paper trail and self-advocacy tool.",
+  "description": "Document disputes, build your paper trail, hold them accountable.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F5EF",
-  "theme_color": "#0F1B2D",
+  "background_color": "#FAFAFA",
+  "theme_color": "#1A1A2E",
   "orientation": "portrait",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },

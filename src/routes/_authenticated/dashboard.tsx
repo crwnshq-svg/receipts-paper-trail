@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Plus, FolderOpen, FileText, Clock } from "lucide-react";
 
-const FREE_LIMIT_BYTES = 50 * 1024 * 1024;
+import { FREE_STORAGE_BYTES } from "@/lib/constants";
+const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Receipts" }] }),
@@ -87,7 +88,7 @@ function Dashboard() {
               <FileText className="h-3.5 w-3.5" /> Storage
             </div>
             <div className="mt-2 font-serif text-xl font-semibold">
-              {formatBytes(used)} <span className="text-sm font-normal text-muted-foreground">/ 50 MB</span>
+              {formatBytes(used)} <span className="text-sm font-normal text-muted-foreground">/ 75 MB</span>
             </div>
             <Progress value={pct} className="mt-2 h-1.5" />
           </Card>

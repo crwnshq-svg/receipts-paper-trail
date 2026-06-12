@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Plus, Upload, Trash2, FileText, Sparkles, Lock } from "lucide-react";
 import { toast } from "sonner";
 
-const FREE_LIMIT_BYTES = 50 * 1024 * 1024;
+import { FREE_STORAGE_BYTES } from "@/lib/constants";
+const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
   head: () => ({ meta: [{ title: "Case — Receipts" }] }),
@@ -356,7 +357,7 @@ function AiTab({ isPaid }: { isPaid: boolean }) {
             <div className="flex-1">
               <div className="font-medium">AI tools are part of the paid plan</div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Unlock all AI features for $10/month or $110/year. The $29 Case Package add-on gives you a court-ready PDF export.
+                Unlock all AI features for $15/month or $150/year. The $49 Case Package add-on gives you a court-ready PDF.
               </p>
               <Button className="mt-3 bg-primary text-primary-foreground hover:bg-accent" disabled>
                 Upgrade (coming soon)
