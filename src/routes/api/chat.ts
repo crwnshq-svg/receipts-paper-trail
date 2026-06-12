@@ -109,7 +109,7 @@ function buildCaseContext(caseRow: any, incidents: any[], documents: any[]) {
     lines.push("");
     lines.push(`--- DOCUMENT ${idx + 1} ---`);
     lines.push(`id: ${d.id}`);
-    lines.push(`file_name: ${d.file_name}`);
+    lines.push(`file_name: ${d.display_name || d.file_name}${d.display_name ? ` (original: ${d.file_name})` : ""}`);
     if (d.detected_type) lines.push(`detected_type: ${d.detected_type}`);
     if (d.mime_type) lines.push(`mime_type: ${d.mime_type}`);
     if (d.user_note) lines.push(`user_note: ${d.user_note}`);
