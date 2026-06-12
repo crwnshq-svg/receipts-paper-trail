@@ -39,7 +39,10 @@ export const Route = createFileRoute("/api/chat")({
           supabase.from("cases").select("*").eq("id", caseId).eq("user_id", userId).maybeSingle(),
           supabase.from("incidents").select("title,occurred_at,what_happened,who_involved,location,notes")
             .eq("case_id", caseId).order("occurred_at", { ascending: true }),
-          supabase.from("documents").select("id,file_name,mime_type,created_at,ai_summary").eq("case_id", caseId),
+          supabase.from("documents")
+            .select("id,file_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
+            .eq("case_id", caseId),
+
           supabase.from("profiles").select("first_name,ai_tone,state").eq("id", userId).maybeSingle(),
         ]);
         if (!caseRes.data) return new Response("Case not found", { status: 404 });
