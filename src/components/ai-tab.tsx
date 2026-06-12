@@ -85,7 +85,21 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
-  }, []);
+    // Pick up insight follow-up context stashed by InsightModal
+    const key = `receipts:insight-followup:${caseId}`;
+    const raw = sessionStorage.getItem(key);
+    if (raw) {
+      try {
+        const ctx = JSON.parse(raw);
+        setInput(
+          `I want to follow up on the insight: "${ctx.insight_title}".\n\n` +
+          `Context: ${ctx.brief_description}\n\n` +
+          `Question: `,
+        );
+      } catch {}
+      sessionStorage.removeItem(key);
+    }
+  }, [caseId]);
 
   const transport = useRef(new DefaultChatTransport({
     api: "/api/chat",

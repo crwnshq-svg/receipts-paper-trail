@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          published_at: string | null
+          target_module: string
+          target_state: string | null
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          target_module: string
+          target_state?: string | null
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          target_module?: string
+          target_state?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           case_id: string
@@ -159,8 +189,63 @@ export type Database = {
         }
         Relationships: []
       }
+      document_insights: {
+        Row: {
+          brief_description: string
+          case_id: string
+          created_at: string
+          document_id: string
+          full_guidance: string
+          id: string
+          insight_title: string
+          insight_type: string
+          is_dismissed: boolean
+          user_id: string
+        }
+        Insert: {
+          brief_description: string
+          case_id: string
+          created_at?: string
+          document_id: string
+          full_guidance: string
+          id?: string
+          insight_title: string
+          insight_type: string
+          is_dismissed?: boolean
+          user_id: string
+        }
+        Update: {
+          brief_description?: string
+          case_id?: string
+          created_at?: string
+          document_id?: string
+          full_guidance?: string
+          id?: string
+          insight_title?: string
+          insight_type?: string
+          is_dismissed?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_insights_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_insights_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
+          ai_summary: string | null
           case_id: string
           created_at: string
           description: string | null
@@ -181,6 +266,7 @@ export type Database = {
           user_note: string | null
         }
         Insert: {
+          ai_summary?: string | null
           case_id: string
           created_at?: string
           description?: string | null
@@ -201,6 +287,7 @@ export type Database = {
           user_note?: string | null
         }
         Update: {
+          ai_summary?: string | null
           case_id?: string
           created_at?: string
           description?: string | null
@@ -351,6 +438,57 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_read: boolean
+          related_case_id: string | null
+          related_document_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          related_case_id?: string | null
+          related_document_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          related_case_id?: string | null
+          related_document_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_case_id_fkey"
+            columns: ["related_case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_document_id_fkey"
+            columns: ["related_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       passive_ai_flags: {
         Row: {
           case_id: string
@@ -410,6 +548,8 @@ export type Database = {
           first_name: string | null
           full_name: string | null
           id: string
+          last_active_at: string | null
+          state: string | null
           stripe_customer_id: string | null
           subscription_status: string
           subscription_tier: Database["public"]["Enums"]["subscription_tier"]
@@ -424,6 +564,8 @@ export type Database = {
           first_name?: string | null
           full_name?: string | null
           id: string
+          last_active_at?: string | null
+          state?: string | null
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
@@ -438,11 +580,40 @@ export type Database = {
           first_name?: string | null
           full_name?: string | null
           id?: string
+          last_active_at?: string | null
+          state?: string | null
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string
           welcomed_at?: string | null
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
         }
         Relationships: []
       }

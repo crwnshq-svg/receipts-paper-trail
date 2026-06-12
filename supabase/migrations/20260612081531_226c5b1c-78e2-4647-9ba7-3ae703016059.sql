@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.fanout_admin_notification() FROM PUBLIC, anon, authenticated;
