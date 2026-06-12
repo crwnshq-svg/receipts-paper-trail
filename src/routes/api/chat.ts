@@ -99,9 +99,48 @@ function buildCaseContext(caseRow: any, incidents: any[], documents: any[]) {
     if (i.notes) lines.push(`   Notes: ${i.notes}`);
   });
   lines.push("");
-  lines.push(`DOCUMENTS (${documents.length}):`);
-  documents.forEach((d) => {
-    lines.push(`- id:${d.id} | ${d.file_name}${d.ai_summary ? ` — ${d.ai_summary.slice(0, 160)}` : ""}`);
+
+  // Budget ~8000 tokens (~32000 chars) total across document full content.
+  const TOTAL_BUDGET = 32000;
+  const perDoc = documents.length > 0 ? Math.max(2000, Math.floor(TOTAL_BUDGET / documents.length)) : 0;
+
+  lines.push(`DOCUMENTS (${documents.length}) — full content included for investigation:`);
+  documents.forEach((d, idx) => {
+    lines.push("");
+    lines.push(`--- DOCUMENT ${idx + 1} ---`);
+    lines.push(`id: ${d.id}`);
+    lines.push(`file_name: ${d.file_name}`);
+    if (d.detected_type) lines.push(`detected_type: ${d.detected_type}`);
+    if (d.mime_type) lines.push(`mime_type: ${d.mime_type}`);
+    if (d.user_note) lines.push(`user_note: ${d.user_note}`);
+    if (d.description) lines.push(`description: ${d.description}`);
+    if (d.ai_summary) {
+      lines.push(`AI SUMMARY:`);
+      lines.push(d.ai_summary);
+    }
+    const extractedText = stringifyExtracted(d.extracted_data);
+    if (extractedText) {
+      const trimmed = extractedText.length > perDoc
+        ? extractedText.slice(0, perDoc) + `\n…[truncated ${extractedText.length - perDoc} chars]`
+        : extractedText;
+      lines.push(`EXTRACTED TEXT:`);
+      lines.push(trimmed);
+    }
+    lines.push(`--- END DOCUMENT ${idx + 1} ---`);
   });
   return lines.join("\n");
 }
+
+function stringifyExtracted(extracted: any): string {
+  if (!extracted) return "";
+  if (typeof extracted === "string") return extracted;
+  // Common shapes: { text: "..." }, { content: "..." }, { pages: [{text}] }, { ocr: "..." }
+  if (typeof extracted.text === "string") return extracted.text;
+  if (typeof extracted.content === "string") return extracted.content;
+  if (typeof extracted.ocr === "string") return extracted.ocr;
+  if (Array.isArray(extracted.pages)) {
+    return extracted.pages.map((p: any) => p?.text ?? p?.content ?? "").filter(Boolean).join("\n\n");
+  }
+  try { return JSON.stringify(extracted); } catch { return ""; }
+}
+
