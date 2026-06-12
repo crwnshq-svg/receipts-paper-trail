@@ -1,6 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, Pencil, FolderLock, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -36,6 +38,14 @@ function Wordmark() {
 }
 
 function Landing() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled && data.user) navigate({ to: "/dashboard", replace: true });
+    });
+    return () => { cancelled = true; };
+  }, [navigate]);
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-30">

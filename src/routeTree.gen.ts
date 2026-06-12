@@ -15,7 +15,9 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthenticatedResourcesRouteImport } from './routes/_authenticated/resources'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases_.new'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
@@ -49,9 +51,19 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedResourcesRoute = AuthenticatedResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
@@ -76,7 +88,9 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/account': typeof AuthenticatedAccountRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
@@ -87,7 +101,9 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/account': typeof AuthenticatedAccountRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
@@ -100,7 +116,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/_authenticated/cases_/new': typeof AuthenticatedCasesNewRoute
@@ -113,7 +131,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/get-started'
     | '/sitemap.xml'
+    | '/account'
     | '/dashboard'
+    | '/resources'
     | '/api/chat'
     | '/cases/$caseId'
     | '/cases/new'
@@ -124,7 +144,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/get-started'
     | '/sitemap.xml'
+    | '/account'
     | '/dashboard'
+    | '/resources'
     | '/api/chat'
     | '/cases/$caseId'
     | '/cases/new'
@@ -136,7 +158,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/get-started'
     | '/sitemap.xml'
+    | '/_authenticated/account'
     | '/_authenticated/dashboard'
+    | '/_authenticated/resources'
     | '/api/chat'
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases_/new'
@@ -196,11 +220,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/resources': {
+      id: '/_authenticated/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof AuthenticatedResourcesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/account': {
+      id: '/_authenticated/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthenticatedAccountRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cases/': {
@@ -228,14 +266,18 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRoute
   AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
   AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
   AuthenticatedCasesIndexRoute: typeof AuthenticatedCasesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAccountRoute: AuthenticatedAccountRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedResourcesRoute: AuthenticatedResourcesRoute,
   AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
   AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,
   AuthenticatedCasesIndexRoute: AuthenticatedCasesIndexRoute,
@@ -255,3 +297,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
