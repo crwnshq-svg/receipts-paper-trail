@@ -1,15 +1,20 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Scale, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle } from "lucide-react";
+import { Scale, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { touchLastActive } from "@/lib/activity.functions";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const touch = useServerFn(touchLastActive);
+  const touched = useRef(false);
 
   async function signOut() {
     await qc.cancelQueries();
@@ -18,11 +23,47 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   }
 
+  // Unread notification count (live)
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["notifications-unread"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return 0;
+      const { count } = await supabase
+        .from("notifications").select("id", { count: "exact", head: true })
+        .eq("user_id", user.id).eq("is_read", false);
+      return count ?? 0;
+    },
+    refetchInterval: 30_000,
+  });
+
+  // Touch last_active_at once per session + register SW for push
+  useEffect(() => {
+    if (touched.current) return;
+    touched.current = true;
+    touch().catch(() => {});
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+    // realtime: refresh unread on insert
+    let channel: any;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      channel = supabase.channel(`notif-${user.id}`)
+        .on("postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+          () => qc.invalidateQueries({ queryKey: ["notifications-unread"] }))
+        .subscribe();
+    });
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [qc, touch]);
+
   const nav = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/cases", label: "Cases", icon: FolderOpen },
-    { to: "/resources", label: "Resources", icon: BookOpen },
-    { to: "/account", label: "Account", icon: UserCircle },
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
+    { to: "/cases", label: "Cases", icon: FolderOpen, badge: 0 },
+    { to: "/notifications", label: "Alerts", icon: Bell, badge: unreadCount },
+    { to: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
+    { to: "/account", label: "Account", icon: UserCircle, badge: 0 },
   ] as const;
 
   return (
@@ -38,9 +79,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           <nav className="hidden gap-1 md:flex">
             {nav.map((n) => (
               <Link key={n.to} to={n.to}
-                className={cn("rounded-md px-3 py-1.5 text-sm",
+                className={cn("relative rounded-md px-3 py-1.5 text-sm",
                   pathname.startsWith(n.to) ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground")}>
                 {n.label}
+                {n.badge > 0 && (
+                  <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground px-1">
+                    {n.badge > 99 ? "99+" : n.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>
@@ -54,22 +100,98 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card md:hidden">
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {nav.map((n) => {
             const active = pathname.startsWith(n.to);
             return (
               <Link key={n.to} to={n.to}
-                className={cn("flex flex-col items-center gap-1 py-2.5 text-xs",
+                className={cn("relative flex flex-col items-center gap-1 py-2.5 text-[10px]",
                   active ? "text-accent" : "text-muted-foreground")}>
-                <n.icon className="h-5 w-5" />
+                <div className="relative">
+                  <n.icon className="h-5 w-5" />
+                  {n.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground px-1">
+                      {n.badge > 99 ? "99+" : n.badge}
+                    </span>
+                  )}
+                </div>
                 {n.label}
               </Link>
             );
           })}
         </div>
       </nav>
+
+      <PushPermissionPrompt />
     </div>
   );
+}
+
+function PushPermissionPrompt() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "default") return;
+    if (sessionStorage.getItem("receipts:push-asked") === "1") return;
+    const t = setTimeout(() => setShow(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+  if (!show) return null;
+
+  async function enable() {
+    sessionStorage.setItem("receipts:push-asked", "1");
+    setShow(false);
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return;
+      // Subscription requires a VAPID public key. Skip if not yet configured.
+      const vapid = (import.meta as any).env?.VITE_VAPID_PUBLIC_KEY as string | undefined;
+      if (!vapid) return;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapid),
+      });
+      const json: any = sub.toJSON();
+      const { savePushSubscription } = await import("@/lib/notifications.functions");
+      await savePushSubscription({ data: {
+        endpoint: json.endpoint,
+        p256dh: json.keys?.p256dh ?? "",
+        auth: json.keys?.auth ?? "",
+      }});
+    } catch (err) {
+      console.warn("push enable failed", err);
+    }
+  }
+  function dismiss() { sessionStorage.setItem("receipts:push-asked", "1"); setShow(false); }
+
+  return (
+    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-40 rounded-lg border bg-card shadow-lg p-4">
+      <div className="flex items-start gap-3">
+        <Bell className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="font-medium text-sm">Stay updated</div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Get notified when new insights appear on your documents.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Button size="sm" onClick={enable} className="bg-primary text-primary-foreground">Enable</Button>
+            <Button size="sm" variant="ghost" onClick={dismiss}>Not now</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const arr = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) arr[i] = rawData.charCodeAt(i);
+  return arr;
 }
 
 export const DISPUTE_LABELS: Record<string, string> = {
@@ -77,6 +199,7 @@ export const DISPUTE_LABELS: Record<string, string> = {
   employer_employee: "Employer / Employee",
   neighbor: "Neighbor",
   other: "Other",
+  other_general: "Other / General",
 };
 
 export const STATUS_LABELS: Record<string, string> = {

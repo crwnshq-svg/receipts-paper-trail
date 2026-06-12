@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
+import { z } from "zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, DISPUTE_LABELS, Disclaimer } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -10,21 +12,32 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Upload, Trash2, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AiTab } from "@/components/ai-tab";
+import { DocumentCard } from "@/components/document-card";
+import { TimelineTab } from "@/components/timeline-tab";
 import { FREE_STORAGE_BYTES } from "@/lib/constants";
+import { analyzeDocument } from "@/lib/document-intelligence.functions";
+
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
+
+const searchSchema = z.object({
+  tab: z.enum(["incidents", "documents", "ai", "timeline"]).optional(),
+}).optional();
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
   head: () => ({ meta: [{ title: "Case — Receipts" }] }),
+  validateSearch: searchSchema,
   component: CaseDetail,
 });
 
 function CaseDetail() {
   const { caseId } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const initialTab = search?.tab ?? "incidents";
 
   const { data: caseRow, isLoading } = useQuery({
     queryKey: ["case", caseId],
@@ -66,18 +79,24 @@ function CaseDetail() {
   });
 
   const isPaid = profile?.subscription_tier === "monthly" || profile?.subscription_tier === "annual";
+  const [aiUsed, setAiUsed] = useState<number | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const effectiveUsed = aiUsed ?? (profile?.ai_questions_used ?? 0);
 
   async function deleteCase() {
     if (!confirm("Delete this case and all its incidents and documents? This cannot be undone.")) return;
-    // delete storage files
     if (docs) {
-      const paths = docs.map((d) => d.storage_path);
+      const paths = docs.map((d: any) => d.storage_path);
       if (paths.length) await supabase.storage.from("case-documents").remove(paths);
     }
     const { error } = await supabase.from("cases").delete().eq("id", caseId);
     if (error) { toast.error(error.message); return; }
     toast.success("Case deleted");
     navigate({ to: "/cases" });
+  }
+
+  function switchTab(tab: "incidents" | "documents" | "ai" | "timeline") {
+    navigate({ to: "/cases/$caseId", params: { caseId }, search: { tab }, replace: true } as any);
   }
 
   if (isLoading) return <AppShell><Card className="p-8 text-center text-sm text-muted-foreground">Loading…</Card></AppShell>;
@@ -108,10 +127,11 @@ function CaseDetail() {
           )}
         </div>
 
-        <Tabs defaultValue="incidents">
+        <Tabs value={initialTab} onValueChange={(v) => switchTab(v as any)}>
           <TabsList>
             <TabsTrigger value="incidents">Incidents ({incidents?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="documents">Documents ({docs?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="ai">AI tools</TabsTrigger>
           </TabsList>
 
@@ -121,19 +141,42 @@ function CaseDetail() {
           </TabsContent>
 
           <TabsContent value="documents" className="mt-4">
-            <DocumentsTab caseId={caseId} docs={docs ?? []}
+            <DocumentsTab
+              caseId={caseId}
+              docs={docs ?? []}
+              isPaid={isPaid}
               onChange={() => {
                 qc.invalidateQueries({ queryKey: ["documents", caseId] });
                 qc.invalidateQueries({ queryKey: ["storage-usage"] });
-              }} />
+              }}
+              onConsumed={setAiUsed}
+              onLimitHit={() => setShowUpgrade(true)}
+            />
+          </TabsContent>
+
+          <TabsContent value="timeline" className="mt-4">
+            <TimelineTab caseId={caseId} caseRow={caseRow} onJumpToTab={switchTab} />
           </TabsContent>
 
           <TabsContent value="ai" className="mt-4">
-            <AiTab caseId={caseId} isPaid={isPaid} questionsUsed={profile?.ai_questions_used ?? 0} />
+            <AiTab caseId={caseId} isPaid={isPaid} questionsUsed={effectiveUsed} />
           </TabsContent>
         </Tabs>
 
         <Disclaimer className="pt-4" />
+
+        <Dialog open={showUpgrade} onOpenChange={setShowUpgrade}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Upgrade to keep going</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              You've used your 3 free AI questions. Upgrade for unlimited AI chat and document generation.
+            </p>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setShowUpgrade(false)}>Not now</Button>
+              <Button className="bg-primary text-primary-foreground" disabled>Upgrade (coming soon)</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );
@@ -242,9 +285,13 @@ function IncidentsTab({ caseId, incidents, onChange }: {
   );
 }
 
-function DocumentsTab({ caseId, docs, onChange }: { caseId: string; docs: any[]; onChange: () => void }) {
+function DocumentsTab({ caseId, docs, isPaid, onChange, onConsumed, onLimitHit }: {
+  caseId: string; docs: any[]; isPaid: boolean; onChange: () => void;
+  onConsumed?: (used: number) => void; onLimitHit?: () => void;
+}) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const analyze = useServerFn(analyzeDocument);
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -254,13 +301,12 @@ function DocumentsTab({ caseId, docs, onChange }: { caseId: string; docs: any[];
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
 
-      // check free tier cap
       const { data: profile } = await supabase.from("profiles").select("subscription_tier").eq("id", user.id).maybeSingle();
       if (profile?.subscription_tier === "free") {
         const { data: existing } = await supabase.from("documents").select("file_size").eq("user_id", user.id);
         const used = (existing ?? []).reduce((s, d) => s + (d.file_size ?? 0), 0);
         if (used + file.size > FREE_LIMIT_BYTES) {
-          toast.error("You've reached the 50MB free storage cap. Upgrade for unlimited storage.");
+          toast.error("You've reached the 75MB free storage cap. Upgrade for unlimited storage.");
           setUploading(false);
           return;
         }
@@ -271,26 +317,26 @@ function DocumentsTab({ caseId, docs, onChange }: { caseId: string; docs: any[];
         contentType: file.type,
       });
       if (upErr) throw upErr;
-      const { error: dbErr } = await supabase.from("documents").insert({
+      const { data: insertedDoc, error: dbErr } = await supabase.from("documents").insert({
         case_id: caseId, user_id: user.id,
         file_name: file.name, storage_path: path,
         file_size: file.size, mime_type: file.type,
-      });
+      }).select().single();
       if (dbErr) throw dbErr;
-      toast.success("Uploaded");
+      toast.success("Uploaded — analyzing…");
       onChange();
+      // Fire and forget analysis
+      if (insertedDoc) {
+        analyze({ data: { documentId: insertedDoc.id } })
+          .then(() => onChange())
+          .catch((err) => console.warn("analyze failed", err));
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
-  }
-
-  async function download(d: any) {
-    const { data, error } = await supabase.storage.from("case-documents").createSignedUrl(d.storage_path, 60);
-    if (error || !data) { toast.error("Could not open file"); return; }
-    window.open(data.signedUrl, "_blank");
   }
 
   async function remove(d: any) {
@@ -318,27 +364,18 @@ function DocumentsTab({ caseId, docs, onChange }: { caseId: string; docs: any[];
       ) : (
         <div className="grid gap-2">
           {docs.map((d) => (
-            <Card key={d.id} className="p-3">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-accent shrink-0" />
-                <button onClick={() => download(d)} className="min-w-0 flex-1 text-left">
-                  <div className="truncate font-medium text-sm">{d.file_name}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {(d.file_size / 1024).toFixed(1)} KB · {new Date(d.created_at).toLocaleDateString()}
-                  </div>
-                </button>
-                <Button variant="ghost" size="sm" onClick={() => remove(d)} className="text-muted-foreground hover:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </Card>
+            <DocumentCard
+              key={d.id} doc={d} isPaid={isPaid}
+              onRemove={remove}
+              onConsumed={onConsumed}
+              onLimitHit={onLimitHit}
+            />
           ))}
         </div>
       )}
     </div>
   );
 }
-
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
