@@ -228,3 +228,57 @@ export const dismissInsight = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+function stringifyExtractedForPrompt(extracted: any): string {
+  if (!extracted) return "";
+  if (typeof extracted === "string") return extracted.slice(0, 8000);
+  if (typeof extracted.text === "string") return extracted.text.slice(0, 8000);
+  if (typeof extracted.content === "string") return extracted.content.slice(0, 8000);
+  if (typeof extracted.ocr === "string") return extracted.ocr.slice(0, 8000);
+  if (Array.isArray(extracted.pages)) {
+    return extracted.pages.map((p: any) => p?.text ?? p?.content ?? "").filter(Boolean).join("\n\n").slice(0, 8000);
+  }
+  try { return JSON.stringify(extracted).slice(0, 4000); } catch { return ""; }
+}
+
+function cleanSuggestedName(raw: string): string | null {
+  if (!raw) return null;
+  let s = raw.trim().split("\n")[0].trim();
+  s = s.replace(/^["'`]+|["'`]+$/g, "");
+  s = s.replace(/\.[a-z0-9]{1,5}$/i, ""); // strip accidental extension
+  s = s.replace(/[^A-Za-z0-9 \-_.()&,]/g, " ").replace(/\s+/g, " ").trim();
+  if (s.length < 3) return null;
+  if (s.length > 70) s = s.slice(0, 70).trim();
+  return s;
+}
+
+const RenameInput = z.object({
+  documentId: z.string().uuid(),
+  displayName: z.string().min(1).max(120).nullable(),
+});
+export const renameDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => RenameInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("documents")
+      .update({ display_name: data.displayName, suggested_name: null })
+      .eq("id", data.documentId)
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+const DismissSuggestionInput = z.object({ documentId: z.string().uuid() });
+export const dismissNameSuggestion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => DismissSuggestionInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("documents")
+      .update({ suggested_name: null })
+      .eq("id", data.documentId)
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { ok: true };
+  });
