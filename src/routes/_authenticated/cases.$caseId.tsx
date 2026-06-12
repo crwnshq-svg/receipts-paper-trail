@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { ArrowLeft, Plus, Upload, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { AiTab } from "@/components/ai-tab";
+import { FREE_STORAGE_BYTES } from "@/lib/constants";
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
