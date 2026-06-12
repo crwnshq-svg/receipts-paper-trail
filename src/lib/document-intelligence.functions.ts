@@ -6,6 +6,8 @@ import { createLovableAiGatewayProvider, CHAT_MODEL } from "./ai-gateway.server"
 import {
   buildInsightSystemPrompt,
   buildSummarySystemPrompt,
+  buildFilenameSuggestionPrompt,
+  isGenericFilename,
   ensureDisclaimer,
 } from "./insight-prompts";
 
