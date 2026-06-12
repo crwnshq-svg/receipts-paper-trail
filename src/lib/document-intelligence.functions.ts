@@ -79,10 +79,14 @@ export const analyzeDocument = createServerFn({ method: "POST" })
       } else {
         const { text } = await generateText({
           model,
-          system: buildSummarySystemPrompt(),
-          prompt: `A user uploaded a document named "${doc.file_name}" (type: ${doc.mime_type ?? "unknown"}) to a "${caseRow.dispute_type}" case titled "${caseRow.title}".
+          system: buildSummarySystemPrompt({ caseTitle: caseRow.title, disputeType: caseRow.dispute_type }),
+          prompt: `Document file name: "${doc.file_name}" (mime type: ${doc.mime_type ?? "unknown"}).
+Case: "${caseRow.title}" (${caseRow.dispute_type}).
 
-Based on the filename and case context, write a 4-sentence plain-English summary of what this document likely is and why it might matter to the case. If the filename is ambiguous, say so and describe what such a document typically contains.`,
+Available extracted content (use this as the ACTUAL document content; do not hedge identification based on the filename if the content makes the type clear):
+${stringifyExtractedForPrompt(doc.extracted_data) || "(no extracted text — work from filename + case context, but follow the absolute rules)"}
+
+Produce the 4-sentence summary now.`,
         });
         summary = text;
       }
@@ -93,6 +97,28 @@ Based on the filename and case context, write a 4-sentence plain-English summary
     }
 
     await supabase.from("documents").update({ ai_summary: summary }).eq("id", doc.id);
+
+    // --- 1b) suggested filename (only if the original filename looks generic) ---
+    if (isGenericFilename(doc.file_name) && summary && !summary.startsWith("Summary unavailable")) {
+      try {
+        const { text: nameText } = await generateText({
+          model,
+          prompt: buildFilenameSuggestionPrompt({
+            originalName: doc.file_name,
+            summary,
+            disputeType: caseRow.dispute_type,
+          }),
+        });
+        const cleaned = cleanSuggestedName(nameText);
+        if (cleaned) {
+          await supabase.from("documents")
+            .update({ suggested_name: cleaned })
+            .eq("id", doc.id);
+        }
+      } catch (err) {
+        console.error("filename suggestion failed", err);
+      }
+    }
 
     // --- 2) insights ---
     try {
