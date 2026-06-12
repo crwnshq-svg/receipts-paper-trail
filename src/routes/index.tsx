@@ -1,107 +1,284 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { FileText, Clock, Shield, Scale } from "lucide-react";
+import { FileText, Pencil, FolderLock, Check } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Receipts — Your Personal Paper Trail" },
-      { name: "description", content: "Document disputes with landlords, employers, or neighbors. Secure vault, incident log, and case summaries — your record, organized." },
+      { title: "Receipts — Pull Up Your Receipts" },
+      {
+        name: "description",
+        content:
+          "Document disputes with landlords, employers, or neighbors. Build a clear, timestamped paper trail and hold them accountable.",
+      },
+      { property: "og:title", content: "Receipts — Pull Up Your Receipts" },
+      {
+        property: "og:description",
+        content:
+          "Your personal legal paper trail and self-advocacy tool. Free forever — 75MB secure storage.",
+      },
     ],
   }),
   component: Landing,
 });
 
+function Wordmark() {
+  return (
+    <Link to="/" className="flex items-center gap-2">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+        <FileText className="h-4 w-4 text-primary-foreground" />
+      </div>
+      <span className="text-base font-semibold tracking-tight">
+        Pull Up Receipts
+      </span>
+    </Link>
+  );
+}
+
 function Landing() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/40 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
-              <Scale className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-serif text-xl font-semibold tracking-tight">Receipts</span>
-          </Link>
+      <header className="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-30">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <Wordmark />
           <div className="flex items-center gap-2">
-            <Link to="/auth"><Button variant="ghost" size="sm">Sign in</Button></Link>
-            <Link to="/auth" search={{ mode: "signup" }}>
-              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-accent">Get started</Button>
+            <Link to="/auth">
+              <Button variant="ghost" size="sm">
+                Sign in
+              </Button>
+            </Link>
+            <Link to="/get-started">
+              <Button
+                size="sm"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Get started
+              </Button>
             </Link>
           </div>
         </div>
       </header>
 
       <main>
-        <section className="mx-auto max-w-4xl px-4 pt-16 pb-12 text-center sm:pt-24">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold"></span>
-            Free forever — 50MB secure storage
-          </div>
-          <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
-            Build your record.<br />
-            <span className="text-accent">Keep your receipts.</span>
+        {/* Hero */}
+        <section className="mx-auto max-w-3xl px-4 pt-16 pb-12 text-center sm:pt-24">
+          <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
+            Stop being talked over.
+            <br />
+            <span className="text-accent">Start being heard.</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            A calm, secure place to document disputes with landlords, employers, or neighbors.
-            Timestamped incidents, organized files, ready when you need them.
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
+            Receipts turns the chaos of a dispute into a clear, timestamped
+            record — so the next conversation is on your terms.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link to="/auth" search={{ mode: "signup" }}>
-              <Button size="lg" className="bg-primary text-primary-foreground hover:bg-accent">
-                Start your case — free
+          <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+            Built for tenants, workers, and anyone tired of being ignored.
+          </p>
+          <div className="mt-8">
+            <Link to="/get-started">
+              <Button
+                size="lg"
+                className="h-12 bg-primary px-8 text-base text-primary-foreground hover:bg-primary/90"
+              >
+                Pull Up Your Receipts
               </Button>
             </Link>
-            <Link to="/auth"><Button size="lg" variant="outline">I have an account</Button></Link>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Free forever — 75MB secure storage.
+            </p>
           </div>
         </section>
 
-        <section className="mx-auto max-w-5xl px-4 pb-20">
+        {/* How it works */}
+        <section className="border-t border-border bg-card">
+          <div className="mx-auto max-w-4xl px-4 py-16">
+            <h2 className="text-center text-2xl font-bold sm:text-3xl">
+              How it works
+            </h2>
+            <div className="mt-10 grid gap-6 sm:grid-cols-3">
+              {[
+                {
+                  n: "1",
+                  title: "Start your case",
+                  body: "Pick what kind of dispute it is and give it a name. Done in a minute.",
+                },
+                {
+                  n: "2",
+                  title: "Build your paper trail",
+                  body: "Upload documents, log incidents as they happen. We organize and timestamp it all.",
+                },
+                {
+                  n: "3",
+                  title: "Make them accountable",
+                  body: "Generate demand letters, formal complaints, and a court-ready case package.",
+                },
+              ].map((s) => (
+                <div key={s.n} className="text-center">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                    {s.n}
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold">{s.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{s.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section className="mx-auto max-w-5xl px-4 py-16">
           <div className="grid gap-4 sm:grid-cols-3">
             {[
-              { icon: Shield, title: "Secure document vault", body: "Upload contracts, emails, photos, and screenshots. Encrypted and private to you." },
-              { icon: Clock, title: "Timestamped incident log", body: "Capture who, what, when, and notes. Every entry is dated and immutable to you." },
-              { icon: FileText, title: "Organized by case", body: "Separate landlord, employer, and neighbor disputes. Find anything in seconds." },
+              {
+                icon: FolderLock,
+                title: "Store Everything",
+                body: "Contracts, emails, photos, screenshots — encrypted in one private vault.",
+              },
+              {
+                icon: Pencil,
+                title: "Log Every Incident",
+                body: "Type what happened in your own words. We format it for your case file.",
+              },
+              {
+                icon: FileText,
+                title: "Generate Your Case",
+                body: "Demand letters, formal complaints, and a full case package on demand.",
+              },
             ].map(({ icon: Icon, title, body }) => (
-              <div key={title} className="rounded-lg border border-border bg-card p-6">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-secondary">
-                  <Icon className="h-4 w-4 text-accent" />
+              <div
+                key={title}
+                className="rounded-xl border border-border bg-card p-6"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                  <Icon className="h-5 w-5 text-accent" />
                 </div>
-                <h3 className="font-serif text-lg font-semibold">{title}</h3>
+                <h3 className="mt-4 text-lg font-semibold">{title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{body}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="border-t border-border bg-card/40">
-          <div className="mx-auto max-w-3xl px-4 py-12 text-center">
-            <h2 className="font-serif text-2xl font-semibold">Plans</h2>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {[
-                { name: "Free", price: "$0", features: ["50MB vault", "Incident log", "Case organization"] },
-                { name: "Monthly", price: "$10/mo", features: ["Unlimited storage", "AI document explainer", "Demand letter drafts"] },
-                { name: "Annual", price: "$110/yr", features: ["Everything in Monthly", "Save $10/yr", "Priority support"] },
-              ].map((p) => (
-                <div key={p.name} className="rounded-lg border border-border bg-background p-5 text-left">
-                  <div className="text-sm font-medium text-muted-foreground">{p.name}</div>
-                  <div className="mt-1 font-serif text-2xl font-semibold">{p.price}</div>
-                  <ul className="mt-3 space-y-1 text-sm text-foreground">
-                    {p.features.map((f) => <li key={f} className="flex gap-2"><span className="text-gold">•</span>{f}</li>)}
-                  </ul>
-                </div>
-              ))}
+        {/* Pricing */}
+        <section className="border-t border-border bg-card">
+          <div className="mx-auto max-w-5xl px-4 py-16">
+            <h2 className="text-center text-2xl font-bold sm:text-3xl">
+              Simple pricing
+            </h2>
+            <p className="mt-2 text-center text-sm text-muted-foreground">
+              Start free. Upgrade when your case grows.
+            </p>
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              <PriceCard
+                name="Free"
+                price="$0"
+                period=""
+                features={[
+                  "1 active case",
+                  "75 MB document vault",
+                  "Incident log",
+                  "3 AI questions",
+                ]}
+              />
+              <PriceCard
+                name="Monthly"
+                price="$15"
+                period="/month"
+                features={[
+                  "Unlimited cases",
+                  "Unlimited storage",
+                  "Unlimited AI chat",
+                  "Document generation",
+                  "Passive AI insights",
+                ]}
+              />
+              <PriceCard
+                name="Annual"
+                price="$150"
+                period="/year"
+                highlighted
+                badge="Most Popular"
+                features={[
+                  "Everything in Monthly",
+                  "Save $30/year",
+                  "Priority support",
+                  "Early access to features",
+                ]}
+              />
             </div>
-            <p className="mt-6 text-xs text-muted-foreground">
-              Receipts does not provide legal advice. Nothing in this product creates an attorney-client relationship.
+            <p className="mx-auto mt-6 max-w-xl text-center text-xs text-muted-foreground">
+              $49 Case Package add-on available to paid subscribers — a
+              court-ready PDF of your full case.
             </p>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Receipts. Your record, your rights.
+      <footer className="border-t border-border">
+        <div className="mx-auto max-w-5xl px-4 py-8 text-center">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <Link to="/" className="hover:text-foreground">
+              Privacy Policy
+            </Link>
+            <Link to="/" className="hover:text-foreground">
+              Terms of Service
+            </Link>
+          </div>
+          <p className="mx-auto mt-4 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
+            Receipts is a document preparation tool and does not provide legal
+            advice. © {new Date().getFullYear()} Receipts.
+          </p>
+        </div>
       </footer>
+    </div>
+  );
+}
+
+function PriceCard({
+  name,
+  price,
+  period,
+  features,
+  highlighted,
+  badge,
+}: {
+  name: string;
+  price: string;
+  period: string;
+  features: string[];
+  highlighted?: boolean;
+  badge?: string;
+}) {
+  return (
+    <div
+      className={
+        "relative rounded-xl border bg-background p-6 " +
+        (highlighted
+          ? "border-accent ring-2 ring-accent/30 shadow-lg"
+          : "border-border")
+      }
+    >
+      {badge && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
+          {badge}
+        </div>
+      )}
+      <div className="text-sm font-semibold">{name}</div>
+      <div className="mt-2 flex items-baseline gap-1">
+        <span className="text-3xl font-bold">{price}</span>
+        <span className="text-sm text-muted-foreground">{period}</span>
+      </div>
+      <ul className="mt-5 space-y-2">
+        {features.map((f) => (
+          <li
+            key={f}
+            className="flex items-start gap-2 text-sm text-foreground"
+          >
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
