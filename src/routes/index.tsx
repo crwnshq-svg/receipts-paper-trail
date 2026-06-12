@@ -142,17 +142,17 @@ function Landing() {
               {
                 icon: FolderLock,
                 title: "Store Everything",
-                body: "Contracts, emails, photos, screenshots — encrypted in one private vault.",
+                body: "Your evidence vault. Contracts, photos, Videos, emails. Store everything, because everything matters.\u00a0",
               },
               {
                 icon: Pencil,
                 title: "Log Every Incident",
-                body: "Type what happened in your own words. We format it for your case file.",
+                body: "Your running timeline. Every date, every detail, every ignored request captured so nothing gets forgotten.\u00a0",
               },
               {
                 icon: FileText,
                 title: "Generate Your Case",
-                body: "Demand letters, formal complaints, and a full case package on demand.",
+                body: "Our tools turn everything you have documented into letters, complaints, requests, and case packages that demand a response.",
               },
             ].map(({ icon: Icon, title, body }) => (
               <div
