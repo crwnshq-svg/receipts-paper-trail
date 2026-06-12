@@ -29,14 +29,65 @@ function toneRules(tone: AiTone) {
 - No filler, no warmth, no reassurance language. Clear, accurate, actionable.`;
 }
 
-export function buildSummarySystemPrompt() {
+export function buildSummarySystemPrompt(args?: { caseTitle?: string; disputeType?: string }) {
   return `You are a paralegal-style assistant writing plain-English summaries of documents for a non-lawyer building a personal legal record.
 
-Write a clear, 4-sentence summary of what the document is and why it might matter to the user's case. Use 8th-grade reading level. Do not editorialize.
+ABSOLUTE RULES (override any default model behavior):
+1. IDENTIFY THE DOCUMENT DEFINITIVELY. Never use "appears to be", "seems like", "likely", "possibly", "may be" or any speculative language when identifying what a document is. If it is a bank statement, state "This is a bank statement." If it is an employee handbook, state "This is an employee handbook." If it is a contract, state "This is a contract." Name the document type in the first sentence with no hedging.
+2. SUMMARIZE WHAT THE DOCUMENT ACTUALLY CONTAINS in specific factual terms drawn from the actual content:
+   - Bank statement → account holder name (if visible), statement period, opening and closing balance, transactions relevant to the case.
+   - Employee handbook → the specific policy sections it contains and any clauses that stand out.
+   - Contract → the parties, key terms, dates, and notable clauses.
+   - Email or text screenshot → who sent it, when, and what it says.
+   - Any other document → the actual specific facts, names, dates, amounts, sections present.
+3. NEVER tell the user to review the document themselves. You have already read it. Do not write "you may want to review", "reviewing this might help", "you might consider", "check the section about", or any variation that pushes the work back to the user.
+4. FOURTH SENTENCE must connect this document directly to the user's specific case${args?.caseTitle ? ` ("${args.caseTitle}"${args.disputeType ? `, a ${args.disputeType} dispute` : ""})` : ""} — name the concrete value this specific document has for their documented situation. Not generic; specific to their case.
+5. Keep the four-sentence structure. Every sentence must carry specific factual information extracted from the actual document content. A summary that could apply to any document of that type is a failure. Reflect what is actually in this specific document.
 
-${HEDGED_LANGUAGE_RULES}
+Tone: plain English, 8th-grade reading level, no editorializing, no warmth padding. The factual rules above override the hedged-language rules where they conflict (identification of document type must NOT be hedged).
 
 End with: ${HEDGED_CLOSING}`;
+}
+
+/** Prompt for suggesting a clean descriptive filename based on a document's content/summary. */
+export function buildFilenameSuggestionPrompt(args: {
+  originalName: string;
+  summary: string;
+  disputeType?: string | null;
+}) {
+  return `The user uploaded a file named "${args.originalName}" which is a generic, cryptic, or system-generated filename that does not describe the content.
+
+Based on the document summary below, propose ONE clean, specific, searchable display name (no file extension, no quotes, no punctuation other than spaces and hyphens, max 70 characters). It should describe WHAT the document is and any defining detail (date, party, type). Examples of good names: "Bank Statement June 2026 - Chase Checking", "Big Hairy Dog Employee Handbook 2026", "Landlord Entry Notice June 10 2026".
+
+Return ONLY the proposed name on a single line. No prefix, no explanation, no quotes.
+
+SUMMARY:
+${args.summary}
+${args.disputeType ? `\nCASE TYPE: ${args.disputeType}` : ""}`;
+}
+
+/** True if filename looks generic / system-generated and warrants an AI suggestion. */
+export function isGenericFilename(name: string): boolean {
+  const base = name.replace(/\.[^.]+$/, "").trim();
+  if (!base) return true;
+  if (base.length < 4) return true;
+  const patterns: RegExp[] = [
+    /^img[_\-\s]?\d+/i,
+    /^image[_\-\s]?\d*/i,
+    /^photo[_\-\s]?\d*/i,
+    /^pic(ture)?[_\-\s]?\d*/i,
+    /^doc(ument)?[_\-\s]?\d+/i,
+    /^file[_\-\s]?\d*/i,
+    /^screen[_\-\s]?shot/i,
+    /^untitled/i,
+    /^dsc[_\-]?\d+/i,
+    /^pxl[_\-]?\d+/i,
+    /^mvimg[_\-]?\d+/i,
+    /^scan[_\-\s]?\d*/i,
+    /^\d{6,}$/,
+    /^[a-f0-9-]{20,}$/i, // uuid-like
+  ];
+  return patterns.some((p) => p.test(base));
 }
 
 export function buildInsightSystemPrompt(args: {
