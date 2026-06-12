@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/chat")({
           supabase.from("incidents").select("title,occurred_at,what_happened,who_involved,location,notes")
             .eq("case_id", caseId).order("occurred_at", { ascending: true }),
           supabase.from("documents")
-            .select("id,file_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
+            .select("id,file_name,display_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
             .eq("case_id", caseId),
 
           supabase.from("profiles").select("first_name,ai_tone,state").eq("id", userId).maybeSingle(),
