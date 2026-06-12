@@ -250,6 +250,7 @@ export type Database = {
           created_at: string
           description: string | null
           detected_type: string | null
+          display_name: string | null
           exhibit_label: string | null
           extracted_data: Json | null
           file_name: string
@@ -262,6 +263,7 @@ export type Database = {
           mime_type: string | null
           passive_ai_flagged: boolean
           storage_path: string
+          suggested_name: string | null
           user_id: string
           user_note: string | null
         }
@@ -271,6 +273,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           detected_type?: string | null
+          display_name?: string | null
           exhibit_label?: string | null
           extracted_data?: Json | null
           file_name: string
@@ -283,6 +286,7 @@ export type Database = {
           mime_type?: string | null
           passive_ai_flagged?: boolean
           storage_path: string
+          suggested_name?: string | null
           user_id: string
           user_note?: string | null
         }
@@ -292,6 +296,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           detected_type?: string | null
+          display_name?: string | null
           exhibit_label?: string | null
           extracted_data?: Json | null
           file_name?: string
@@ -304,6 +309,7 @@ export type Database = {
           mime_type?: string | null
           passive_ai_flagged?: boolean
           storage_path?: string
+          suggested_name?: string | null
           user_id?: string
           user_note?: string | null
         }
