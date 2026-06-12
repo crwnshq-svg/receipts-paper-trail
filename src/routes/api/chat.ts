@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/chat")({
           supabase.from("incidents").select("title,occurred_at,what_happened,who_involved,location,notes")
             .eq("case_id", caseId).order("occurred_at", { ascending: true }),
           supabase.from("documents")
-            .select("id,file_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
+            .select("id,file_name,display_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
             .eq("case_id", caseId),
 
           supabase.from("profiles").select("first_name,ai_tone,state").eq("id", userId).maybeSingle(),
@@ -109,7 +109,7 @@ function buildCaseContext(caseRow: any, incidents: any[], documents: any[]) {
     lines.push("");
     lines.push(`--- DOCUMENT ${idx + 1} ---`);
     lines.push(`id: ${d.id}`);
-    lines.push(`file_name: ${d.file_name}`);
+    lines.push(`file_name: ${d.display_name || d.file_name}${d.display_name ? ` (original: ${d.file_name})` : ""}`);
     if (d.detected_type) lines.push(`detected_type: ${d.detected_type}`);
     if (d.mime_type) lines.push(`mime_type: ${d.mime_type}`);
     if (d.user_note) lines.push(`user_note: ${d.user_note}`);

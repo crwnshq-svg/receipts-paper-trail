@@ -82,6 +82,36 @@ export function AiTab({ caseId, isPaid, questionsUsed }: {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const remaining = Math.max(0, FREE_AI_QUESTIONS - used);
 
+  // Realtime subscription to profiles so the counter stays accurate across tabs.
+  useEffect(() => {
+    let cancelled = false;
+    let channel: any;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      channel = supabase
+        .channel(`profile-ai-${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
+          (payload) => {
+            const next = (payload.new as any)?.ai_questions_used;
+            if (typeof next === "number") setUsed(next);
+          },
+        )
+        .subscribe();
+    })();
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Auto-open upgrade modal as soon as the free quota hits zero.
+  useEffect(() => {
+    if (!isPaid && remaining === 0) setShowUpgrade(true);
+  }, [isPaid, remaining]);
+
   return (
     <div className="space-y-6">
       <ChatPanel

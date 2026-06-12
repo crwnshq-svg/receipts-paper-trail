@@ -6,6 +6,8 @@ import { createLovableAiGatewayProvider, CHAT_MODEL } from "./ai-gateway.server"
 import {
   buildInsightSystemPrompt,
   buildSummarySystemPrompt,
+  buildFilenameSuggestionPrompt,
+  isGenericFilename,
   ensureDisclaimer,
 } from "./insight-prompts";
 
@@ -44,6 +46,13 @@ export const analyzeDocument = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway(CHAT_MODEL);
 
+    // Clear previous insights so re-analysis produces a clean set (no duplicates).
+    await supabase
+      .from("document_insights")
+      .update({ is_dismissed: true })
+      .eq("document_id", doc.id)
+      .eq("is_dismissed", false);
+
     // --- 1) summary ---
     const isImage = IMAGE_MIMES.includes(doc.mime_type ?? "");
     let summary = "";
@@ -54,7 +63,7 @@ export const analyzeDocument = createServerFn({ method: "POST" })
         const url = signed?.signedUrl;
         const { text } = await generateText({
           model,
-          system: buildSummarySystemPrompt(),
+          system: buildSummarySystemPrompt({ caseTitle: caseRow.title, disputeType: caseRow.dispute_type }),
           messages: [{
             role: "user",
             content: [
@@ -70,10 +79,14 @@ export const analyzeDocument = createServerFn({ method: "POST" })
       } else {
         const { text } = await generateText({
           model,
-          system: buildSummarySystemPrompt(),
-          prompt: `A user uploaded a document named "${doc.file_name}" (type: ${doc.mime_type ?? "unknown"}) to a "${caseRow.dispute_type}" case titled "${caseRow.title}".
+          system: buildSummarySystemPrompt({ caseTitle: caseRow.title, disputeType: caseRow.dispute_type }),
+          prompt: `Document file name: "${doc.file_name}" (mime type: ${doc.mime_type ?? "unknown"}).
+Case: "${caseRow.title}" (${caseRow.dispute_type}).
 
-Based on the filename and case context, write a 4-sentence plain-English summary of what this document likely is and why it might matter to the case. If the filename is ambiguous, say so and describe what such a document typically contains.`,
+Available extracted content (use this as the ACTUAL document content; do not hedge identification based on the filename if the content makes the type clear):
+${stringifyExtractedForPrompt(doc.extracted_data) || "(no extracted text — work from filename + case context, but follow the absolute rules)"}
+
+Produce the 4-sentence summary now.`,
         });
         summary = text;
       }
@@ -84,6 +97,28 @@ Based on the filename and case context, write a 4-sentence plain-English summary
     }
 
     await supabase.from("documents").update({ ai_summary: summary }).eq("id", doc.id);
+
+    // --- 1b) suggested filename (only if the original filename looks generic) ---
+    if (isGenericFilename(doc.file_name) && summary && !summary.startsWith("Summary unavailable")) {
+      try {
+        const { text: nameText } = await generateText({
+          model,
+          prompt: buildFilenameSuggestionPrompt({
+            originalName: doc.file_name,
+            summary,
+            disputeType: caseRow.dispute_type,
+          }),
+        });
+        const cleaned = cleanSuggestedName(nameText);
+        if (cleaned) {
+          await supabase.from("documents")
+            .update({ suggested_name: cleaned })
+            .eq("id", doc.id);
+        }
+      } catch (err) {
+        console.error("filename suggestion failed", err);
+      }
+    }
 
     // --- 2) insights ---
     try {
@@ -189,6 +224,60 @@ export const dismissInsight = createServerFn({ method: "POST" })
       .from("document_insights")
       .update({ is_dismissed: true })
       .eq("id", data.insightId)
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+function stringifyExtractedForPrompt(extracted: any): string {
+  if (!extracted) return "";
+  if (typeof extracted === "string") return extracted.slice(0, 8000);
+  if (typeof extracted.text === "string") return extracted.text.slice(0, 8000);
+  if (typeof extracted.content === "string") return extracted.content.slice(0, 8000);
+  if (typeof extracted.ocr === "string") return extracted.ocr.slice(0, 8000);
+  if (Array.isArray(extracted.pages)) {
+    return extracted.pages.map((p: any) => p?.text ?? p?.content ?? "").filter(Boolean).join("\n\n").slice(0, 8000);
+  }
+  try { return JSON.stringify(extracted).slice(0, 4000); } catch { return ""; }
+}
+
+function cleanSuggestedName(raw: string): string | null {
+  if (!raw) return null;
+  let s = raw.trim().split("\n")[0].trim();
+  s = s.replace(/^["'`]+|["'`]+$/g, "");
+  s = s.replace(/\.[a-z0-9]{1,5}$/i, ""); // strip accidental extension
+  s = s.replace(/[^A-Za-z0-9 \-_.()&,]/g, " ").replace(/\s+/g, " ").trim();
+  if (s.length < 3) return null;
+  if (s.length > 70) s = s.slice(0, 70).trim();
+  return s;
+}
+
+const RenameInput = z.object({
+  documentId: z.string().uuid(),
+  displayName: z.string().min(1).max(120).nullable(),
+});
+export const renameDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => RenameInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("documents")
+      .update({ display_name: data.displayName, suggested_name: null })
+      .eq("id", data.documentId)
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+const DismissSuggestionInput = z.object({ documentId: z.string().uuid() });
+export const dismissNameSuggestion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => DismissSuggestionInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("documents")
+      .update({ suggested_name: null })
+      .eq("id", data.documentId)
       .eq("user_id", context.userId);
     if (error) throw error;
     return { ok: true };
