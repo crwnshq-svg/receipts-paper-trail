@@ -1,73 +1,54 @@
-## Receipts — Full Build Plan
+## Scope
 
-This is a large spec that supersedes parts of what's already built (pricing changes from $10/$110 to $15/$150, storage from 50MB to 75MB, adds Stripe, Anthropic, doc generation, case packages, passive AI, etc.). I'll build it in phases so each is testable, and confirm a few decisions before I start.
+Four related features for the case detail and app shell. I'll use Lovable AI Gateway (Gemini) rather than the Anthropic Claude models you named — this project doesn't have an Anthropic key and the gateway uses Gemini models. The hedged-language guardrails work the same regardless of model. If you want true Anthropic Claude, add an `ANTHROPIC_API_KEY` and I'll swap the calls.
 
-### Decisions I need from you
+## Part 1 — Case Timeline tab
 
-1. **AI provider**: You specified Anthropic Claude (`claude-sonnet-4-6`) directly. Lovable Cloud includes a built-in AI Gateway (no key needed) that supports Claude models. Do you want:
-   - **A.** Use Lovable AI Gateway (no setup, billed via Lovable credits) — recommended
-   - **B.** Bring your own Anthropic API key (I'll request it as a secret)
-2. **Payments**: I'll use Lovable's built-in Stripe payments (no Stripe account setup needed — uses Lovable as merchant of record). Confirm OK, or do you want to connect your own Stripe account?
-3. **Email sequences** (welcome, 48h educational, storage warning, discount): these need a transactional email provider. OK to scaffold the email infra now or defer to a later phase?
-4. **Certified mail** ($10.99): there's no built-in carrier integration. OK to ship this as a UI stub that records a tracking-number field manually for now (real Lob/USPS integration is a separate add-on)?
+- Add a 4th tab "Timeline" on `/cases/$caseId`.
+- Build a virtual timeline by unioning rows from `cases` (created), `incidents`, `documents`, `generated_documents`, and a new `ai_insights` source.
+- Each entry: colored dot (red/blue/yellow/green/gray), timestamp, type badge, brief description.
+- Tapping an entry scrolls/switches to the corresponding tab and highlights the item (`?focus=<id>` query param).
+- "Export Timeline" button → generates a `.txt` download client-side (faster than PDF and works offline).
 
-### Phase 1 — Schema, design system, billing rules realignment
+## Part 2 — Document intelligence
 
-- Migrate DB to the new schema you specified: `users` extensions (ai_questions_used, stripe_customer_id), `cases` (module, sub_type, custom_sub_type, strength_score, status), `incidents` (raw_input, formatted_entry, category, passive_ai_flagged), `documents` (detected_type, extracted_data, exhibit_label, user_note, flag fields), `generated_documents`, `case_packages`, `ai_conversations`, `passive_ai_flags`. RLS + GRANTs on each.
-- Update design tokens in `src/styles.css` to the new palette (#FAFAFA bg, #1A1A2E primary, #00A878 accent, #E53E3E error, Inter font, 12px/8px radii). Replace the current "Calm legal" navy/gold theme.
-- Update storage cap constants to 75MB, plan prices to $15/$150, $49/$9.
-- PWA manifest already exists — update theme/background colors to match new palette.
+- New column `documents.ai_summary` (text, nullable).
+- New table `document_insights` (fields exactly as spec).
+- New server fn `analyzeDocument(documentId)` invoked right after upload:
+  1. Generate 4-sentence plain-English summary; for images, send `image_url` part to use vision.
+  2. Cross-reference call against case context → 0–3 insight rows.
+- Show skeleton on doc card while `ai_summary` is null and analysis is in flight.
+- Edit button → inline textarea + save.
+- Yellow lightbulb icon when insights exist; modal shows title + brief description + Follow Up + Dismiss.
+- Follow Up: paid → open AI tab with pre-loaded context. Free → confirm "Use a Question to Follow Up", call `consumeAiQuestion`, then open chat. Both pass insight context via `sessionStorage` key the AI tab reads on mount.
+- Add `profiles.last_active_at` (timestamptz); update via lightweight server fn called from app shell on mount (throttled to once per session).
+- Weekly cron via Supabase Edge Function `weekly-insight-refresh` (pg_cron → calls TanStack route). Re-analyzes recent docs for users inactive ≥ 7 days.
 
-### Phase 2 — Public + onboarding
+## Part 3 — Notifications
 
-- Landing page (`/`) per spec: hero, how-it-works, 3 feature blocks, pricing table, footer with disclaimer.
-- Module intro screen (`/get-started`).
-- Account creation (`/auth`) with first_name field, Google OAuth (already wired), terms checkbox.
-- Welcome overlay on first dashboard load.
+- New table `notifications` (per spec).
+- New table `admin_notifications` (per spec) with a trigger that fans out to `notifications` for matching users (by case module type and profile location).
+- `documents` insight generation also inserts a notification.
+- Bottom nav badge: unread count via realtime subscription on `notifications`.
+- `/notifications` route: list, mark-as-read on view, tap → navigate to case/document.
+- Web Push: register service worker, request permission after first sign-in, store subscription in `push_subscriptions` table. Edge function `send-push` triggered when a notification is created AND user is inactive ≥ 7 days.
 
-### Phase 3 — Case lifecycle (free tier core)
+> Web Push requires VAPID keys. I'll generate them and store as `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` secrets — no user action needed.
 
-- Dashboard with case grid, status badges, strength bar, last-activity, "locked second case" tile for free tier.
-- Bottom nav (Dashboard / Resources / Account) + top nav (wordmark + avatar).
-- 4-step case creation flow with module → sub-type chips → AB5 qualifier for "I did work and wasn't paid" → foundation doc prompt.
-- Case dashboard: strength bar, 2×2 section grid, passive-AI banner area, Receipts AI button with counter.
-- Document Vault: storage bar (60MB orange / 75MB red freeze), evidence checklist, exhibit labeling, FAB upload sheet (camera/library/file).
-- Incident Log + entry screen with AI-formatted preview/confirm step.
-- Case Timeline with vertical timeline + PDF export.
-- Case strength calculation rule (0/20/40/60/80/100).
-- 48h foundation-doc reminder banner.
+## Part 4 — Hedged language guardrails
 
-### Phase 4 — AI features (Anthropic / Lovable AI)
+- Central `INSIGHT_SYSTEM_PROMPT` constant containing the hedged-language rules and required closing disclaimer.
+- All insight + summary generation uses it.
+- Server post-processor ensures the disclaimer is appended if the model omits it.
 
-- Receipts AI chat (free: 3-question counter + guided 3-question intake; paid: unlimited). Disclaimer on every response.
-- Passive AI background analysis after every doc upload / incident log entry → writes `passive_ai_flags` (JSON-structured). Free shows message only; paid shows full_explanation + suggested_action.
-- Document detection on upload (detected_type + extracted_data).
-- Incident AI-formatting step.
-- All AI server-side via TanStack `createServerFn` so the key never hits the client.
+## Technical details
 
-### Phase 5 — Document generation + case package (paid)
+- AI model: `google/gemini-3-flash-preview` via Lovable AI Gateway (existing setup).
+- Migrations: one for `documents.ai_summary` + `document_insights` + `profiles.last_active_at`, one for `notifications` + `admin_notifications` + fan-out trigger + `push_subscriptions`.
+- Files added: `src/routes/_authenticated/cases.$caseId.tsx` (Timeline tab inline), `src/components/document-card.tsx`, `src/components/insight-modal.tsx`, `src/routes/_authenticated/notifications.tsx`, `src/lib/document-intelligence.functions.ts`, `src/lib/notifications.functions.ts`, `src/lib/activity.functions.ts`, `public/sw-push.js`, `supabase/functions/weekly-insight-refresh/index.ts`, `supabase/functions/send-push/index.ts`.
 
-- Doc generation page with card grid (Demand Letter, Formal Complaint, etc.), recipient selector, generation loader, editable result, Download PDF / Email / Certified Mail buttons. Free tier sees locked cards.
-- Certified mail flow (address → confirm → success with manually-entered tracking #), creates the auto Day 0/3/10 timeline entries and Day-10 reminder.
-- Case Package builder ($49) with section toggles, personal statement, recipient, Stripe one-time checkout, processing → PDF result. Regen first free, then $9.
+## Confirm before I start
 
-### Phase 6 — Stripe + tiers
-
-- Lovable Payments: Monthly $15 subscription, Annual $150 subscription, $49 + $9 one-time products.
-- Upgrade modal (reusable) triggered by: locked feature, 75MB freeze, 3-question AI cap, second-case attempt, passive-AI flag explanation.
-- Post-upgrade confirmation screen that returns to the prior route.
-- Webhook → updates `users.subscription_tier` / `subscription_status`.
-
-### Phase 7 — Resources + Account + Email
-
-- Resources page (module tabs, action categories, partner directory with Basic/Featured/Badge tiers) — public to all tiers.
-- Account/Settings: tier, storage bar, AI questions remaining, notification toggles, billing portal link, support, logout.
-- Email sequences (welcome / 48h educational / storage warning / 14-day discount $130).
-
-### Technical notes (for reference)
-
-- Stack stays TanStack Start + Lovable Cloud (Supabase) + Lovable Payments. All AI calls go through server functions (`src/lib/ai.functions.ts`). Anthropic via Lovable AI Gateway model id `anthropic/claude-sonnet-4-5` (closest available; `claude-sonnet-4-6` is not a public model id — I'll use the latest available Claude Sonnet).
-- PDFs generated server-side with `pdf-lib`.
-- Existing routes/components from the foundation pass will be refactored, not duplicated.
-
-Reply with your decisions on the 4 questions above (or just "go" to take my defaults: Lovable AI Gateway, Lovable Payments, defer email infra, certified-mail as manual stub) and I'll start with Phase 1.
+1. OK to use Lovable AI Gemini instead of Anthropic Claude? (Cheaper, no key needed. Hedged-language guardrails are identical.)
+2. OK for me to provision VAPID keys for web push automatically?
+3. Export Timeline as `.txt` (instant, no extra deps) — or do you specifically want PDF?
