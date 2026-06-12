@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Disclaimer } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
@@ -17,8 +18,11 @@ import {
   LogOut,
   AlertTriangle,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import { FREE_STORAGE_BYTES, STORAGE_WARNING_BYTES, FREE_AI_QUESTIONS } from "@/lib/constants";
+import { updateAiTone } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/account")({
   head: () => ({ meta: [{ title: "Account — Receipts" }] }),
@@ -62,6 +66,24 @@ function AccountPage() {
   const [passiveAi, setPassiveAi] = useState(() => loadNotifPref("passive_ai", true));
   const [deadlines, setDeadlines] = useState(() => loadNotifPref("deadlines", true));
   const [caseUpdates, setCaseUpdates] = useState(() => loadNotifPref("case_updates", true));
+
+  const [aiTone, setAiToneLocal] = useState<"straightforward" | "personable">("straightforward");
+  useEffect(() => {
+    if (profile?.ai_tone === "personable" || profile?.ai_tone === "straightforward") {
+      setAiToneLocal(profile.ai_tone);
+    }
+  }, [profile?.ai_tone]);
+  const updateTone = useServerFn(updateAiTone);
+  async function changeTone(t: "straightforward" | "personable") {
+    setAiToneLocal(t);
+    try {
+      await updateTone({ data: { tone: t } });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      toast.success(`AI tone set to ${t === "personable" ? "Personable" : "Straightforward"}`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not update tone");
+    }
+  }
 
   function setNotif(key: string, value: boolean, setter: (v: boolean) => void) {
     setter(value);
@@ -178,6 +200,35 @@ function AccountPage() {
               checked={caseUpdates}
               onChange={(v) => setNotif("case_updates", v, setCaseUpdates)}
             />
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5" /> AI Response Style
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Choose how Receipts AI talks to you. Both modes give the same accurate information.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <button
+              onClick={() => changeTone("straightforward")}
+              className={`rounded-lg border p-3 text-left transition ${aiTone === "straightforward" ? "border-accent bg-accent/5" : "bg-background hover:border-muted-foreground/30"}`}
+            >
+              <div className="font-medium text-sm">Straightforward</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                Direct, plain English, legally precise. No filler, no warmth — just clear, accurate information you can act on.
+              </div>
+            </button>
+            <button
+              onClick={() => changeTone("personable")}
+              className={`rounded-lg border p-3 text-left transition ${aiTone === "personable" ? "border-accent bg-accent/5" : "bg-background hover:border-muted-foreground/30"}`}
+            >
+              <div className="font-medium text-sm">Personable</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                Same accuracy and directness, with warmth and acknowledgment of your situation. You're not alone in this.
+              </div>
+            </button>
           </div>
         </Card>
 

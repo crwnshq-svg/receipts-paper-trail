@@ -489,6 +489,54 @@ export type Database = {
           },
         ]
       }
+      partner_listings: {
+        Row: {
+          blurb: string | null
+          city: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          contact_url: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          module_type: Database["public"]["Enums"]["dispute_type"]
+          name: string
+          specialty: string
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          blurb?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          module_type: Database["public"]["Enums"]["dispute_type"]
+          name: string
+          specialty: string
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blurb?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_url?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          module_type?: Database["public"]["Enums"]["dispute_type"]
+          name?: string
+          specialty?: string
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       passive_ai_flags: {
         Row: {
           case_id: string
@@ -542,6 +590,7 @@ export type Database = {
       profiles: {
         Row: {
           ai_questions_used: number
+          ai_tone: string
           case_package_credits: number
           created_at: string
           email: string | null
@@ -558,6 +607,7 @@ export type Database = {
         }
         Insert: {
           ai_questions_used?: number
+          ai_tone?: string
           case_package_credits?: number
           created_at?: string
           email?: string | null
@@ -574,6 +624,7 @@ export type Database = {
         }
         Update: {
           ai_questions_used?: number
+          ai_tone?: string
           case_package_credits?: number
           created_at?: string
           email?: string | null
