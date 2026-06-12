@@ -46,6 +46,13 @@ export const analyzeDocument = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway(CHAT_MODEL);
 
+    // Clear previous insights so re-analysis produces a clean set (no duplicates).
+    await supabase
+      .from("document_insights")
+      .update({ is_dismissed: true })
+      .eq("document_id", doc.id)
+      .eq("is_dismissed", false);
+
     // --- 1) summary ---
     const isImage = IMAGE_MIMES.includes(doc.mime_type ?? "");
     let summary = "";
@@ -56,7 +63,7 @@ export const analyzeDocument = createServerFn({ method: "POST" })
         const url = signed?.signedUrl;
         const { text } = await generateText({
           model,
-          system: buildSummarySystemPrompt(),
+          system: buildSummarySystemPrompt({ caseTitle: caseRow.title, disputeType: caseRow.dispute_type }),
           messages: [{
             role: "user",
             content: [
