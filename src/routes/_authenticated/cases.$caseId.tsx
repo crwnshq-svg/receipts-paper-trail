@@ -129,7 +129,7 @@ function CaseDetail() {
           </TabsContent>
 
           <TabsContent value="ai" className="mt-4">
-            <AiTab isPaid={isPaid} />
+            <AiTab caseId={caseId} isPaid={isPaid} questionsUsed={profile?.ai_questions_used ?? 0} />
           </TabsContent>
         </Tabs>
 
@@ -339,58 +339,6 @@ function DocumentsTab({ caseId, docs, onChange }: { caseId: string; docs: any[];
   );
 }
 
-function AiTab({ isPaid }: { isPaid: boolean }) {
-  const tools = [
-    { title: "Explain a document in plain English", desc: "Paste a contract, lease clause, or letter — get a clear summary." },
-    { title: "Help me write up an incident", desc: "Turn rough notes into a clear, factual incident entry." },
-    { title: "Draft a demand letter", desc: "Generate a firm, professional letter based on your case." },
-    { title: "Generate a case summary", desc: "A formatted summary of your full case for review." },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {!isPaid && (
-        <Card className="border-gold/40 bg-gold/5 p-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-md bg-gold/20 p-2"><Sparkles className="h-4 w-4 text-gold-foreground" /></div>
-            <div className="flex-1">
-              <div className="font-medium">AI tools are part of the paid plan</div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Unlock all AI features for $15/month or $150/year. The $49 Case Package add-on gives you a court-ready PDF.
-              </p>
-              <Button className="mt-3 bg-primary text-primary-foreground hover:bg-accent" disabled>
-                Upgrade (coming soon)
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {tools.map((t) => (
-          <Card key={t.title} className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="rounded-md bg-secondary p-2">
-                {isPaid ? <Sparkles className="h-4 w-4 text-accent" /> : <Lock className="h-4 w-4 text-muted-foreground" />}
-              </div>
-              <div className="flex-1">
-                <div className="font-medium">{t.title}</div>
-                <p className="mt-1 text-xs text-muted-foreground">{t.desc}</p>
-                <Button variant="outline" size="sm" className="mt-3" disabled>
-                  {isPaid ? "Coming soon" : "Locked"}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <p className="text-[11px] text-muted-foreground">
-        Every AI-generated output will include: "Receipts does not provide legal advice. Nothing generated constitutes an attorney-client relationship."
-      </p>
-    </div>
-  );
-}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
