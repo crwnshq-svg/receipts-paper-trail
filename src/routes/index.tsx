@@ -73,9 +73,9 @@ function Landing() {
         {/* Hero */}
         <section className="mx-auto max-w-3xl px-4 pt-16 pb-12 text-center sm:pt-24">
           <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
-            Stop being talked over.
+            The paper trail they hoped you'd never build.&nbsp;
             <br />
-            <span className="text-accent">Start being heard.</span>
+            <span className="text-accent">Start documenting.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
             Receipts turns the chaos of a dispute into a clear, timestamped
