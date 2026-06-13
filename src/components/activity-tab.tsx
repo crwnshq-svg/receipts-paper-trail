@@ -525,7 +525,7 @@ function IncidentDialog({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.from("incidents").insert({
+      const { data: inserted, error } = await supabase.from("incidents").insert({
         case_id: caseId,
         user_id: user.id,
         title,
@@ -535,12 +535,13 @@ function IncidentDialog({
         location: location || null,
         occurred_at: new Date(occurredAt).toISOString(),
         document_ids: docIds as never,
-      });
+      }).select("id").single();
       if (error) throw error;
       toast.success("Incident logged");
       onOpenChange(false);
       reset();
-      onSaved();
+      onSaved(inserted?.id);
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
