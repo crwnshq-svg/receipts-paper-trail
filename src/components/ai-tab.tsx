@@ -43,6 +43,7 @@ const RECIPIENTS = ["Court", "HR Department", "Labor Board", "Housing Authority"
 type StructuredAction = {
   type: "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource";
   label: string;
+  prefill?: Record<string, any>;
 };
 type StructuredResource = { name: string; url: string; description?: string };
 type StructuredPartner = {
