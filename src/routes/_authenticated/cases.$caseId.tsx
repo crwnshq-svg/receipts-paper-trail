@@ -290,13 +290,14 @@ function IncidentsTab({ caseId, incidents, autoOpen, onChange }: {
   );
 }
 
-function DocumentsTab({ caseId, docs, isPaid, onChange, onConsumed, onLimitHit }: {
-  caseId: string; docs: any[]; isPaid: boolean; onChange: () => void;
+function DocumentsTab({ caseId, docs, isPaid, autoUpload, onChange, onConsumed, onLimitHit }: {
+  caseId: string; docs: any[]; isPaid: boolean; autoUpload?: boolean; onChange: () => void;
   onConsumed?: (used: number) => void; onLimitHit?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const analyze = useServerFn(analyzeDocument);
+  useEffect(() => { if (autoUpload) fileRef.current?.click(); }, [autoUpload]);
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
