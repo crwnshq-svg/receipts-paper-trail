@@ -228,15 +228,20 @@ export function ActivityTab({
         <ol className="space-y-3">
           {feed.map((f) =>
             f.kind === "incident" ? (
-              <li key={`i-${f.data.id}`}>
+              <li key={`i-${f.data.id}`} className="space-y-2">
                 <Card className="border-l-4 border-l-red-500 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
                         <AlertCircle className="h-3 w-3" /> Incident
                         <span className="font-normal text-muted-foreground">
                           · {new Date(f.data.occurred_at).toLocaleString()}
                         </span>
+                        {analyzingIds.has(f.data.id) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal normal-case text-muted-foreground">
+                            <Loader2 className="h-2.5 w-2.5 animate-spin" /> Analyzing…
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1 font-medium">{f.data.title}</div>
                       {f.data.who_involved && (
@@ -273,7 +278,44 @@ export function ActivityTab({
                     </Button>
                   </div>
                 </Card>
+
+                {(() => {
+                  const questions = toQuestions(f.data.clarifying_questions);
+                  if (questions.length === 0) return null;
+                  return (
+                    <Card className="border-l-4 border-l-sky-400 bg-sky-500/5 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-300">
+                          <Sparkles className="h-3 w-3" />
+                          A couple of things that could strengthen this entry
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => dismissQuestions(f.data.id)}
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label="Dismiss"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <ul className="mt-2 space-y-1">
+                        {questions.map((q, idx) => (
+                          <li key={idx}>
+                            <button
+                              type="button"
+                              onClick={() => setAnswerQ({ incidentId: f.data.id, question: q })}
+                              className="w-full rounded-md px-2 py-1.5 text-left text-sm text-foreground/90 hover:bg-sky-500/10 transition-colors"
+                            >
+                              {q}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
+                  );
+                })()}
               </li>
+
             ) : (
               <li key={`n-${f.data.id}`}>
                 <Card className="border-l-4 border-l-muted-foreground/40 bg-muted/20 p-4">
