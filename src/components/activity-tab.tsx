@@ -140,6 +140,50 @@ export function ActivityTab({
     }
   }
 
+  // Fire-and-forget AI analysis after an incident saves.
+  async function triggerAnalysis(incidentId: string) {
+    setAnalyzingIds((s) => new Set(s).add(incidentId));
+    try {
+      await callAnalyze({ data: { incidentId } });
+    } catch (err) {
+      console.error("analyzeIncident failed", err);
+    } finally {
+      setAnalyzingIds((s) => {
+        const n = new Set(s);
+        n.delete(incidentId);
+        return n;
+      });
+      onChange();
+    }
+  }
+
+  async function dismissQuestions(incidentId: string) {
+    const { error } = await supabase
+      .from("incidents")
+      .update({ clarifying_questions: [] as never })
+      .eq("id", incidentId);
+    if (error) toast.error(error.message);
+    else onChange();
+  }
+
+  async function submitAnswer(incidentId: string, question: string, answer: string) {
+    const inc = incidents.find((i) => i.id === incidentId);
+    if (!inc) return;
+    const appended = `${inc.notes ? inc.notes + "\n\n" : ""}Q: ${question}\nA: ${answer}`;
+    const remaining = toQuestions(inc.clarifying_questions).filter((q) => q !== question);
+    const { error } = await supabase
+      .from("incidents")
+      .update({ notes: appended, clarifying_questions: remaining as never })
+      .eq("id", incidentId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Answer added to incident");
+      setAnswerQ(null);
+      onChange();
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
@@ -162,7 +206,10 @@ export function ActivityTab({
         caseId={caseId}
         open={incidentOpen}
         onOpenChange={setIncidentOpen}
-        onSaved={onChange}
+        onSaved={(newId) => {
+          onChange();
+          if (newId) void triggerAnalysis(newId);
+        }}
       />
       <NoteDialog
         caseId={caseId}
@@ -170,6 +217,7 @@ export function ActivityTab({
         onOpenChange={setNoteOpen}
         onSaved={refetchNotes}
       />
+
 
       {feed.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
