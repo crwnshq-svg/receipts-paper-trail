@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
+import { loadConversation, saveConversation } from "@/lib/conversation.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
 import { setPrefill, popPrefill } from "@/lib/prefill";
 
