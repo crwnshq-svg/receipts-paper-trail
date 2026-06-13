@@ -167,19 +167,61 @@ export function AiTab({ caseId, isPaid, questionsUsed }: {
 
 // ============================== Chat ==============================
 
-function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
+function ChatPanel(props: {
   caseId: string; isPaid: boolean; remaining: number;
   onConsumed: (used: number) => void; onLimitHit: () => void;
 }) {
+  const loadFn = useServerFn(loadConversation);
+  const [loaded, setLoaded] = useState(false);
+  const [initial, setInitial] = useState<UIMessage[]>([]);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await loadFn({ data: { caseId: props.caseId } });
+        if (cancelled) return;
+        setInitial((res.messages ?? []) as UIMessage[]);
+        setStartedAt(res.started_at);
+      } catch (err) {
+        console.warn("Failed to load chat history", err);
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [props.caseId, loadFn]);
+
+  if (!loaded) {
+    return (
+      <Card className="overflow-hidden">
+        <div className="border-b p-4 flex items-center gap-2">
+          <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
+          <div>
+            <div className="font-medium text-sm">Receipts AI</div>
+            <div className="text-xs text-muted-foreground">Loading conversation…</div>
+          </div>
+        </div>
+        <div className="h-[480px] flex items-center justify-center text-xs text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      </Card>
+    );
+  }
+
+  return <ChatPanelInner {...props} initialMessages={initial} startedAt={startedAt} />;
+}
+
+function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, initialMessages, startedAt }: {
+  caseId: string; isPaid: boolean; remaining: number;
+  onConsumed: (used: number) => void; onLimitHit: () => void;
+  initialMessages: UIMessage[]; startedAt: string | null;
+}) {
   const [input, setInput] = useState("");
   const consume = useServerFn(consumeAiQuestion);
-  const loadFn = useServerFn(loadConversation);
   const saveFn = useServerFn(saveConversation);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
-  const [startedAt, setStartedAt] = useState<string | null>(null);
 
   useEffect(() => {
     const key = `receipts:insight-followup:${caseId}`;
@@ -196,24 +238,6 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
       sessionStorage.removeItem(key);
     }
   }, [caseId]);
-
-  // Load persisted conversation history once per case.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await loadFn({ data: { caseId } });
-        if (cancelled) return;
-        setInitialMessages((res.messages ?? []) as UIMessage[]);
-        setStartedAt(res.started_at);
-      } catch (err) {
-        console.warn("Failed to load chat history", err);
-      } finally {
-        if (!cancelled) setHistoryLoaded(true);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [caseId, loadFn]);
 
   const transport = useRef(new DefaultChatTransport({
     api: "/api/chat",
@@ -237,7 +261,6 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
     transport,
     onError: (err) => toast.error(err.message || "Chat failed"),
     onFinish: ({ messages: latest }) => {
-      // Persist the full transcript after each assistant turn completes.
       saveFn({ data: { caseId, messages: latest as any[] } }).catch((err) =>
         console.warn("Failed to save chat history", err),
       );
@@ -283,7 +306,6 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
     return `Conversation started ${new Date(startedAt).toLocaleDateString()}`;
   }, [startedAt]);
 
-
   return (
     <Card className="overflow-hidden">
       <div className="border-b p-4 flex items-center justify-between gap-3">
@@ -306,9 +328,6 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
       )}
 
       <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
-        {!historyLoaded && (
-          <div className="text-xs text-muted-foreground text-center py-4">Loading conversation…</div>
-        )}
         {messages.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10">
             Ask anything about your case. The AI has your incidents and documents as context.
