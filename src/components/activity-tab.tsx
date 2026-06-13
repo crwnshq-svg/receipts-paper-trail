@@ -296,6 +296,40 @@ function IncidentDialog({
   );
   const [docIds, setDocIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
+
+  // When the dialog opens, pop any AI-supplied prefill and apply it.
+  useEffect(() => {
+    if (!open) return;
+    const pre = popPrefill<Record<string, any>>("incident");
+    if (!pre) return;
+    const marks: Record<string, boolean> = {};
+    if (typeof pre.title === "string") { setTitle(pre.title); marks.title = true; }
+    if (typeof pre.who_involved === "string") { setWho(pre.who_involved); marks.who = true; }
+    if (typeof pre.what_happened === "string") { setWhat(pre.what_happened); marks.what = true; }
+    if (typeof pre.notes === "string") { setExtraNotes(pre.notes); marks.notes = true; }
+    if (typeof pre.location === "string") { setLocation(pre.location); marks.location = true; }
+    if (typeof pre.occurred_at === "string") {
+      const d = new Date(pre.occurred_at);
+      if (!isNaN(+d)) { setOccurredAt(d.toISOString().slice(0, 16)); marks.occurredAt = true; }
+    }
+    if (Array.isArray(pre.suggested_document_ids)) {
+      setDocIds(pre.suggested_document_ids.filter((x) => typeof x === "string"));
+      marks.docIds = true;
+    }
+    // Witness-logging prefill: fold structured witness fields into the form.
+    const witnessParts = [pre.witness_name, pre.witness_contact, pre.witness_location]
+      .filter((x) => typeof x === "string" && x.trim().length > 0);
+    if (witnessParts.length > 0 && !marks.who) {
+      setWho(`Witness: ${witnessParts.join(" — ")}`);
+      marks.who = true;
+    }
+    if (typeof pre.witness_observations === "string" && !marks.what) {
+      setWhat(pre.witness_observations);
+      marks.what = true;
+    }
+    setPrefilled(marks);
+  }, [open]);
 
   function reset() {
     setTitle("");
@@ -305,6 +339,7 @@ function IncidentDialog({
     setLocation("");
     setOccurredAt(new Date().toISOString().slice(0, 16));
     setDocIds([]);
+    setPrefilled({});
   }
 
   async function add(e: React.FormEvent) {
