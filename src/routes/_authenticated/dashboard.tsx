@@ -293,7 +293,7 @@ function Dashboard() {
                   const strength = c.strength_score ?? 0;
                   const days = Math.max(0, Math.floor((Date.now() - +new Date(c.created_at)) / 86400000));
                   const strengthColor = strength >= 60 ? "bg-emerald-500" : strength >= 30 ? "bg-amber-500" : "bg-red-500";
-                  const statusClass = STATUS_STYLE[c.status] ?? STATUS_STYLE.active;
+                  void STATUS_STYLE;
 
                   let nextAction = "Keep documenting — every detail matters";
                   if (docs === 0) nextAction = "Upload your contract or agreement";
