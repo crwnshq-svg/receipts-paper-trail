@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 type Entry = {
   id: string;
   at: string;
-  type: "case_created" | "incident" | "document" | "ai_insight" | "doc_generated";
+  type: "case_created" | "incident" | "note" | "document" | "ai_insight" | "doc_generated";
   label: string;
   description: string;
   onTap?: () => void;
@@ -17,10 +17,11 @@ type Entry = {
 
 const TYPE_STYLES: Record<Entry["type"], { dot: string; badge: string; label: string }> = {
   incident:      { dot: "bg-red-500",    badge: "bg-red-100 text-red-700",       label: "Incident logged" },
+  note:          { dot: "bg-gray-400",   badge: "bg-gray-100 text-gray-700",     label: "Note" },
   document:      { dot: "bg-blue-500",   badge: "bg-blue-100 text-blue-700",     label: "Document uploaded" },
   ai_insight:    { dot: "bg-amber-500",  badge: "bg-amber-100 text-amber-700",   label: "AI insight" },
   doc_generated: { dot: "bg-emerald-500",badge: "bg-emerald-100 text-emerald-700", label: "Document generated" },
-  case_created:  { dot: "bg-gray-400",   badge: "bg-gray-100 text-gray-700",     label: "Case created" },
+  case_created:  { dot: "bg-gray-400",   badge: "bg-gray-100 text-gray-700",     label: "Record created" },
 };
 
 export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
@@ -44,6 +45,10 @@ export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
     queryKey: ["generated_documents", caseId],
     queryFn: async () => (await supabase.from("generated_documents").select("*").eq("case_id", caseId)).data ?? [],
   });
+  const { data: notes } = useQuery({
+    queryKey: ["notes", caseId],
+    queryFn: async () => (await supabase.from("notes").select("*").eq("case_id", caseId)).data ?? [],
+  });
 
   const entries = useMemo<Entry[]>(() => {
     const out: Entry[] = [];
@@ -61,9 +66,14 @@ export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
       label: "Incident logged", description: i.title,
       onTap: () => onJumpToTab("incidents"),
     }));
+    (notes ?? []).forEach((n: any) => out.push({
+      id: `note-${n.id}`, at: n.created_at, type: "note",
+      label: "Note", description: n.content.length > 80 ? n.content.slice(0, 80) + "…" : n.content,
+      onTap: () => onJumpToTab("incidents"),
+    }));
     (documents ?? []).forEach((d: any) => out.push({
       id: `doc-${d.id}`, at: d.created_at, type: "document",
-      label: "Document uploaded", description: d.file_name,
+      label: "Document uploaded", description: d.display_name ?? d.file_name,
       onTap: () => onJumpToTab("documents"),
     }));
     (insights ?? []).forEach((ins: any) => out.push({
@@ -77,7 +87,7 @@ export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
       onTap: () => onJumpToTab("ai"),
     }));
     return out.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-  }, [caseRow, incidents, documents, insights, generated, onJumpToTab]);
+  }, [caseRow, incidents, notes, documents, insights, generated, onJumpToTab]);
 
   function exportTxt() {
     const lines = [
