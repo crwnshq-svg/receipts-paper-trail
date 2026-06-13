@@ -186,10 +186,11 @@ function CaseDetail() {
   );
 }
 
-function IncidentsTab({ caseId, incidents, onChange }: {
-  caseId: string; incidents: any[]; onChange: () => void;
+function IncidentsTab({ caseId, incidents, autoOpen, onChange }: {
+  caseId: string; incidents: any[]; autoOpen?: boolean; onChange: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => { if (autoOpen) setOpen(true); }, [autoOpen]);
   const [title, setTitle] = useState("");
   const [who, setWho] = useState("");
   const [what, setWhat] = useState("");
