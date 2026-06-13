@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
+import { loadConversation, saveConversation } from "@/lib/conversation.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
 import { setPrefill, popPrefill } from "@/lib/prefill";
 
@@ -41,8 +42,22 @@ const RECIPIENTS = ["Court", "HR Department", "Labor Board", "Housing Authority"
 
 // ============================== Structured response types ==============================
 
+type StructuredActionType =
+  | "generate_document"
+  | "upload_evidence"
+  | "log_incident"
+  | "file_complaint"
+  | "find_resource"
+  | "send_preservation_demand"
+  | "log_witness"
+  | "create_written_record"
+  | "draft_followup_email"
+  | "generate_police_report"
+  | "generate_footage_request"
+  | "log_spoliation";
+
 type StructuredAction = {
-  type: "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource";
+  type: StructuredActionType;
   label: string;
   prefill?: Record<string, any>;
 };
@@ -152,12 +167,60 @@ export function AiTab({ caseId, isPaid, questionsUsed }: {
 
 // ============================== Chat ==============================
 
-function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
+function ChatPanel(props: {
   caseId: string; isPaid: boolean; remaining: number;
   onConsumed: (used: number) => void; onLimitHit: () => void;
 }) {
+  const loadFn = useServerFn(loadConversation);
+  const [loaded, setLoaded] = useState(false);
+  const [initial, setInitial] = useState<UIMessage[]>([]);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await loadFn({ data: { caseId: props.caseId } });
+        if (cancelled) return;
+        setInitial((res.messages ?? []) as UIMessage[]);
+        setStartedAt(res.started_at);
+      } catch (err) {
+        console.warn("Failed to load chat history", err);
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [props.caseId, loadFn]);
+
+  if (!loaded) {
+    return (
+      <Card className="overflow-hidden">
+        <div className="border-b p-4 flex items-center gap-2">
+          <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
+          <div>
+            <div className="font-medium text-sm">Receipts AI</div>
+            <div className="text-xs text-muted-foreground">Loading conversation…</div>
+          </div>
+        </div>
+        <div className="h-[480px] flex items-center justify-center text-xs text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      </Card>
+    );
+  }
+
+  return <ChatPanelInner {...props} initialMessages={initial} startedAt={startedAt} />;
+}
+
+function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, initialMessages, startedAt }: {
+  caseId: string; isPaid: boolean; remaining: number;
+  onConsumed: (used: number) => void; onLimitHit: () => void;
+  initialMessages: UIMessage[]; startedAt: string | null;
+}) {
   const [input, setInput] = useState("");
   const consume = useServerFn(consumeAiQuestion);
+  const saveFn = useServerFn(saveConversation);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -193,8 +256,15 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
   })).current;
 
   const { messages, sendMessage, status } = useChat({
+    id: caseId,
+    messages: initialMessages,
     transport,
     onError: (err) => toast.error(err.message || "Chat failed"),
+    onFinish: ({ messages: latest }) => {
+      saveFn({ data: { caseId, messages: latest as any[] } }).catch((err) =>
+        console.warn("Failed to save chat history", err),
+      );
+    },
   });
 
   const isLoading = status === "submitted" || status === "streaming";
@@ -226,6 +296,16 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
     await doSend(input);
   }
 
+  const historyLabel = useMemo(() => {
+    if (!startedAt) return null;
+    const days = Math.floor((Date.now() - new Date(startedAt).getTime()) / 86400000);
+    if (days <= 0) return "Conversation started today";
+    if (days === 1) return "Conversation started yesterday";
+    if (days < 30) return `Conversation started ${days} days ago`;
+    if (days < 365) return `Conversation started ${Math.floor(days / 30)} mo ago`;
+    return `Conversation started ${new Date(startedAt).toLocaleDateString()}`;
+  }, [startedAt]);
+
   return (
     <Card className="overflow-hidden">
       <div className="border-b p-4 flex items-center justify-between gap-3">
@@ -240,6 +320,12 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
           {isPaid ? "Unlimited" : `${remaining} of ${FREE_AI_QUESTIONS} questions remaining`}
         </div>
       </div>
+
+      {historyLabel && messages.length > 0 && (
+        <div className="px-4 py-1.5 border-b bg-secondary/40 text-[10px] uppercase tracking-wide text-muted-foreground text-center">
+          {historyLabel} · {messages.length} message{messages.length === 1 ? "" : "s"}
+        </div>
+      )}
 
       <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
         {messages.length === 0 && (
@@ -428,6 +514,38 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
       }
       if (a.type === "file_complaint" || a.type === "find_resource") {
         navigate({ to: "/resources" } as any);
+        return;
+      }
+
+      // New specialized action types — all open Document Workshop with a
+      // document_type pre-selected, except log_witness which opens the
+      // incident form pre-filled with a witness category.
+      const specializedDocType: Record<string, string> = {
+        send_preservation_demand: "Preservation Demand Letter",
+        create_written_record: "Contemporaneous Written Record",
+        draft_followup_email: "Follow-Up Email",
+        generate_police_report: "Police Report Summary",
+        generate_footage_request: "Business Footage Request Letter",
+        log_spoliation: "Spoliation of Evidence Notice",
+      };
+      if (a.type in specializedDocType) {
+        const docType = specializedDocType[a.type];
+        setPrefill("document", {
+          ...(a.prefill ?? {}),
+          documentType: docType,
+          actionLabel: a.label,
+        });
+        navigate({ to: "/cases/$caseId", params: { caseId },
+          search: { tab: "ai", generate: docType } } as any);
+        return;
+      }
+      if (a.type === "log_witness") {
+        setPrefill("incident", {
+          title: "Witness account",
+          ...(a.prefill ?? {}),
+        });
+        navigate({ to: "/cases/$caseId", params: { caseId },
+          search: { tab: "incidents", action: "new" } } as any);
         return;
       }
     } catch (err: any) {
