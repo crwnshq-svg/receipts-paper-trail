@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell, Sparkles, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { popPrefill } from "@/lib/prefill";
+import { analyzeIncident } from "@/lib/document-intelligence.functions";
 
 type Incident = {
   id: string;
@@ -28,6 +36,7 @@ type Incident = {
   location: string | null;
   notes: string | null;
   document_ids?: unknown;
+  clarifying_questions?: unknown;
   created_at: string;
 };
 
@@ -44,6 +53,13 @@ type Note = {
 function toIds(value: unknown): string[] {
   return Array.isArray(value) ? (value as string[]) : [];
 }
+
+function toQuestions(value: unknown): string[] {
+  return Array.isArray(value)
+    ? (value as unknown[]).filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+    : [];
+}
+
 
 export function ActivityTab({
   caseId,
