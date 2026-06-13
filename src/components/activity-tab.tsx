@@ -75,6 +75,10 @@ export function ActivityTab({
   const qc = useQueryClient();
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
+  const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
+  const callAnalyze = useServerFn(analyzeIncident);
+
 
   useEffect(() => {
     if (autoOpen) setIncidentOpen(true);
