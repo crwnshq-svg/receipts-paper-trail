@@ -24,6 +24,7 @@ export const Route = createFileRoute("/auth")({
       { name: "description", content: "Sign in or create your free Receipts account." },
     ],
   }),
+  ssr: false,
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
