@@ -22,6 +22,7 @@ import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases_.new'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
+import { Route as AuthenticatedCasesCaseIdDocumentsDocIdRouteImport } from './routes/_authenticated/cases.$caseId.documents.$docId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -89,6 +90,12 @@ const AuthenticatedCasesCaseIdRoute =
     path: '/cases/$caseId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCasesCaseIdDocumentsDocIdRoute =
+  AuthenticatedCasesCaseIdDocumentsDocIdRouteImport.update({
+    id: '/documents/$docId',
+    path: '/documents/$docId',
+    getParentRoute: () => AuthenticatedCasesCaseIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -100,9 +107,10 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
-  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
+  '/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -114,9 +122,10 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
-  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
+  '/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -130,9 +139,10 @@ export interface FileRoutesById {
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
-  '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/_authenticated/cases_/new': typeof AuthenticatedCasesNewRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
+  '/_authenticated/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/cases/new'
     | '/cases/'
+    | '/cases/$caseId/documents/$docId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/cases/new'
     | '/cases'
+    | '/cases/$caseId/documents/$docId'
   id:
     | '__root__'
     | '/'
@@ -178,6 +190,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases_/new'
     | '/_authenticated/cases/'
+    | '/_authenticated/cases/$caseId/documents/$docId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -282,15 +295,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesCaseIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cases/$caseId/documents/$docId': {
+      id: '/_authenticated/cases/$caseId/documents/$docId'
+      path: '/documents/$docId'
+      fullPath: '/cases/$caseId/documents/$docId'
+      preLoaderRoute: typeof AuthenticatedCasesCaseIdDocumentsDocIdRouteImport
+      parentRoute: typeof AuthenticatedCasesCaseIdRoute
+    }
   }
 }
+
+interface AuthenticatedCasesCaseIdRouteChildren {
+  AuthenticatedCasesCaseIdDocumentsDocIdRoute: typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
+}
+
+const AuthenticatedCasesCaseIdRouteChildren: AuthenticatedCasesCaseIdRouteChildren =
+  {
+    AuthenticatedCasesCaseIdDocumentsDocIdRoute:
+      AuthenticatedCasesCaseIdDocumentsDocIdRoute,
+  }
+
+const AuthenticatedCasesCaseIdRouteWithChildren =
+  AuthenticatedCasesCaseIdRoute._addFileChildren(
+    AuthenticatedCasesCaseIdRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRoute
-  AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
+  AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRouteWithChildren
   AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
   AuthenticatedCasesIndexRoute: typeof AuthenticatedCasesIndexRoute
 }
@@ -300,7 +335,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedResourcesRoute: AuthenticatedResourcesRoute,
-  AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
+  AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRouteWithChildren,
   AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,
   AuthenticatedCasesIndexRoute: AuthenticatedCasesIndexRoute,
 }
