@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { ArrowLeft, Plus, Upload, Trash2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { AiTab } from "@/components/ai-tab";
+import { ActivityTab } from "@/components/activity-tab";
 import { DocumentCard } from "@/components/document-card";
 import { TimelineTab } from "@/components/timeline-tab";
 import { FREE_STORAGE_BYTES } from "@/lib/constants";
@@ -162,14 +163,14 @@ function CaseDetail() {
 
         <Tabs value={initialTab} onValueChange={(v) => switchTab(v as any)}>
           <TabsList>
-            <TabsTrigger value="incidents">Incidents ({incidents?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="incidents">Activity ({incidents?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="documents">Documents ({docs?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="ai">AI tools</TabsTrigger>
           </TabsList>
 
           <TabsContent value="incidents" className="mt-4">
-            <IncidentsTab caseId={caseId} incidents={incidents ?? []}
+            <ActivityTab caseId={caseId} incidents={incidents ?? []}
               autoOpen={search?.action === "new"}
               onChange={() => qc.invalidateQueries({ queryKey: ["incidents", caseId] })} />
           </TabsContent>
@@ -214,110 +215,6 @@ function CaseDetail() {
         </Dialog>
       </div>
     </AppShell>
-  );
-}
-
-function IncidentsTab({ caseId, incidents, autoOpen, onChange }: {
-  caseId: string; incidents: any[]; autoOpen?: boolean; onChange: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  useEffect(() => { if (autoOpen) setOpen(true); }, [autoOpen]);
-  const [title, setTitle] = useState("");
-  const [who, setWho] = useState("");
-  const [what, setWhat] = useState("");
-  const [notes, setNotes] = useState("");
-  const [location, setLocation] = useState("");
-  const [occurredAt, setOccurredAt] = useState(() => new Date().toISOString().slice(0, 16));
-  const [saving, setSaving] = useState(false);
-
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.from("incidents").insert({
-        case_id: caseId, user_id: user.id,
-        title, who_involved: who || null, what_happened: what,
-        notes: notes || null, location: location || null,
-        occurred_at: new Date(occurredAt).toISOString(),
-      });
-      if (error) throw error;
-      toast.success("Incident logged");
-      setOpen(false);
-      setTitle(""); setWho(""); setWhat(""); setNotes(""); setLocation("");
-      setOccurredAt(new Date().toISOString().slice(0, 16));
-      onChange();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
-    } finally { setSaving(false); }
-  }
-
-  async function remove(id: string) {
-    if (!confirm("Delete this incident?")) return;
-    const { error } = await supabase.from("incidents").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); onChange(); }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary text-primary-foreground hover:bg-accent">
-              <Plus className="mr-1 h-4 w-4" /> Log incident
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Log an incident</DialogTitle></DialogHeader>
-            <form onSubmit={add} className="space-y-3">
-              <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="What happened, in a few words" /></Field>
-              <Field label="When"><Input type="datetime-local" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} required /></Field>
-              <Field label="Who was involved"><Input value={who} onChange={(e) => setWho(e.target.value)} placeholder="Names or roles" /></Field>
-              <Field label="What happened"><Textarea value={what} onChange={(e) => setWhat(e.target.value)} required rows={4} /></Field>
-              <Field label="Location (optional)"><Input value={location} onChange={(e) => setLocation(e.target.value)} /></Field>
-              <Field label="Notes (optional)"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></Field>
-              <DialogFooter>
-                <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground">
-                  {saving ? "Saving…" : "Save incident"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {incidents.length === 0 ? (
-        <Card className="p-8 text-center text-sm text-muted-foreground">
-          No incidents yet. Start logging as soon as things happen — details fade fast.
-        </Card>
-      ) : (
-        <ol className="relative border-l border-border ml-3 space-y-4">
-          {incidents.map((inc) => (
-            <li key={inc.id} className="pl-5 relative">
-              <span className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-gold ring-4 ring-background"></span>
-              <Card className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(inc.occurred_at).toLocaleString()}
-                    </div>
-                    <div className="mt-0.5 font-medium">{inc.title}</div>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => remove(inc.id)} className="text-muted-foreground hover:text-destructive">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                {inc.who_involved && <div className="mt-2 text-sm"><span className="text-muted-foreground">Who: </span>{inc.who_involved}</div>}
-                <div className="mt-1 text-sm whitespace-pre-wrap">{inc.what_happened}</div>
-                {inc.location && <div className="mt-1 text-xs text-muted-foreground">Location: {inc.location}</div>}
-                {inc.notes && <div className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">{inc.notes}</div>}
-              </Card>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
   );
 }
 

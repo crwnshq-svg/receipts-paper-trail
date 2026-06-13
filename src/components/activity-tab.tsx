@@ -1,0 +1,528 @@
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell } from "lucide-react";
+import { toast } from "sonner";
+import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
+
+type Incident = {
+  id: string;
+  case_id: string;
+  title: string;
+  occurred_at: string;
+  who_involved: string | null;
+  what_happened: string;
+  location: string | null;
+  notes: string | null;
+  document_ids?: unknown;
+  created_at: string;
+};
+
+type Note = {
+  id: string;
+  case_id: string;
+  content: string;
+  reminder_at: string | null;
+  reminder_sent: boolean;
+  document_ids?: unknown;
+  created_at: string;
+};
+
+function toIds(value: unknown): string[] {
+  return Array.isArray(value) ? (value as string[]) : [];
+}
+
+export function ActivityTab({
+  caseId,
+  incidents,
+  autoOpen,
+  onChange,
+}: {
+  caseId: string;
+  incidents: Incident[];
+  autoOpen?: boolean;
+  onChange: () => void;
+}) {
+  const qc = useQueryClient();
+  const [incidentOpen, setIncidentOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+
+  useEffect(() => {
+    if (autoOpen) setIncidentOpen(true);
+  }, [autoOpen]);
+
+  const { data: notes = [] } = useQuery({
+    queryKey: ["notes", caseId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notes")
+        .select("*")
+        .eq("case_id", caseId)
+        .order("created_at", { ascending: false });
+      return (data ?? []) as Note[];
+    },
+  });
+
+  const refetchNotes = () =>
+    qc.invalidateQueries({ queryKey: ["notes", caseId] });
+
+  // Unified chronological feed
+  type Feed =
+    | { kind: "incident"; at: string; data: Incident }
+    | { kind: "note"; at: string; data: Note };
+
+  const feed = useMemo<Feed[]>(() => {
+    const items: Feed[] = [
+      ...incidents.map<Feed>((i) => ({
+        kind: "incident",
+        at: i.occurred_at,
+        data: i,
+      })),
+      ...notes.map<Feed>((n) => ({
+        kind: "note",
+        at: n.created_at,
+        data: n,
+      })),
+    ];
+    return items.sort((a, b) => +new Date(b.at) - +new Date(a.at));
+  }, [incidents, notes]);
+
+  async function removeIncident(id: string) {
+    if (!confirm("Delete this incident?")) return;
+    const { error } = await supabase.from("incidents").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Deleted");
+      onChange();
+    }
+  }
+
+  async function removeNote(id: string) {
+    if (!confirm("Delete this note?")) return;
+    const { error } = await supabase.from("notes").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Deleted");
+      refetchNotes();
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setNoteOpen(true)}
+          className="border-muted-foreground/30"
+        >
+          <StickyNote className="mr-1 h-4 w-4" /> Add Note
+        </Button>
+        <Button
+          onClick={() => setIncidentOpen(true)}
+          className="bg-primary text-primary-foreground hover:bg-accent"
+        >
+          <Plus className="mr-1 h-4 w-4" /> Log Incident
+        </Button>
+      </div>
+
+      <IncidentDialog
+        caseId={caseId}
+        open={incidentOpen}
+        onOpenChange={setIncidentOpen}
+        onSaved={onChange}
+      />
+      <NoteDialog
+        caseId={caseId}
+        open={noteOpen}
+        onOpenChange={setNoteOpen}
+        onSaved={refetchNotes}
+      />
+
+      {feed.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-muted-foreground">
+          No activity yet. Log an incident or add a note as things happen —
+          details fade fast.
+        </Card>
+      ) : (
+        <ol className="space-y-3">
+          {feed.map((f) =>
+            f.kind === "incident" ? (
+              <li key={`i-${f.data.id}`}>
+                <Card className="border-l-4 border-l-red-500 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+                        <AlertCircle className="h-3 w-3" /> Incident
+                        <span className="font-normal text-muted-foreground">
+                          · {new Date(f.data.occurred_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="mt-1 font-medium">{f.data.title}</div>
+                      {f.data.who_involved && (
+                        <div className="mt-1.5 text-sm">
+                          <span className="text-muted-foreground">Who: </span>
+                          {f.data.who_involved}
+                        </div>
+                      )}
+                      <div className="mt-1 text-sm whitespace-pre-wrap">
+                        {f.data.what_happened}
+                      </div>
+                      {f.data.location && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Location: {f.data.location}
+                        </div>
+                      )}
+                      {f.data.notes && (
+                        <div className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">
+                          {f.data.notes}
+                        </div>
+                      )}
+                      <AttachedDocsRow
+                        caseId={caseId}
+                        ids={toIds(f.data.document_ids)}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeIncident(f.data.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </Card>
+              </li>
+            ) : (
+              <li key={`n-${f.data.id}`}>
+                <Card className="border-l-4 border-l-muted-foreground/40 bg-muted/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <StickyNote className="h-3 w-3" /> Note
+                        <span className="font-normal">
+                          · {new Date(f.data.created_at).toLocaleString()}
+                        </span>
+                        {f.data.reminder_at && (
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] ${
+                              f.data.reminder_sent
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                            }`}
+                          >
+                            <Bell className="h-2.5 w-2.5" />
+                            {f.data.reminder_sent ? "Reminded" : "Reminder"}{" "}
+                            {new Date(f.data.reminder_at).toLocaleString([], {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5 text-sm whitespace-pre-wrap">
+                        {f.data.content}
+                      </div>
+                      <AttachedDocsRow
+                        caseId={caseId}
+                        ids={toIds(f.data.document_ids)}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeNote(f.data.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </Card>
+              </li>
+            ),
+          )}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function IncidentDialog({
+  caseId,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  caseId: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [who, setWho] = useState("");
+  const [what, setWhat] = useState("");
+  const [extraNotes, setExtraNotes] = useState("");
+  const [location, setLocation] = useState("");
+  const [occurredAt, setOccurredAt] = useState(() =>
+    new Date().toISOString().slice(0, 16),
+  );
+  const [docIds, setDocIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  function reset() {
+    setTitle("");
+    setWho("");
+    setWhat("");
+    setExtraNotes("");
+    setLocation("");
+    setOccurredAt(new Date().toISOString().slice(0, 16));
+    setDocIds([]);
+  }
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("incidents").insert({
+        case_id: caseId,
+        user_id: user.id,
+        title,
+        who_involved: who || null,
+        what_happened: what,
+        notes: extraNotes || null,
+        location: location || null,
+        occurred_at: new Date(occurredAt).toISOString(),
+        document_ids: docIds as never,
+      });
+      if (error) throw error;
+      toast.success("Incident logged");
+      onOpenChange(false);
+      reset();
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Log an Incident</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={add} className="space-y-3">
+          <Field label="Title">
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              placeholder="What happened, in a few words"
+            />
+          </Field>
+          <Field label="When">
+            <Input
+              type="datetime-local"
+              value={occurredAt}
+              onChange={(e) => setOccurredAt(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Who was involved">
+            <Input
+              value={who}
+              onChange={(e) => setWho(e.target.value)}
+              placeholder="Names or roles"
+            />
+          </Field>
+          <Field label="What happened">
+            <Textarea
+              value={what}
+              onChange={(e) => setWhat(e.target.value)}
+              required
+              rows={4}
+            />
+          </Field>
+          <Field label="Location (optional)">
+            <Input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+          </Field>
+          <Field label="Notes (optional)">
+            <Textarea
+              value={extraNotes}
+              onChange={(e) => setExtraNotes(e.target.value)}
+              rows={2}
+            />
+          </Field>
+
+          <div className="space-y-1.5">
+            <Label>Attach Evidence</Label>
+            <AttachDocs caseId={caseId} value={docIds} onChange={setDocIds} />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="bg-primary text-primary-foreground"
+            >
+              {saving ? "Saving…" : "Save incident"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NoteDialog({
+  caseId,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  caseId: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [content, setContent] = useState("");
+  const [setReminder, setSetReminder] = useState(false);
+  const [reminderAt, setReminderAt] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 16);
+  });
+  const [docIds, setDocIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  function reset() {
+    setContent("");
+    setSetReminder(false);
+    setDocIds([]);
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    setReminderAt(d.toISOString().slice(0, 16));
+  }
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("notes").insert({
+        case_id: caseId,
+        user_id: user.id,
+        content,
+        reminder_at: setReminder ? new Date(reminderAt).toISOString() : null,
+        document_ids: docIds as never,
+      });
+      if (error) throw error;
+      toast.success("Note saved");
+      onOpenChange(false);
+      reset();
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add a Note</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={add} className="space-y-3">
+          <Field label="Note">
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              required
+              rows={4}
+              placeholder="A thought, reminder, or observation that doesn't rise to a formal incident."
+            />
+          </Field>
+
+          <div className="rounded-md border border-border p-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={setReminder}
+                onChange={(e) => setSetReminder(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <Bell className="h-3.5 w-3.5" /> Set a reminder
+            </label>
+            {setReminder && (
+              <div className="mt-2">
+                <Input
+                  type="datetime-local"
+                  value={reminderAt}
+                  onChange={(e) => setReminderAt(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  We'll send you a notification at this time.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Attach Evidence (optional)</Label>
+            <AttachDocs caseId={caseId} value={docIds} onChange={setDocIds} />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="bg-primary text-primary-foreground"
+            >
+              {saving ? "Saving…" : "Save note"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

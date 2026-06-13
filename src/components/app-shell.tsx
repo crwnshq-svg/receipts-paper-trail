@@ -58,7 +58,37 @@ export function AppShell({ children }: { children: ReactNode }) {
       channel = ch;
       if (cancelled) supabase.removeChannel(ch);
     });
-    return () => { cancelled = true; if (channel) supabase.removeChannel(channel); };
+    // Note reminders: check every 60s for due reminders and fan out notifications
+    let interval: ReturnType<typeof setInterval> | null = null;
+    async function fireDueReminders() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const nowIso = new Date().toISOString();
+      const { data: due } = await supabase
+        .from("notes")
+        .select("id, case_id, content, reminder_at")
+        .eq("user_id", user.id)
+        .eq("reminder_sent", false)
+        .not("reminder_at", "is", null)
+        .lte("reminder_at", nowIso);
+      if (!due || due.length === 0) return;
+      for (const n of due) {
+        const preview = n.content.length > 120 ? n.content.slice(0, 120) + "…" : n.content;
+        await supabase.from("notifications").insert({
+          user_id: user.id,
+          type: "note_reminder",
+          title: "Note reminder",
+          body: preview,
+          related_case_id: n.case_id,
+        });
+        await supabase.from("notes").update({ reminder_sent: true }).eq("id", n.id);
+      }
+      qc.invalidateQueries({ queryKey: ["notifications-unread"] });
+      qc.invalidateQueries({ queryKey: ["notes"] });
+    }
+    fireDueReminders().catch(() => {});
+    interval = setInterval(() => fireDueReminders().catch(() => {}), 60_000);
+    return () => { cancelled = true; if (channel) supabase.removeChannel(channel); if (interval) clearInterval(interval); };
   }, [qc, touch]);
 
   const nav = [
