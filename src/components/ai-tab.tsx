@@ -173,7 +173,13 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
 }) {
   const [input, setInput] = useState("");
   const consume = useServerFn(consumeAiQuestion);
+  const loadFn = useServerFn(loadConversation);
+  const saveFn = useServerFn(saveConversation);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
 
   useEffect(() => {
     const key = `receipts:insight-followup:${caseId}`;
@@ -190,6 +196,24 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
       sessionStorage.removeItem(key);
     }
   }, [caseId]);
+
+  // Load persisted conversation history once per case.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await loadFn({ data: { caseId } });
+        if (cancelled) return;
+        setInitialMessages((res.messages ?? []) as UIMessage[]);
+        setStartedAt(res.started_at);
+      } catch (err) {
+        console.warn("Failed to load chat history", err);
+      } finally {
+        if (!cancelled) setHistoryLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [caseId, loadFn]);
 
   const transport = useRef(new DefaultChatTransport({
     api: "/api/chat",
@@ -208,8 +232,16 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
   })).current;
 
   const { messages, sendMessage, status } = useChat({
+    id: caseId,
+    messages: initialMessages,
     transport,
     onError: (err) => toast.error(err.message || "Chat failed"),
+    onFinish: ({ messages: latest }) => {
+      // Persist the full transcript after each assistant turn completes.
+      saveFn({ data: { caseId, messages: latest as any[] } }).catch((err) =>
+        console.warn("Failed to save chat history", err),
+      );
+    },
   });
 
   const isLoading = status === "submitted" || status === "streaming";
@@ -240,6 +272,17 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
     e.preventDefault();
     await doSend(input);
   }
+
+  const historyLabel = useMemo(() => {
+    if (!startedAt) return null;
+    const days = Math.floor((Date.now() - new Date(startedAt).getTime()) / 86400000);
+    if (days <= 0) return "Conversation started today";
+    if (days === 1) return "Conversation started yesterday";
+    if (days < 30) return `Conversation started ${days} days ago`;
+    if (days < 365) return `Conversation started ${Math.floor(days / 30)} mo ago`;
+    return `Conversation started ${new Date(startedAt).toLocaleDateString()}`;
+  }, [startedAt]);
+
 
   return (
     <Card className="overflow-hidden">
