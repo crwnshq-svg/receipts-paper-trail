@@ -90,7 +90,7 @@ Produce the 4-sentence summary now.`,
         });
         summary = text;
       }
-      summary = ensureDisclaimer(summary);
+      // Summary intentionally excludes the legal disclaimer (PART 2).
     } catch (err) {
       console.error("summary generation failed", err);
       summary = "Summary unavailable. Open the document to review its contents.";
