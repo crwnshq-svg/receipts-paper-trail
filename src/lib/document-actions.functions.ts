@@ -63,7 +63,7 @@ export const aiEditGeneratedDocument = createServerFn({ method: "POST" })
     if (error) throw error;
     if (!doc) throw new Error("Document not found");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("AI not configured");
     const gateway = createLovableAiGatewayProvider(apiKey);
 

@@ -96,7 +96,7 @@ export const generateDocument = createServerFn({ method: "POST" })
       docRes.data ?? [],
       data.keyFacts ?? "",
     );
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("AI not configured");
 
     const tone: AiTone = (profile?.ai_tone as AiTone) ?? "straightforward";
