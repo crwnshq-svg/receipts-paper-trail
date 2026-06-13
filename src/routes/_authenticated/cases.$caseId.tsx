@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { ArrowLeft, Plus, Upload, Trash2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { AiTab } from "@/components/ai-tab";
+import { ActivityTab } from "@/components/activity-tab";
 import { DocumentCard } from "@/components/document-card";
 import { TimelineTab } from "@/components/timeline-tab";
 import { FREE_STORAGE_BYTES } from "@/lib/constants";
@@ -162,14 +163,14 @@ function CaseDetail() {
 
         <Tabs value={initialTab} onValueChange={(v) => switchTab(v as any)}>
           <TabsList>
-            <TabsTrigger value="incidents">Incidents ({incidents?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="incidents">Activity ({incidents?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="documents">Documents ({docs?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="ai">AI tools</TabsTrigger>
           </TabsList>
 
           <TabsContent value="incidents" className="mt-4">
-            <IncidentsTab caseId={caseId} incidents={incidents ?? []}
+            <ActivityTab caseId={caseId} incidents={incidents ?? []}
               autoOpen={search?.action === "new"}
               onChange={() => qc.invalidateQueries({ queryKey: ["incidents", caseId] })} />
           </TabsContent>
