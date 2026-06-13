@@ -26,7 +26,7 @@ type Incident = {
   what_happened: string;
   location: string | null;
   notes: string | null;
-  document_ids?: string[] | null;
+  document_ids?: unknown;
   created_at: string;
 };
 
@@ -36,9 +36,13 @@ type Note = {
   content: string;
   reminder_at: string | null;
   reminder_sent: boolean;
-  document_ids?: string[] | null;
+  document_ids?: unknown;
   created_at: string;
 };
+
+function toIds(value: unknown): string[] {
+  return Array.isArray(value) ? (value as string[]) : [];
+}
 
 export function ActivityTab({
   caseId,
