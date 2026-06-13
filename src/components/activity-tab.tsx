@@ -366,9 +366,64 @@ export function ActivityTab({
           )}
         </ol>
       )}
+
+      <Sheet open={!!answerQ} onOpenChange={(v) => { if (!v) setAnswerQ(null); }}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle className="text-base">Answer this question</SheetTitle>
+          </SheetHeader>
+          {answerQ && (
+            <AnswerForm
+              question={answerQ.question}
+              onCancel={() => setAnswerQ(null)}
+              onSubmit={(text) => submitAnswer(answerQ.incidentId, answerQ.question, text)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
+
+function AnswerForm({
+  question,
+  onSubmit,
+  onCancel,
+}: {
+  question: string;
+  onSubmit: (text: string) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        setSaving(true);
+        try { await onSubmit(text.trim()); } finally { setSaving(false); }
+      }}
+      className="mt-3 space-y-3"
+    >
+      <p className="text-sm text-foreground/90">{question}</p>
+      <Textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={question}
+        rows={4}
+        autoFocus
+      />
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" disabled={saving || !text.trim()} className="bg-primary text-primary-foreground">
+          {saving ? "Saving…" : "Submit Answer"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 
 function Field({
   label,
