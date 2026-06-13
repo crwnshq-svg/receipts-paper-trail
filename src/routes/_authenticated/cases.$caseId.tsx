@@ -139,6 +139,7 @@ function CaseDetail() {
 
           <TabsContent value="incidents" className="mt-4">
             <IncidentsTab caseId={caseId} incidents={incidents ?? []}
+              autoOpen={search?.action === "new"}
               onChange={() => qc.invalidateQueries({ queryKey: ["incidents", caseId] })} />
           </TabsContent>
 
@@ -147,6 +148,7 @@ function CaseDetail() {
               caseId={caseId}
               docs={docs ?? []}
               isPaid={isPaid}
+              autoUpload={search?.action === "upload"}
               onChange={() => {
                 qc.invalidateQueries({ queryKey: ["documents", caseId] });
                 qc.invalidateQueries({ queryKey: ["storage-usage"] });
