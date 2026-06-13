@@ -9,6 +9,8 @@ import {
   buildFilenameSuggestionPrompt,
   isGenericFilename,
   ensureDisclaimer,
+  HEDGED_CLOSING,
+  HEDGED_LANGUAGE_RULES,
 } from "./insight-prompts";
 
 const DocIdInput = z.object({ documentId: z.string().uuid() });
