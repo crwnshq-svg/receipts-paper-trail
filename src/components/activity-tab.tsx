@@ -458,8 +458,9 @@ function IncidentDialog({
   caseId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSaved: () => void;
+  onSaved: (newIncidentId?: string) => void;
 }) {
+
   const [title, setTitle] = useState("");
   const [who, setWho] = useState("");
   const [what, setWhat] = useState("");
