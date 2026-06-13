@@ -534,7 +534,50 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
   const [keyFacts, setKeyFacts] = useState("");
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
   const generateFn = useServerFn(generateDocument);
+
+  // Apply AI-supplied prefill once on mount: jump straight to the right step.
+  useEffect(() => {
+    const pre = popPrefill<Record<string, any>>("document");
+    if (!pre) return;
+    const marks: Record<string, boolean> = {};
+    let nextStep: typeof step = "type";
+    if (typeof pre.documentType === "string") {
+      if (!isPaid) { onLocked(); return; }
+      setSelectedType(pre.documentType);
+      marks.documentType = true;
+      nextStep = "recipient";
+    }
+    if (typeof pre.recipientType === "string") {
+      setRecipientType(pre.recipientType);
+      marks.recipientType = true;
+      if (nextStep === "recipient") nextStep = "build";
+    }
+    if (typeof pre.recipientName === "string") {
+      setRecipientName(pre.recipientName);
+      marks.recipientName = true;
+    } else if (typeof pre.recipient_name === "string") {
+      setRecipientName(pre.recipient_name);
+      marks.recipientName = true;
+    }
+    if (typeof pre.keyFacts === "string" || typeof pre.body === "string" || typeof pre.description === "string") {
+      setKeyFacts(pre.keyFacts ?? pre.body ?? pre.description);
+      marks.keyFacts = true;
+    }
+    if (Array.isArray(pre.incident_ids)) {
+      setSelectedIncidents(pre.incident_ids.filter((x: any) => typeof x === "string"));
+      marks.incidents = true;
+    }
+    if (Array.isArray(pre.document_ids)) {
+      setSelectedDocs(pre.document_ids.filter((x: any) => typeof x === "string"));
+      marks.documents = true;
+    }
+    setPrefilled(marks);
+    if (nextStep !== "type") setStep(nextStep);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   function pickType(t: string) {
     if (!isPaid) { onLocked(); return; }
