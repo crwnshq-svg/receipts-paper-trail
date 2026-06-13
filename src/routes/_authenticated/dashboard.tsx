@@ -41,13 +41,7 @@ function relTime(iso: string) {
   return `${mo} month${mo === 1 ? "" : "s"} ago`;
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  active: "bg-sky-500/15 text-sky-400 border-sky-500/30",
-  ongoing: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  escalated: "bg-red-500/15 text-red-400 border-red-500/30",
-  resolved: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  archived: "bg-muted text-muted-foreground border-border",
-};
+// status_level (record/case) drives the badge color now; old `status` field unused for badges.
 
 const RESOURCE_BY_MODULE: Record<string, string> = {
   landlord_tenant: "Did you know? Your landlord must give 24 hours notice before entering your home in California.",
@@ -293,7 +287,7 @@ function Dashboard() {
                   const strength = c.strength_score ?? 0;
                   const days = Math.max(0, Math.floor((Date.now() - +new Date(c.created_at)) / 86400000));
                   const strengthColor = strength >= 60 ? "bg-emerald-500" : strength >= 30 ? "bg-amber-500" : "bg-red-500";
-                  void STATUS_STYLE;
+                  
 
                   let nextAction = "Keep documenting — every detail matters";
                   if (docs === 0) nextAction = "Upload your contract or agreement";
