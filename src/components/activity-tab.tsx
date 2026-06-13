@@ -263,13 +263,22 @@ export function ActivityTab({
 function Field({
   label,
   children,
+  aiSuggested,
 }: {
   label: string;
   children: React.ReactNode;
+  aiSuggested?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        {aiSuggested && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+            ✨ AI suggested
+          </span>
+        )}
+      </div>
       {children}
     </div>
   );
