@@ -16,6 +16,7 @@ import {
 import { Plus, Trash2, StickyNote, AlertCircle, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
+import { popPrefill } from "@/lib/prefill";
 
 type Incident = {
   id: string;
