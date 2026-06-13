@@ -299,7 +299,16 @@ function ChatPanel({ caseId, isPaid, remaining, onConsumed, onLimitHit }: {
         </div>
       </div>
 
+      {historyLabel && messages.length > 0 && (
+        <div className="px-4 py-1.5 border-b bg-secondary/40 text-[10px] uppercase tracking-wide text-muted-foreground text-center">
+          {historyLabel} · {messages.length} message{messages.length === 1 ? "" : "s"}
+        </div>
+      )}
+
       <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
+        {!historyLoaded && (
+          <div className="text-xs text-muted-foreground text-center py-4">Loading conversation…</div>
+        )}
         {messages.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10">
             Ask anything about your case. The AI has your incidents and documents as context.
