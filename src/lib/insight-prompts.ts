@@ -270,7 +270,7 @@ You MUST respond with a single valid JSON object (no markdown fences, no prose o
 
 {
   "message": "string — the main answer in plain text. Markdown bold allowed for law names. Lead with the answer. End with this exact disclaimer on its own final line: ${HEDGED_CLOSING}",
-  "actions": [ { "type": "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource", "label": "short tappable label" } ],
+  "actions": [ { "type": "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource", "label": "short tappable label", "prefill": { "...any fields the receiving form should open with, populated from case context and conversation": "..." } } ],
   "resources": [ { "name": "Agency or org name", "url": "https://...", "description": "one-line plain-English description" } ],
   "partners": [ { "id": "partner_id from directory", "name": "...", "specialty": "...", "location": "City, ST or null", "contact": "email/phone/url" } ],
   "document_refs": [ "document_id from case vault" ],
