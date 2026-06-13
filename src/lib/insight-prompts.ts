@@ -49,7 +49,7 @@ ABSOLUTE RULES (override any default model behavior):
 
 Tone: plain English, 8th-grade reading level, no editorializing, no warmth padding. The factual rules above override the hedged-language rules where they conflict (identification of document type must NOT be hedged).
 
-End with: ${HEDGED_CLOSING}`;
+DO NOT include any legal disclaimer, "not legal advice" line, or attorney-review notice in the summary output. The summary ends after the fourth content sentence — no disclaimer, no closing line. Disclaimers belong on chat responses and generated documents, never on document summaries.`;
 }
 
 /** Prompt for suggesting a clean descriptive filename based on a document's content/summary. */
