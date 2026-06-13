@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell, Sparkles, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { popPrefill } from "@/lib/prefill";
+import { analyzeIncident } from "@/lib/document-intelligence.functions";
 
 type Incident = {
   id: string;
@@ -28,6 +36,7 @@ type Incident = {
   location: string | null;
   notes: string | null;
   document_ids?: unknown;
+  clarifying_questions?: unknown;
   created_at: string;
 };
 
@@ -45,6 +54,13 @@ function toIds(value: unknown): string[] {
   return Array.isArray(value) ? (value as string[]) : [];
 }
 
+function toQuestions(value: unknown): string[] {
+  return Array.isArray(value)
+    ? (value as unknown[]).filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+    : [];
+}
+
+
 export function ActivityTab({
   caseId,
   incidents,
@@ -59,6 +75,10 @@ export function ActivityTab({
   const qc = useQueryClient();
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
+  const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
+  const callAnalyze = useServerFn(analyzeIncident);
+
 
   useEffect(() => {
     if (autoOpen) setIncidentOpen(true);
@@ -120,6 +140,50 @@ export function ActivityTab({
     }
   }
 
+  // Fire-and-forget AI analysis after an incident saves.
+  async function triggerAnalysis(incidentId: string) {
+    setAnalyzingIds((s) => new Set(s).add(incidentId));
+    try {
+      await callAnalyze({ data: { incidentId } });
+    } catch (err) {
+      console.error("analyzeIncident failed", err);
+    } finally {
+      setAnalyzingIds((s) => {
+        const n = new Set(s);
+        n.delete(incidentId);
+        return n;
+      });
+      onChange();
+    }
+  }
+
+  async function dismissQuestions(incidentId: string) {
+    const { error } = await supabase
+      .from("incidents")
+      .update({ clarifying_questions: [] as never })
+      .eq("id", incidentId);
+    if (error) toast.error(error.message);
+    else onChange();
+  }
+
+  async function submitAnswer(incidentId: string, question: string, answer: string) {
+    const inc = incidents.find((i) => i.id === incidentId);
+    if (!inc) return;
+    const appended = `${inc.notes ? inc.notes + "\n\n" : ""}Q: ${question}\nA: ${answer}`;
+    const remaining = toQuestions(inc.clarifying_questions).filter((q) => q !== question);
+    const { error } = await supabase
+      .from("incidents")
+      .update({ notes: appended, clarifying_questions: remaining as never })
+      .eq("id", incidentId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Answer added to incident");
+      setAnswerQ(null);
+      onChange();
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
@@ -142,7 +206,10 @@ export function ActivityTab({
         caseId={caseId}
         open={incidentOpen}
         onOpenChange={setIncidentOpen}
-        onSaved={onChange}
+        onSaved={(newId) => {
+          onChange();
+          if (newId) void triggerAnalysis(newId);
+        }}
       />
       <NoteDialog
         caseId={caseId}
@@ -150,6 +217,7 @@ export function ActivityTab({
         onOpenChange={setNoteOpen}
         onSaved={refetchNotes}
       />
+
 
       {feed.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
@@ -160,15 +228,20 @@ export function ActivityTab({
         <ol className="space-y-3">
           {feed.map((f) =>
             f.kind === "incident" ? (
-              <li key={`i-${f.data.id}`}>
+              <li key={`i-${f.data.id}`} className="space-y-2">
                 <Card className="border-l-4 border-l-red-500 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
                         <AlertCircle className="h-3 w-3" /> Incident
                         <span className="font-normal text-muted-foreground">
                           · {new Date(f.data.occurred_at).toLocaleString()}
                         </span>
+                        {analyzingIds.has(f.data.id) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal normal-case text-muted-foreground">
+                            <Loader2 className="h-2.5 w-2.5 animate-spin" /> Analyzing…
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1 font-medium">{f.data.title}</div>
                       {f.data.who_involved && (
@@ -205,7 +278,44 @@ export function ActivityTab({
                     </Button>
                   </div>
                 </Card>
+
+                {(() => {
+                  const questions = toQuestions(f.data.clarifying_questions);
+                  if (questions.length === 0) return null;
+                  return (
+                    <Card className="border-l-4 border-l-sky-400 bg-sky-500/5 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-300">
+                          <Sparkles className="h-3 w-3" />
+                          A couple of things that could strengthen this entry
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => dismissQuestions(f.data.id)}
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label="Dismiss"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <ul className="mt-2 space-y-1">
+                        {questions.map((q, idx) => (
+                          <li key={idx}>
+                            <button
+                              type="button"
+                              onClick={() => setAnswerQ({ incidentId: f.data.id, question: q })}
+                              className="w-full rounded-md px-2 py-1.5 text-left text-sm text-foreground/90 hover:bg-sky-500/10 transition-colors"
+                            >
+                              {q}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
+                  );
+                })()}
               </li>
+
             ) : (
               <li key={`n-${f.data.id}`}>
                 <Card className="border-l-4 border-l-muted-foreground/40 bg-muted/20 p-4">
@@ -256,9 +366,64 @@ export function ActivityTab({
           )}
         </ol>
       )}
+
+      <Sheet open={!!answerQ} onOpenChange={(v) => { if (!v) setAnswerQ(null); }}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle className="text-base">Answer this question</SheetTitle>
+          </SheetHeader>
+          {answerQ && (
+            <AnswerForm
+              question={answerQ.question}
+              onCancel={() => setAnswerQ(null)}
+              onSubmit={(text) => submitAnswer(answerQ.incidentId, answerQ.question, text)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
+
+function AnswerForm({
+  question,
+  onSubmit,
+  onCancel,
+}: {
+  question: string;
+  onSubmit: (text: string) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        setSaving(true);
+        try { await onSubmit(text.trim()); } finally { setSaving(false); }
+      }}
+      className="mt-3 space-y-3"
+    >
+      <p className="text-sm text-foreground/90">{question}</p>
+      <Textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={question}
+        rows={4}
+        autoFocus
+      />
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" disabled={saving || !text.trim()} className="bg-primary text-primary-foreground">
+          {saving ? "Saving…" : "Submit Answer"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 
 function Field({
   label,
@@ -293,8 +458,9 @@ function IncidentDialog({
   caseId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSaved: () => void;
+  onSaved: (newIncidentId?: string) => void;
 }) {
+
   const [title, setTitle] = useState("");
   const [who, setWho] = useState("");
   const [what, setWhat] = useState("");
@@ -359,7 +525,7 @@ function IncidentDialog({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.from("incidents").insert({
+      const { data: inserted, error } = await supabase.from("incidents").insert({
         case_id: caseId,
         user_id: user.id,
         title,
@@ -369,12 +535,13 @@ function IncidentDialog({
         location: location || null,
         occurred_at: new Date(occurredAt).toISOString(),
         document_ids: docIds as never,
-      });
+      }).select("id").single();
       if (error) throw error;
       toast.success("Incident logged");
       onOpenChange(false);
       reset();
-      onSaved();
+      onSaved(inserted?.id);
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {

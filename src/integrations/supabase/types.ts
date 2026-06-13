@@ -380,6 +380,7 @@ export type Database = {
         Row: {
           case_id: string
           category: string | null
+          clarifying_questions: Json
           created_at: string
           date_of_incident: string | null
           document_ids: Json
@@ -401,6 +402,7 @@ export type Database = {
         Insert: {
           case_id: string
           category?: string | null
+          clarifying_questions?: Json
           created_at?: string
           date_of_incident?: string | null
           document_ids?: Json
@@ -422,6 +424,7 @@ export type Database = {
         Update: {
           case_id?: string
           category?: string | null
+          clarifying_questions?: Json
           created_at?: string
           date_of_incident?: string | null
           document_ids?: Json
