@@ -47,15 +47,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     // realtime: refresh unread on insert
     let channel: any;
+    let cancelled = false;
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      channel = supabase.channel(`notif-${user.id}`)
-        .on("postgres_changes",
+      if (cancelled || !user) return;
+      const ch = supabase.channel(`notif-${user.id}-${Math.random().toString(36).slice(2, 8)}`);
+      ch.on("postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-          () => qc.invalidateQueries({ queryKey: ["notifications-unread"] }))
-        .subscribe();
+          () => qc.invalidateQueries({ queryKey: ["notifications-unread"] }));
+      ch.subscribe();
+      channel = ch;
+      if (cancelled) supabase.removeChannel(ch);
     });
-    return () => { if (channel) supabase.removeChannel(channel); };
+    return () => { cancelled = true; if (channel) supabase.removeChannel(channel); };
   }, [qc, touch]);
 
   const nav = [
