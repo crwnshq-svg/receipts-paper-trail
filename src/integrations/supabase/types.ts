@@ -145,6 +145,7 @@ export type Database = {
           opposing_party: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["case_status"]
+          status_level: Database["public"]["Enums"]["case_status_level"]
           strength_score: number
           sub_type: string | null
           title: string
@@ -163,6 +164,7 @@ export type Database = {
           opposing_party?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["case_status"]
+          status_level?: Database["public"]["Enums"]["case_status_level"]
           strength_score?: number
           sub_type?: string | null
           title: string
@@ -181,6 +183,7 @@ export type Database = {
           opposing_party?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["case_status"]
+          status_level?: Database["public"]["Enums"]["case_status_level"]
           strength_score?: number
           sub_type?: string | null
           title?: string
@@ -379,6 +382,7 @@ export type Database = {
           category: string | null
           created_at: string
           date_of_incident: string | null
+          document_ids: Json
           flag_message: string | null
           flag_type: string | null
           formatted_entry: string | null
@@ -399,6 +403,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           date_of_incident?: string | null
+          document_ids?: Json
           flag_message?: string | null
           flag_type?: string | null
           formatted_entry?: string | null
@@ -419,6 +424,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           date_of_incident?: string | null
+          document_ids?: Json
           flag_message?: string | null
           flag_type?: string | null
           formatted_entry?: string | null
@@ -437,6 +443,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "incidents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          case_id: string
+          content: string
+          created_at: string
+          document_ids: Json
+          id: string
+          reminder_at: string | null
+          reminder_sent: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          content: string
+          created_at?: string
+          document_ids?: Json
+          id?: string
+          reminder_at?: string | null
+          reminder_sent?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          content?: string
+          created_at?: string
+          document_ids?: Json
+          id?: string
+          reminder_at?: string | null
+          reminder_sent?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_case_id_fkey"
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"
@@ -684,6 +734,7 @@ export type Database = {
     Enums: {
       case_module: "landlord_tenant" | "employer_employee" | "other_general"
       case_status: "active" | "resolved" | "archived" | "ongoing" | "escalated"
+      case_status_level: "record" | "case"
       dispute_type:
         | "landlord_tenant"
         | "employer_employee"
@@ -819,6 +870,7 @@ export const Constants = {
     Enums: {
       case_module: ["landlord_tenant", "employer_employee", "other_general"],
       case_status: ["active", "resolved", "archived", "ongoing", "escalated"],
+      case_status_level: ["record", "case"],
       dispute_type: [
         "landlord_tenant",
         "employer_employee",
