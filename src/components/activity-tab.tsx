@@ -389,7 +389,7 @@ function IncidentDialog({
           <DialogTitle>Log an Incident</DialogTitle>
         </DialogHeader>
         <form onSubmit={add} className="space-y-3">
-          <Field label="Title">
+          <Field label="Title" aiSuggested={prefilled.title}>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -397,7 +397,7 @@ function IncidentDialog({
               placeholder="What happened, in a few words"
             />
           </Field>
-          <Field label="When">
+          <Field label="When" aiSuggested={prefilled.occurredAt}>
             <Input
               type="datetime-local"
               value={occurredAt}
@@ -405,14 +405,14 @@ function IncidentDialog({
               required
             />
           </Field>
-          <Field label="Who was involved">
+          <Field label="Who was involved" aiSuggested={prefilled.who}>
             <Input
               value={who}
               onChange={(e) => setWho(e.target.value)}
               placeholder="Names or roles"
             />
           </Field>
-          <Field label="What happened">
+          <Field label="What happened" aiSuggested={prefilled.what}>
             <Textarea
               value={what}
               onChange={(e) => setWhat(e.target.value)}
@@ -420,13 +420,13 @@ function IncidentDialog({
               rows={4}
             />
           </Field>
-          <Field label="Location (optional)">
+          <Field label="Location (optional)" aiSuggested={prefilled.location}>
             <Input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
           </Field>
-          <Field label="Notes (optional)">
+          <Field label="Notes (optional)" aiSuggested={prefilled.notes}>
             <Textarea
               value={extraNotes}
               onChange={(e) => setExtraNotes(e.target.value)}
