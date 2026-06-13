@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
-import { setPrefill } from "@/lib/prefill";
+import { setPrefill, popPrefill } from "@/lib/prefill";
 
 const DISCLAIMER_LINE =
   "Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
