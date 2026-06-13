@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           type: "note_reminder",
           title: "Note reminder",
           body: preview,
-          link_url: `/cases/${n.case_id}?tab=incidents`,
+          related_case_id: n.case_id,
         });
         await supabase.from("notes").update({ reminder_sent: true }).eq("id", n.id);
       }
