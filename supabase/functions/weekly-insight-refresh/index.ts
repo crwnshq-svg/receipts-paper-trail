@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
   // Inactive users (>=7 days)
@@ -24,19 +24,18 @@ Deno.serve(async (req) => {
     for (const d of docs ?? []) {
       try {
         // Simple insight regeneration prompt using current context
-        const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Lovable-API-Key": LOVABLE_API_KEY,
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 1024,
+            system: "Return ONLY a JSON array (max 2 items) of NEW insights about this document. Each item: {insight_type, insight_title, brief_description, full_guidance}. Use only hedged language. End full_guidance with: This is not legal advice. Review with a qualified attorney for guidance specific to your situation.",
             messages: [
-              {
-                role: "system",
-                content: "Return ONLY a JSON array (max 2 items) of NEW insights about this document. Each item: {insight_type, insight_title, brief_description, full_guidance}. Use only hedged language. End full_guidance with: This is not legal advice. Review with a qualified attorney for guidance specific to your situation.",
-              },
               {
                 role: "user",
                 content: `Document: ${d.file_name}\nSummary: ${d.ai_summary ?? "(none)"}\n\nWhat new considerations might have come up in the past week?`,
@@ -45,7 +44,7 @@ Deno.serve(async (req) => {
           }),
         });
         const json = await res.json();
-        const text = json.choices?.[0]?.message?.content ?? "";
+        const text = json.content?.[0]?.text ?? "";
         const arr = parseInsights(text);
         if (arr.length === 0) continue;
         const rows = arr.slice(0, 2).map((p: any) => ({

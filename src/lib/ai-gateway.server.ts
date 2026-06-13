@@ -1,14 +1,14 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createAnthropic } from "@ai-sdk/anthropic";
 
-export function createLovableAiGatewayProvider(lovableApiKey: string) {
-  return createOpenAICompatible({
-    name: "lovable",
-    baseURL: "https://ai.gateway.lovable.dev/v1",
-    headers: {
-      "Lovable-API-Key": lovableApiKey,
-      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-    },
-  });
+// Anthropic provider. Use SUMMARY_MODEL for passive/background analysis
+// (document summaries, insights, filename suggestions, weekly re-analysis),
+// and CHAT_MODEL for user-facing chat and document generation.
+export function createAnthropicProvider(apiKey: string) {
+  return createAnthropic({ apiKey });
 }
 
-export const CHAT_MODEL = "google/gemini-3-flash-preview";
+// Back-compat alias so existing imports keep working.
+export const createLovableAiGatewayProvider = createAnthropicProvider;
+
+export const CHAT_MODEL = "claude-sonnet-4-6";
+export const SUMMARY_MODEL = "claude-haiku-4-5-20251001";

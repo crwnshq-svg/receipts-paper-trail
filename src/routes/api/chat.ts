@@ -23,7 +23,7 @@ export const Route = createFileRoute("/api/chat")({
 
         const SUPABASE_URL = process.env.SUPABASE_URL!;
         const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY!;
-        const apiKey = process.env.LOVABLE_API_KEY;
+        const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) return new Response("AI not configured", { status: 500 });
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

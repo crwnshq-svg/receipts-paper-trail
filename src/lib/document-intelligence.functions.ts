@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateText } from "ai";
-import { createLovableAiGatewayProvider, CHAT_MODEL } from "./ai-gateway.server";
+import { createLovableAiGatewayProvider, SUMMARY_MODEL as CHAT_MODEL } from "./ai-gateway.server";
 import {
   buildInsightSystemPrompt,
   buildSummarySystemPrompt,
@@ -20,7 +20,7 @@ export const analyzeDocument = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => DocIdInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("AI not configured");
 
     const { data: doc } = await supabase
