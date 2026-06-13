@@ -191,7 +191,7 @@ export function ActivityTab({
                       )}
                       <AttachedDocsRow
                         caseId={caseId}
-                        ids={(f.data.document_ids as string[]) ?? []}
+                        ids={toIds(f.data.document_ids)}
                       />
                     </div>
                     <Button
@@ -237,7 +237,7 @@ export function ActivityTab({
                       </div>
                       <AttachedDocsRow
                         caseId={caseId}
-                        ids={(f.data.document_ids as string[]) ?? []}
+                        ids={toIds(f.data.document_ids)}
                       />
                     </div>
                     <Button
