@@ -282,3 +282,145 @@ export const dismissNameSuggestion = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+// ============================================================================
+// PART 3: Incident analysis — passive AI flags + clarifying questions
+// ============================================================================
+
+const AnalyzeIncidentInput = z.object({ incidentId: z.string().uuid() });
+
+export const analyzeIncident = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => AnalyzeIncidentInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("AI not configured");
+
+    const { data: incident } = await supabase
+      .from("incidents").select("*").eq("id", data.incidentId).eq("user_id", userId).maybeSingle();
+    if (!incident) throw new Error("Incident not found");
+
+    const { data: caseRow } = await supabase
+      .from("cases").select("*").eq("id", incident.case_id).maybeSingle();
+    if (!caseRow) throw new Error("Case not found");
+
+    const { data: profile } = await supabase
+      .from("profiles").select("state").eq("id", userId).maybeSingle();
+
+    const [{ data: otherIncidents }, { data: docs }] = await Promise.all([
+      supabase.from("incidents")
+        .select("title,what_happened,occurred_at,who_involved,location")
+        .eq("case_id", incident.case_id).neq("id", incident.id)
+        .order("occurred_at", { ascending: false }).limit(20),
+      supabase.from("documents")
+        .select("file_name,ai_summary").eq("case_id", incident.case_id).limit(20),
+    ]);
+
+    const gateway = createLovableAiGatewayProvider(apiKey);
+    const model = gateway(CHAT_MODEL); // haiku — passive analysis
+
+    const systemPrompt = `You are Receipts AI analyzing a newly logged incident in the context of a user's case.
+
+CASE: "${caseRow.title}" (${caseRow.dispute_type})
+${profile?.state ? `JURISDICTION: ${profile.state}` : ""}
+
+Return ONLY a JSON object (no prose, no markdown fences) with exactly these two fields:
+{
+  "insights": [
+    {
+      "insight_type": "pattern" | "rights" | "deadline" | "law_change",
+      "insight_title": "3-7 words",
+      "brief_description": "2-3 sentences, hedged language",
+      "full_guidance": "3-4 sentences with suggested next steps, hedged language, ending with: ${HEDGED_CLOSING}"
+    }
+  ],
+  "clarifying_questions": [
+    "A single specific question that would strengthen this incident record if answered"
+  ]
+}
+
+Rules:
+- insights: 0 to 2 items. Only include when there is genuine signal (a pattern across incidents, a right the user may not know, a deadline implied). Empty array if nothing meaningful.
+- clarifying_questions: 1 to 2 items. Targeted and specific to what is ACTUALLY missing from this incident — never generic. Examples: "Was anyone else present who saw what happened?", "Do you remember the exact time the manager said this?", "Is there a written copy of the notice they handed you?". Avoid: "Can you add more detail?", "What else happened?".
+${HEDGED_LANGUAGE_RULES}`;
+
+    const userPrompt = `NEW INCIDENT JUST LOGGED:
+Title: ${incident.title}
+When: ${new Date(incident.occurred_at).toLocaleString()}
+Who: ${incident.who_involved ?? "(not specified)"}
+Location: ${incident.location ?? "(not specified)"}
+What happened: ${incident.what_happened}
+Notes: ${incident.notes ?? "(none)"}
+
+OTHER INCIDENTS IN THIS CASE:
+${(otherIncidents ?? []).map((i) => `- [${new Date(i.occurred_at).toLocaleDateString()}] ${i.title}: ${i.what_happened.slice(0, 200)}`).join("\n") || "(none)"}
+
+DOCUMENTS ON FILE:
+${(docs ?? []).map((d) => `- ${d.file_name}${d.ai_summary ? `: ${d.ai_summary.slice(0, 160)}` : ""}`).join("\n") || "(none)"}
+
+Return the JSON object now.`;
+
+    let parsed: { insights: Array<any>; clarifying_questions: string[] } = { insights: [], clarifying_questions: [] };
+    try {
+      const { text } = await generateText({ model, system: systemPrompt, prompt: userPrompt });
+      let t = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+      const start = t.indexOf("{");
+      const end = t.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        const obj = JSON.parse(t.slice(start, end + 1));
+        if (Array.isArray(obj.insights)) parsed.insights = obj.insights.slice(0, 2);
+        if (Array.isArray(obj.clarifying_questions)) {
+          parsed.clarifying_questions = obj.clarifying_questions
+            .filter((q: any) => typeof q === "string" && q.trim().length > 0)
+            .slice(0, 2);
+        }
+      }
+    } catch (err) {
+      console.error("analyzeIncident generation failed", err);
+    }
+
+    // Persist insights as passive_ai_flags
+    if (parsed.insights.length > 0) {
+      const flagRows = parsed.insights
+        .filter((p) => p && typeof p.insight_title === "string" && typeof p.brief_description === "string")
+        .map((p) => ({
+          case_id: incident.case_id,
+          user_id: userId,
+          entity_type: "incident",
+          entity_id: incident.id,
+          flag_type: typeof p.insight_type === "string" ? p.insight_type : "pattern",
+          flag_message: p.insight_title,
+          full_explanation: ensureDisclaimer(p.full_guidance ?? p.brief_description ?? ""),
+          suggested_action: p.brief_description ?? null,
+        }));
+
+      if (flagRows.length > 0) {
+        const { data: insertedFlags } = await supabase.from("passive_ai_flags").insert(flagRows).select();
+
+        const first = flagRows[0];
+        await supabase.from("incidents").update({
+          passive_ai_flagged: true,
+          flag_type: first.flag_type,
+          flag_message: first.flag_message,
+        }).eq("id", incident.id);
+
+        if (insertedFlags && insertedFlags.length > 0) {
+          await supabase.from("notifications").insert(insertedFlags.map((f) => ({
+            user_id: userId,
+            type: "insight" as const,
+            title: `New insight: ${f.flag_message}`,
+            body: f.suggested_action ?? "",
+            related_case_id: f.case_id,
+          })));
+        }
+      }
+    }
+
+    // Persist clarifying questions on the incident row
+    await supabase.from("incidents")
+      .update({ clarifying_questions: parsed.clarifying_questions as never })
+      .eq("id", incident.id);
+
+    return { ok: true, insights: parsed.insights.length, questions: parsed.clarifying_questions.length };
+  });
