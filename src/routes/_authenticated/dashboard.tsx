@@ -41,13 +41,7 @@ function relTime(iso: string) {
   return `${mo} month${mo === 1 ? "" : "s"} ago`;
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  active: "bg-sky-500/15 text-sky-400 border-sky-500/30",
-  ongoing: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  escalated: "bg-red-500/15 text-red-400 border-red-500/30",
-  resolved: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  archived: "bg-muted text-muted-foreground border-border",
-};
+// status_level (record/case) drives the badge color now; old `status` field unused for badges.
 
 const RESOURCE_BY_MODULE: Record<string, string> = {
   landlord_tenant: "Did you know? Your landlord must give 24 hours notice before entering your home in California.",
@@ -144,14 +138,14 @@ function Dashboard() {
   // greeting status line
   const activeCount = caseList.filter((c) => c.status === "active").length;
   const totalUnreadInsights = insightsAll.length;
-  let statusLine = "No cases yet — start documenting your situation today.";
+  let statusLine = "No records yet — start documenting your situation today.";
   if (hasCases) {
     if (totalUnreadInsights > 0) {
       const caseIdsWithInsights = new Set(insightsAll.map((i) => i.case_id));
-      statusLine = `You have unread insights on ${caseIdsWithInsights.size} case${caseIdsWithInsights.size === 1 ? "" : "s"}.`;
+      statusLine = `You have unread insights on ${caseIdsWithInsights.size} record${caseIdsWithInsights.size === 1 ? "" : "s"}.`;
     } else {
       const last = mostRecent?.updated_at;
-      statusLine = `You have ${activeCount} active case${activeCount === 1 ? "" : "s"}.${last ? ` Last activity ${relTime(last)}.` : ""}`;
+      statusLine = `You have ${activeCount} active record${activeCount === 1 ? "" : "s"}.${last ? ` Last activity ${relTime(last)}.` : ""}`;
     }
   }
 
@@ -167,11 +161,11 @@ function Dashboard() {
   const activity: Activity[] = [
     ...documentsAll.map<Activity>((d) => ({
       id: `d-${d.id}`, type: "doc", at: d.created_at, caseId: d.case_id,
-      text: `Uploaded "${d.file_name}" to ${caseTitleById.get(d.case_id) ?? "a case"}`,
+      text: `Uploaded "${d.file_name}" to ${caseTitleById.get(d.case_id) ?? "a record"}`,
     })),
     ...incidentsAll.map<Activity>((i) => ({
       id: `i-${i.id}`, type: "incident", at: i.created_at, caseId: i.case_id,
-      text: `Logged incident "${i.title}" in ${caseTitleById.get(i.case_id) ?? "a case"}`,
+      text: `Logged incident "${i.title}" in ${caseTitleById.get(i.case_id) ?? "a record"}`,
     })),
     ...insightsAll.map<Activity>((n) => ({
       id: `n-${n.id}`, type: "insight", at: n.created_at, caseId: n.case_id,
@@ -179,7 +173,7 @@ function Dashboard() {
     })),
     ...generatedAll.map<Activity>((g) => ({
       id: `g-${g.id}`, type: "generated", at: g.created_at, caseId: g.case_id,
-      text: `Generated ${g.document_type.replace(/_/g, " ")} for ${caseTitleById.get(g.case_id) ?? "a case"}`,
+      text: `Generated ${g.document_type.replace(/_/g, " ")} for ${caseTitleById.get(g.case_id) ?? "a record"}`,
     })),
   ].sort((a, b) => +new Date(b.at) - +new Date(a.at)).slice(0, 5);
 
@@ -210,7 +204,7 @@ function Dashboard() {
             </div>
             <Link to="/cases/new">
               <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm">
-                <Plus className="mr-1 h-4 w-4" /> New case
+                <Plus className="mr-1 h-4 w-4" /> New Record
               </Button>
             </Link>
           </div>
@@ -226,7 +220,7 @@ function Dashboard() {
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <StatCard icon={FolderOpen} label="Cases" value={String(caseList.length)} />
+            <StatCard icon={FolderOpen} label="Records" value={String(caseList.length)} />
             <Card className="rounded-xl p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" /> Plan
@@ -273,14 +267,14 @@ function Dashboard() {
             </Card>
           </div>
 
-          {/* Recent cases */}
+          {/* Recent records */}
           <div>
-            <h2 className="font-serif text-xl font-semibold">Recent cases</h2>
+            <h2 className="font-serif text-xl font-semibold">Recent records</h2>
             {!hasCases ? (
               <Card className="mt-3 rounded-xl p-8 text-center shadow-sm">
-                <p className="text-sm text-muted-foreground">No cases yet. Start by creating one.</p>
+                <p className="text-sm text-muted-foreground">No records yet. Start by creating one.</p>
                 <Link to="/cases/new">
-                  <Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">Create your first case</Button>
+                  <Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">Start your first Record</Button>
                 </Link>
               </Card>
             ) : (
@@ -293,12 +287,17 @@ function Dashboard() {
                   const strength = c.strength_score ?? 0;
                   const days = Math.max(0, Math.floor((Date.now() - +new Date(c.created_at)) / 86400000));
                   const strengthColor = strength >= 60 ? "bg-emerald-500" : strength >= 30 ? "bg-amber-500" : "bg-red-500";
-                  const statusClass = STATUS_STYLE[c.status] ?? STATUS_STYLE.active;
+                  
 
                   let nextAction = "Keep documenting — every detail matters";
                   if (docs === 0) nextAction = "Upload your contract or agreement";
-                  else if (inc < 3) nextAction = "Log more incidents to strengthen your case";
+                  else if (inc < 3) nextAction = "Log more incidents to strengthen your record";
                   else if (strength >= 60 && gens === 0) nextAction = "Ready to generate a document";
+
+                  const statusLevel = (c as any).status_level === "case" ? "case" : "record";
+                  const levelClass = statusLevel === "case"
+                    ? "bg-red-500/15 text-red-400 border-red-500/30"
+                    : "bg-amber-500/15 text-amber-400 border-amber-500/30";
 
                   return (
                     <Link key={c.id} to="/cases/$caseId" params={{ caseId: c.id }}>
@@ -309,8 +308,8 @@ function Dashboard() {
                           </div>
                         )}
                         <div className="flex flex-wrap items-center gap-2 pr-16">
-                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusClass}`}>
-                            {c.status}
+                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${levelClass}`}>
+                            {statusLevel === "case" ? "Case" : "Record"}
                           </span>
                           <span className="text-[11px] text-muted-foreground">
                             {DISPUTE_LABELS[c.dispute_type]}
@@ -320,7 +319,7 @@ function Dashboard() {
 
                         <div className="mt-3">
                           <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                            <span>Case strength</span><span>{strength}%</span>
+                            <span>Record strength</span><span>{strength}%</span>
                           </div>
                           <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                             <div className={`h-full ${strengthColor}`} style={{ width: `${Math.min(100, strength)}%` }} />
@@ -350,7 +349,7 @@ function Dashboard() {
             <h2 className="font-serif text-xl font-semibold">Recent activity</h2>
             <Card className="mt-3 rounded-xl p-5 shadow-sm">
               {activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Your activity will appear here as you build your case.</p>
+                <p className="text-sm text-muted-foreground">Your activity will appear here as you build your record.</p>
               ) : (
                 <ul className="space-y-3">
                   {activity.map((a) => (
@@ -430,7 +429,7 @@ function QuickAction({ icon: Icon, label, target, disabled }: { icon: any; label
     return (
       <Tooltip>
         <TooltipTrigger asChild><div>{button}</div></TooltipTrigger>
-        <TooltipContent>Start a case first</TooltipContent>
+        <TooltipContent>Start a record first</TooltipContent>
       </Tooltip>
     );
   }

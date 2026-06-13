@@ -84,6 +84,8 @@ export const Route = createFileRoute("/api/chat")({
 
 function buildCaseContext(caseRow: any, incidents: any[], documents: any[]) {
   const lines: string[] = [];
+  const level = caseRow.status_level === "case" ? "Case" : "Record";
+  lines.push(`Status level: ${level} (use this term when referring to the user's situation; a Record is informal documentation, a Case is escalated formal action).`);
   lines.push(`Title: ${caseRow.title}`);
   lines.push(`Dispute type: ${caseRow.dispute_type}`);
   if (caseRow.opposing_party) lines.push(`Opposing party: ${caseRow.opposing_party}`);

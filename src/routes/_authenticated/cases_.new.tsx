@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cases_/new")({
-  head: () => ({ meta: [{ title: "New case — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Start a Record — Receipts" }] }),
   component: NewCase,
 });
 
@@ -37,10 +37,10 @@ function NewCase() {
         description: description || null,
       }).select().single();
       if (error) throw error;
-      toast.success("Case created");
+      toast.success("Record started");
       navigate({ to: "/cases/$caseId", params: { caseId: data.id } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create case");
+      toast.error(err instanceof Error ? err.message : "Could not start record");
     } finally {
       setLoading(false);
     }
@@ -49,13 +49,13 @@ function NewCase() {
   return (
     <AppShell>
       <div className="mx-auto max-w-xl">
-        <h1 className="font-serif text-3xl font-semibold">New case</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Start a paper trail. You can add incidents and documents next.</p>
+        <h1 className="font-serif text-3xl font-semibold">Start a Record</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Begin a paper trail. You can promote it to a formal Case later when the situation escalates.</p>
 
         <Card className="mt-6 p-6">
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Case title</Label>
+              <Label>Title</Label>
               <Input value={title} onChange={(e) => setTitle(e.target.value)} required
                 placeholder="e.g. Apartment 4B — habitability dispute" />
             </div>
@@ -87,8 +87,8 @@ function NewCase() {
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => navigate({ to: "/cases" })}>Cancel</Button>
-              <Button type="submit" disabled={loading || !title} className="bg-primary text-primary-foreground hover:bg-accent">
-                {loading ? "Creating…" : "Create case"}
+              <Button type="submit" disabled={loading || !title} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                {loading ? "Starting…" : "Start Record"}
               </Button>
             </div>
           </form>
