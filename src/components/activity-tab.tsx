@@ -16,6 +16,7 @@ import {
 import { Plus, Trash2, StickyNote, AlertCircle, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
+import { popPrefill } from "@/lib/prefill";
 
 type Incident = {
   id: string;
@@ -262,13 +263,22 @@ export function ActivityTab({
 function Field({
   label,
   children,
+  aiSuggested,
 }: {
   label: string;
   children: React.ReactNode;
+  aiSuggested?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        {aiSuggested && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+            ✨ AI suggested
+          </span>
+        )}
+      </div>
       {children}
     </div>
   );
@@ -295,6 +305,40 @@ function IncidentDialog({
   );
   const [docIds, setDocIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
+
+  // When the dialog opens, pop any AI-supplied prefill and apply it.
+  useEffect(() => {
+    if (!open) return;
+    const pre = popPrefill<Record<string, any>>("incident");
+    if (!pre) return;
+    const marks: Record<string, boolean> = {};
+    if (typeof pre.title === "string") { setTitle(pre.title); marks.title = true; }
+    if (typeof pre.who_involved === "string") { setWho(pre.who_involved); marks.who = true; }
+    if (typeof pre.what_happened === "string") { setWhat(pre.what_happened); marks.what = true; }
+    if (typeof pre.notes === "string") { setExtraNotes(pre.notes); marks.notes = true; }
+    if (typeof pre.location === "string") { setLocation(pre.location); marks.location = true; }
+    if (typeof pre.occurred_at === "string") {
+      const d = new Date(pre.occurred_at);
+      if (!isNaN(+d)) { setOccurredAt(d.toISOString().slice(0, 16)); marks.occurredAt = true; }
+    }
+    if (Array.isArray(pre.suggested_document_ids)) {
+      setDocIds(pre.suggested_document_ids.filter((x) => typeof x === "string"));
+      marks.docIds = true;
+    }
+    // Witness-logging prefill: fold structured witness fields into the form.
+    const witnessParts = [pre.witness_name, pre.witness_contact, pre.witness_location]
+      .filter((x) => typeof x === "string" && x.trim().length > 0);
+    if (witnessParts.length > 0 && !marks.who) {
+      setWho(`Witness: ${witnessParts.join(" — ")}`);
+      marks.who = true;
+    }
+    if (typeof pre.witness_observations === "string" && !marks.what) {
+      setWhat(pre.witness_observations);
+      marks.what = true;
+    }
+    setPrefilled(marks);
+  }, [open]);
 
   function reset() {
     setTitle("");
@@ -304,6 +348,7 @@ function IncidentDialog({
     setLocation("");
     setOccurredAt(new Date().toISOString().slice(0, 16));
     setDocIds([]);
+    setPrefilled({});
   }
 
   async function add(e: React.FormEvent) {
@@ -344,7 +389,7 @@ function IncidentDialog({
           <DialogTitle>Log an Incident</DialogTitle>
         </DialogHeader>
         <form onSubmit={add} className="space-y-3">
-          <Field label="Title">
+          <Field label="Title" aiSuggested={prefilled.title}>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -352,7 +397,7 @@ function IncidentDialog({
               placeholder="What happened, in a few words"
             />
           </Field>
-          <Field label="When">
+          <Field label="When" aiSuggested={prefilled.occurredAt}>
             <Input
               type="datetime-local"
               value={occurredAt}
@@ -360,14 +405,14 @@ function IncidentDialog({
               required
             />
           </Field>
-          <Field label="Who was involved">
+          <Field label="Who was involved" aiSuggested={prefilled.who}>
             <Input
               value={who}
               onChange={(e) => setWho(e.target.value)}
               placeholder="Names or roles"
             />
           </Field>
-          <Field label="What happened">
+          <Field label="What happened" aiSuggested={prefilled.what}>
             <Textarea
               value={what}
               onChange={(e) => setWhat(e.target.value)}
@@ -375,13 +420,13 @@ function IncidentDialog({
               rows={4}
             />
           </Field>
-          <Field label="Location (optional)">
+          <Field label="Location (optional)" aiSuggested={prefilled.location}>
             <Input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
           </Field>
-          <Field label="Notes (optional)">
+          <Field label="Notes (optional)" aiSuggested={prefilled.notes}>
             <Textarea
               value={extraNotes}
               onChange={(e) => setExtraNotes(e.target.value)}

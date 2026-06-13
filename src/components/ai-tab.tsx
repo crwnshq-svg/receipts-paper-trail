@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
+import { setPrefill, popPrefill } from "@/lib/prefill";
 
 const DISCLAIMER_LINE =
   "Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
@@ -43,6 +44,7 @@ const RECIPIENTS = ["Court", "HR Department", "Labor Board", "Housing Authority"
 type StructuredAction = {
   type: "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource";
   label: string;
+  prefill?: Record<string, any>;
 };
 type StructuredResource = { name: string; url: string; description?: string };
 type StructuredPartner = {
@@ -384,6 +386,16 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
     try {
       if (a.type === "generate_document") {
         const docType = matchDocType(a.label);
+        // Stash prefill for Document Generator to consume on mount.
+        if (a.prefill) {
+          setPrefill("document", {
+            ...a.prefill,
+            ...(docType && !a.prefill.documentType ? { documentType: docType } : {}),
+            actionLabel: a.label,
+          });
+        } else if (docType) {
+          setPrefill("document", { documentType: docType, actionLabel: a.label });
+        }
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           let q = supabase.from("generated_documents")
@@ -391,7 +403,8 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
             .order("created_at", { ascending: false }).limit(1);
           if (docType) q = q.eq("document_type", docType);
           const { data } = await q.maybeSingle();
-          if (data?.id) {
+          if (data?.id && !a.prefill) {
+            // Only jump to an existing doc when there's no fresh prefill to apply.
             navigate({ to: "/cases/$caseId/documents/$docId",
               params: { caseId, docId: data.id } } as any);
             return;
@@ -402,11 +415,13 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
         return;
       }
       if (a.type === "log_incident") {
+        if (a.prefill) setPrefill("incident", a.prefill);
         navigate({ to: "/cases/$caseId", params: { caseId },
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
       if (a.type === "upload_evidence") {
+        if (a.prefill) setPrefill("document", a.prefill);
         navigate({ to: "/cases/$caseId", params: { caseId },
           search: { tab: "documents", action: "upload" } } as any);
         return;
@@ -519,7 +534,50 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
   const [keyFacts, setKeyFacts] = useState("");
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
   const generateFn = useServerFn(generateDocument);
+
+  // Apply AI-supplied prefill once on mount: jump straight to the right step.
+  useEffect(() => {
+    const pre = popPrefill<Record<string, any>>("document");
+    if (!pre) return;
+    const marks: Record<string, boolean> = {};
+    let nextStep: typeof step = "type";
+    if (typeof pre.documentType === "string") {
+      if (!isPaid) { onLocked(); return; }
+      setSelectedType(pre.documentType);
+      marks.documentType = true;
+      nextStep = "recipient";
+    }
+    if (typeof pre.recipientType === "string") {
+      setRecipientType(pre.recipientType);
+      marks.recipientType = true;
+      if (nextStep === "recipient") nextStep = "build";
+    }
+    if (typeof pre.recipientName === "string") {
+      setRecipientName(pre.recipientName);
+      marks.recipientName = true;
+    } else if (typeof pre.recipient_name === "string") {
+      setRecipientName(pre.recipient_name);
+      marks.recipientName = true;
+    }
+    if (typeof pre.keyFacts === "string" || typeof pre.body === "string" || typeof pre.description === "string") {
+      setKeyFacts(pre.keyFacts ?? pre.body ?? pre.description);
+      marks.keyFacts = true;
+    }
+    if (Array.isArray(pre.incident_ids)) {
+      setSelectedIncidents(pre.incident_ids.filter((x: any) => typeof x === "string"));
+      marks.incidents = true;
+    }
+    if (Array.isArray(pre.document_ids)) {
+      setSelectedDocs(pre.document_ids.filter((x: any) => typeof x === "string"));
+      marks.documents = true;
+    }
+    setPrefilled(marks);
+    if (nextStep !== "type") setStep(nextStep);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   function pickType(t: string) {
     if (!isPaid) { onLocked(); return; }
