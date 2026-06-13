@@ -445,6 +445,38 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
         navigate({ to: "/resources" } as any);
         return;
       }
+
+      // New specialized action types — all open Document Workshop with a
+      // document_type pre-selected, except log_witness which opens the
+      // incident form pre-filled with a witness category.
+      const specializedDocType: Record<string, string> = {
+        send_preservation_demand: "Preservation Demand Letter",
+        create_written_record: "Contemporaneous Written Record",
+        draft_followup_email: "Follow-Up Email",
+        generate_police_report: "Police Report Summary",
+        generate_footage_request: "Business Footage Request Letter",
+        log_spoliation: "Spoliation of Evidence Notice",
+      };
+      if (a.type in specializedDocType) {
+        const docType = specializedDocType[a.type];
+        setPrefill("document", {
+          ...(a.prefill ?? {}),
+          documentType: docType,
+          actionLabel: a.label,
+        });
+        navigate({ to: "/cases/$caseId", params: { caseId },
+          search: { tab: "ai", generate: docType } } as any);
+        return;
+      }
+      if (a.type === "log_witness") {
+        setPrefill("incident", {
+          title: "Witness account",
+          ...(a.prefill ?? {}),
+        });
+        navigate({ to: "/cases/$caseId", params: { caseId },
+          search: { tab: "incidents", action: "new" } } as any);
+        return;
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "Action failed");
     }
