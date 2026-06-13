@@ -386,6 +386,16 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
     try {
       if (a.type === "generate_document") {
         const docType = matchDocType(a.label);
+        // Stash prefill for Document Generator to consume on mount.
+        if (a.prefill) {
+          setPrefill("document", {
+            ...a.prefill,
+            ...(docType && !a.prefill.documentType ? { documentType: docType } : {}),
+            actionLabel: a.label,
+          });
+        } else if (docType) {
+          setPrefill("document", { documentType: docType, actionLabel: a.label });
+        }
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           let q = supabase.from("generated_documents")
@@ -393,7 +403,8 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
             .order("created_at", { ascending: false }).limit(1);
           if (docType) q = q.eq("document_type", docType);
           const { data } = await q.maybeSingle();
-          if (data?.id) {
+          if (data?.id && !a.prefill) {
+            // Only jump to an existing doc when there's no fresh prefill to apply.
             navigate({ to: "/cases/$caseId/documents/$docId",
               params: { caseId, docId: data.id } } as any);
             return;
@@ -404,11 +415,13 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
         return;
       }
       if (a.type === "log_incident") {
+        if (a.prefill) setPrefill("incident", a.prefill);
         navigate({ to: "/cases/$caseId", params: { caseId },
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
       if (a.type === "upload_evidence") {
+        if (a.prefill) setPrefill("document", a.prefill);
         navigate({ to: "/cases/$caseId", params: { caseId },
           search: { tab: "documents", action: "upload" } } as any);
         return;
