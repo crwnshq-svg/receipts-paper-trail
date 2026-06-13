@@ -42,8 +42,22 @@ const RECIPIENTS = ["Court", "HR Department", "Labor Board", "Housing Authority"
 
 // ============================== Structured response types ==============================
 
+type StructuredActionType =
+  | "generate_document"
+  | "upload_evidence"
+  | "log_incident"
+  | "file_complaint"
+  | "find_resource"
+  | "send_preservation_demand"
+  | "log_witness"
+  | "create_written_record"
+  | "draft_followup_email"
+  | "generate_police_report"
+  | "generate_footage_request"
+  | "log_spoliation";
+
 type StructuredAction = {
-  type: "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource";
+  type: StructuredActionType;
   label: string;
   prefill?: Record<string, any>;
 };
