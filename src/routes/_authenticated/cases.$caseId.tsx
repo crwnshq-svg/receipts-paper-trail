@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { z } from "zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,6 +24,8 @@ const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 const searchSchema = z.object({
   tab: z.enum(["incidents", "documents", "ai", "timeline"]).optional(),
+  action: z.enum(["new", "upload"]).optional(),
+  generate: z.string().optional(),
 }).optional();
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
@@ -137,6 +139,7 @@ function CaseDetail() {
 
           <TabsContent value="incidents" className="mt-4">
             <IncidentsTab caseId={caseId} incidents={incidents ?? []}
+              autoOpen={search?.action === "new"}
               onChange={() => qc.invalidateQueries({ queryKey: ["incidents", caseId] })} />
           </TabsContent>
 
@@ -145,6 +148,7 @@ function CaseDetail() {
               caseId={caseId}
               docs={docs ?? []}
               isPaid={isPaid}
+              autoUpload={search?.action === "upload"}
               onChange={() => {
                 qc.invalidateQueries({ queryKey: ["documents", caseId] });
                 qc.invalidateQueries({ queryKey: ["storage-usage"] });
@@ -182,10 +186,11 @@ function CaseDetail() {
   );
 }
 
-function IncidentsTab({ caseId, incidents, onChange }: {
-  caseId: string; incidents: any[]; onChange: () => void;
+function IncidentsTab({ caseId, incidents, autoOpen, onChange }: {
+  caseId: string; incidents: any[]; autoOpen?: boolean; onChange: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => { if (autoOpen) setOpen(true); }, [autoOpen]);
   const [title, setTitle] = useState("");
   const [who, setWho] = useState("");
   const [what, setWhat] = useState("");
@@ -285,13 +290,14 @@ function IncidentsTab({ caseId, incidents, onChange }: {
   );
 }
 
-function DocumentsTab({ caseId, docs, isPaid, onChange, onConsumed, onLimitHit }: {
-  caseId: string; docs: any[]; isPaid: boolean; onChange: () => void;
+function DocumentsTab({ caseId, docs, isPaid, autoUpload, onChange, onConsumed, onLimitHit }: {
+  caseId: string; docs: any[]; isPaid: boolean; autoUpload?: boolean; onChange: () => void;
   onConsumed?: (used: number) => void; onLimitHit?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const analyze = useServerFn(analyzeDocument);
+  useEffect(() => { if (autoUpload) fileRef.current?.click(); }, [autoUpload]);
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

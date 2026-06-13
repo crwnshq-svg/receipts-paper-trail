@@ -327,7 +327,7 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
     <div className="max-w-[95%] text-sm space-y-3">
       <MessageBody markdown={structured.message} />
       {structured.actions && structured.actions.length > 0 && (
-        <ActionCards actions={structured.actions} />
+        <ActionCards caseId={caseId} actions={structured.actions} />
       )}
       {structured.partners && structured.partners.length > 0 && (
         <div className="space-y-2">
@@ -371,11 +371,59 @@ function renderInline(text: string) {
   return esc.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 }
 
-function ActionCards({ actions }: { actions: StructuredAction[] }) {
+function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredAction[] }) {
+  const navigate = useNavigate();
+
+  function matchDocType(label: string): string | null {
+    const lower = label.toLowerCase();
+    const found = DOCUMENT_TYPES.find((t) => lower.includes(t.toLowerCase()));
+    return found ?? null;
+  }
+
+  async function handle(a: StructuredAction) {
+    try {
+      if (a.type === "generate_document") {
+        const docType = matchDocType(a.label);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          let q = supabase.from("generated_documents")
+            .select("id").eq("case_id", caseId).eq("user_id", user.id)
+            .order("created_at", { ascending: false }).limit(1);
+          if (docType) q = q.eq("document_type", docType);
+          const { data } = await q.maybeSingle();
+          if (data?.id) {
+            navigate({ to: "/cases/$caseId/documents/$docId",
+              params: { caseId, docId: data.id } } as any);
+            return;
+          }
+        }
+        navigate({ to: "/cases/$caseId", params: { caseId },
+          search: { tab: "ai", generate: docType ?? "1" } } as any);
+        return;
+      }
+      if (a.type === "log_incident") {
+        navigate({ to: "/cases/$caseId", params: { caseId },
+          search: { tab: "incidents", action: "new" } } as any);
+        return;
+      }
+      if (a.type === "upload_evidence") {
+        navigate({ to: "/cases/$caseId", params: { caseId },
+          search: { tab: "documents", action: "upload" } } as any);
+        return;
+      }
+      if (a.type === "file_complaint" || a.type === "find_resource") {
+        navigate({ to: "/resources" } as any);
+        return;
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Action failed");
+    }
+  }
+
   return (
     <div className="grid gap-2">
       {actions.map((a, i) => (
-        <button key={i}
+        <button key={i} onClick={() => handle(a)}
           className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left">
           <span>{a.label}</span>
           <ArrowRight className="h-4 w-4" />
