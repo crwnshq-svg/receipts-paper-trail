@@ -24,6 +24,8 @@ const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 const searchSchema = z.object({
   tab: z.enum(["incidents", "documents", "ai", "timeline"]).optional(),
+  action: z.enum(["new", "upload"]).optional(),
+  generate: z.string().optional(),
 }).optional();
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
