@@ -327,7 +327,7 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
     <div className="max-w-[95%] text-sm space-y-3">
       <MessageBody markdown={structured.message} />
       {structured.actions && structured.actions.length > 0 && (
-        <ActionCards actions={structured.actions} />
+        <ActionCards caseId={caseId} actions={structured.actions} />
       )}
       {structured.partners && structured.partners.length > 0 && (
         <div className="space-y-2">
