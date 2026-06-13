@@ -63,7 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
-    { to: "/cases", label: "Cases", icon: FolderOpen, badge: 0 },
+    { to: "/cases", label: "Records", icon: FolderOpen, badge: 0 },
     { to: "/notifications", label: "Alerts", icon: Bell, badge: unreadCount },
     { to: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
     { to: "/account", label: "Account", icon: UserCircle, badge: 0 },
