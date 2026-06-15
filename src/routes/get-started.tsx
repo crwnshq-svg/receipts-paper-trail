@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Home, Briefcase, Users, FileText } from "lucide-react";
+import { Home, Briefcase, Users, ReceiptText } from "lucide-react";
 
 export const Route = createFileRoute("/get-started")({
   head: () => ({
