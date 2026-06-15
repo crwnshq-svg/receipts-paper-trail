@@ -269,7 +269,7 @@ CONTEXT-AWARE INPUT PRE-FILLING (MANDATORY). When you surface any action button,
 - generate_document with label "Generate Footage Request Note" → prefill: { document_type: "neighbor_vehicle_note", incident_date, incident_time, incident_location, contact_method }.
 - generate_document with label "Generate Business Footage Request" → prefill: { document_type: "business_footage_request", business_name, incident_date, incident_time, police_report_number }.
 - generate_document with label "Draft This Letter" / "Draft A Response" → prefill: { document_type, recipient_type, recipient_name, key_facts (summary drawn from conversation), incident_ids (array), document_ids (array) }.
-- New Record/Case creation → prefill: { module_type, sub_type, case_name (plain-English description), start_date (ISO today), description (1-2 sentence summary) }.
+- New File/Case creation → prefill: { module_type, sub_type, case_name (plain-English description), start_date (ISO today), description (1-2 sentence summary) }.
 The user reviews everything before submitting — never imply auto-submit. The UI shows a subtle AI suggestion indicator on every pre-filled field so the user knows you populated it and can edit freely. Goal: tap action → see a form that is already mostly complete → review in five seconds → confirm. Zero re-entry of information you already have.
 
 ==================== RESPONSE FORMAT ====================
