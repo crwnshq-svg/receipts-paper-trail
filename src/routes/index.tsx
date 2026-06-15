@@ -235,8 +235,8 @@ function Landing() {
             </Link>
           </div>
           <p className="mx-auto mt-4 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
-            Receipts is a document preparation tool and does not provide legal
-            advice. © {new Date().getFullYear()} Receipts.
+            Pull Up Receipts is a document preparation tool and does not provide legal
+            advice. © {new Date().getFullYear()} Pull Up Receipts.
           </p>
         </div>
       </footer>
