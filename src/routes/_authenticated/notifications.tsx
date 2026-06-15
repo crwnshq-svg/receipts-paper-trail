@@ -10,7 +10,7 @@ import { markNotificationsRead } from "@/lib/notifications.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
-  head: () => ({ meta: [{ title: "Notifications — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Notifications — Pull Up Receipts" }] }),
   component: NotificationsPage,
 });
 
