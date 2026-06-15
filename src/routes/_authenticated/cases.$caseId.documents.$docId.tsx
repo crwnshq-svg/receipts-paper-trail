@@ -106,7 +106,7 @@ function DocumentReview() {
     const { data } = await supabase.auth.getUser();
     const email = data.user?.email;
     if (!email) { toast.error("No email on file"); return; }
-    const subject = encodeURIComponent(`Receipts — ${doc?.document_type ?? "Document"}`);
+    const subject = encodeURIComponent(`Pull Up Receipts — ${doc?.document_type ?? "Document"}`);
     const body = encodeURIComponent(content);
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   }
