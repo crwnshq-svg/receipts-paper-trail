@@ -347,7 +347,7 @@ Rules:
 - clarifying_questions: 1 to 2 items. Targeted and specific to what is ACTUALLY missing from this event — never generic. Examples: "Was anyone else present who saw what happened?", "Do you remember the exact time the manager said this?", "Is there a written copy of the notice they handed you?". Avoid: "Can you add more detail?", "What else happened?".
 ${HEDGED_LANGUAGE_RULES}`;
 
-    const userPrompt = `NEW INCIDENT JUST LOGGED:
+    const userPrompt = `NEW EVENT JUST LOGGED:
 Title: ${incident.title}
 When: ${new Date(incident.occurred_at).toLocaleString()}
 Who: ${incident.who_involved ?? "(not specified)"}
@@ -355,10 +355,10 @@ Location: ${incident.location ?? "(not specified)"}
 What happened: ${incident.what_happened}
 Notes: ${incident.notes ?? "(none)"}
 
-OTHER INCIDENTS IN THIS CASE:
+OTHER EVENTS IN THIS FILE:
 ${(otherIncidents ?? []).map((i) => `- [${new Date(i.occurred_at).toLocaleDateString()}] ${i.title}: ${i.what_happened.slice(0, 200)}`).join("\n") || "(none)"}
 
-DOCUMENTS ON FILE:
+EVIDENCE ON FILE:
 ${(docs ?? []).map((d) => `- ${d.file_name}${d.ai_summary ? `: ${d.ai_summary.slice(0, 160)}` : ""}`).join("\n") || "(none)"}
 
 Return the JSON object now.`;
