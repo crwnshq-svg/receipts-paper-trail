@@ -1035,7 +1035,7 @@ function ResultEditor(props: {
   onBack: () => void; onDownload: () => void; onEmail: () => void;
 }) {
   // Ensure non-removable disclaimer footer
-  const FOOTER_MARKER = "---\nReceipts is a document preparation tool";
+  const FOOTER_MARKER = "---\nPull Up Receipts is a document preparation tool";
   const hasFooter = props.value.includes(FOOTER_MARKER);
   return (
     <div className="space-y-3">
