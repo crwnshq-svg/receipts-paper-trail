@@ -307,16 +307,19 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
   async function doSend(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
-    try {
-      const result = await consume();
-      onConsumed(typeof result.used === "number" ? result.used : 0);
-    } catch (err: any) {
-      if (err?.message?.includes("FREE_LIMIT_REACHED")) {
-        onLimitHit();
-        return;
-      }
-      toast.error(err?.message ?? "Could not send");
-      return;
+    // Fire the question-counter decrement in parallel — don't block streaming on it.
+    if (!isPaid) {
+      consume()
+        .then((result) => {
+          onConsumed(typeof result.used === "number" ? result.used : 0);
+        })
+        .catch((err: any) => {
+          if (err?.message?.includes("FREE_LIMIT_REACHED")) {
+            onLimitHit();
+          } else {
+            console.warn("consumeAiQuestion failed", err);
+          }
+        });
     }
     setInput("");
     await sendMessage({ text: trimmed });
