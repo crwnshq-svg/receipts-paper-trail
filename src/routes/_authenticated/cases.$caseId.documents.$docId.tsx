@@ -18,7 +18,7 @@ import {
 } from "@/lib/document-actions.functions";
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId/documents/$docId")({
-  head: () => ({ meta: [{ title: "Review document — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Review document — Pull Up Receipts" }] }),
   component: DocumentReview,
 });
 
