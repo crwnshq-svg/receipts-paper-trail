@@ -290,14 +290,13 @@ function DocumentsTab({ caseId, docs, isPaid, autoUpload, onChange, onConsumed, 
           accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg" />
         <Button onClick={() => fileRef.current?.click()} disabled={uploading}
           className="bg-primary text-primary-foreground hover:bg-accent">
-          <Upload className="mr-1 h-4 w-4" /> {uploading ? "Uploading…" : "Upload document"}
+          <Upload className="mr-1 h-4 w-4" /> {uploading ? "Uploading…" : "Add Evidence"}
         </Button>
       </div>
 
       {docs.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          Upload anything that matters. We keep it encrypted and organized until
-          you need it.&nbsp;
+          No evidence uploaded yet. Upload anything that matters — we keep it encrypted and organized until you need it.
         </Card>
       ) : (
         <div className="grid gap-2">
