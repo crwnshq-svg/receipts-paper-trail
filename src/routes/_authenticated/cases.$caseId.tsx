@@ -30,7 +30,7 @@ const searchSchema = z.object({
 }).optional();
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
-  head: () => ({ meta: [{ title: "Case — Receipts" }] }),
+  head: () => ({ meta: [{ title: "File — Pull Up Receipts" }] }),
   validateSearch: searchSchema,
   component: CaseDetail,
 });
