@@ -20,8 +20,8 @@ export const Route = createFileRoute("/auth")({
   validateSearch: search,
   head: () => ({
     meta: [
-      { title: "Sign in — Receipts" },
-      { name: "description", content: "Sign in or create your free Receipts account." },
+      { title: "Sign in — Pull Up Receipts" },
+      { name: "description", content: "Sign in or create your free Pull Up Receipts account." },
     ],
   }),
   ssr: false,
