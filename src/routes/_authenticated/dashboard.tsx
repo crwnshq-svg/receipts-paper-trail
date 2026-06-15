@@ -433,7 +433,7 @@ function QuickAction({ icon: Icon, label, target, disabled }: { icon: any; label
     return (
       <Tooltip>
         <TooltipTrigger asChild><div>{button}</div></TooltipTrigger>
-        <TooltipContent>Start a record first</TooltipContent>
+        <TooltipContent>Start a file first</TooltipContent>
       </Tooltip>
     );
   }
