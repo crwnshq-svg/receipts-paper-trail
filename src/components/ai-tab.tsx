@@ -591,7 +591,7 @@ function PartnerCard({ partner }: { partner: StructuredPartner }) {
   return (
     <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 space-y-2">
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-accent">
-        <BadgeCheck className="h-3.5 w-3.5" /> Verified Receipts Partner
+        <BadgeCheck className="h-3.5 w-3.5" /> Verified Pull Up Receipts Partner
       </div>
       <div>
         <div className="font-semibold text-sm">{partner.name}</div>
