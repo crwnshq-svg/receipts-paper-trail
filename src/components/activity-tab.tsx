@@ -178,7 +178,7 @@ export function ActivityTab({
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Answer added to incident");
+      toast.success("Answer added to event");
       setAnswerQ(null);
       onChange();
     }
