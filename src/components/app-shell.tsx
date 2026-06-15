@@ -206,7 +206,7 @@ function PushPermissionPrompt() {
         <div className="flex-1">
           <div className="font-medium text-sm">Stay updated</div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Get notified when new insights appear on your documents.
+            Get notified when new insights appear on your evidence.
           </p>
           <div className="mt-3 flex gap-2">
             <Button size="sm" onClick={enable} className="bg-primary text-primary-foreground">Enable</Button>
