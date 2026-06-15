@@ -49,15 +49,15 @@ function NewCase() {
   return (
     <AppShell>
       <div className="mx-auto max-w-xl">
-        <h1 className="font-serif text-3xl font-semibold">Start a Record</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Begin a paper trail. You can promote it to a formal Case later when the situation escalates.</p>
+        <h1 className="font-serif text-3xl font-semibold">Start a File</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Your file. Documented and proven. Begin a paper trail today — you can promote it to a formal Case later when the situation escalates.</p>
 
         <Card className="mt-6 p-6">
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Title</Label>
+              <Label>File name (the other party)</Label>
               <Input value={title} onChange={(e) => setTitle(e.target.value)} required
-                placeholder="e.g. Apartment 4B — habitability dispute" />
+                placeholder="Name the person, company, or organization the dispute involves" />
             </div>
 
             <div className="space-y-1.5">
