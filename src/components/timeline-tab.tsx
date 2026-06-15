@@ -57,13 +57,13 @@ export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
         id: `case-${caseRow.id}`,
         at: caseRow.created_at,
         type: "case_created",
-        label: "Case created",
+        label: "File created",
         description: caseRow.title,
       });
     }
     (incidents ?? []).forEach((i: any) => out.push({
       id: `inc-${i.id}`, at: i.occurred_at, type: "incident",
-      label: "Incident logged", description: i.title,
+      label: "Event logged", description: i.title,
       onTap: () => onJumpToTab("incidents"),
     }));
     (notes ?? []).forEach((n: any) => out.push({
@@ -73,7 +73,7 @@ export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
     }));
     (documents ?? []).forEach((d: any) => out.push({
       id: `doc-${d.id}`, at: d.created_at, type: "document",
-      label: "Document uploaded", description: d.display_name ?? d.file_name,
+      label: "Evidence uploaded", description: d.display_name ?? d.file_name,
       onTap: () => onJumpToTab("documents"),
     }));
     (insights ?? []).forEach((ins: any) => out.push({
