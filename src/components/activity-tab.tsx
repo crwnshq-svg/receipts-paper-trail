@@ -198,7 +198,7 @@ export function ActivityTab({
           onClick={() => setIncidentOpen(true)}
           className="bg-primary text-primary-foreground hover:bg-accent"
         >
-          <Plus className="mr-1 h-4 w-4" /> Log Incident
+          <Plus className="mr-1 h-4 w-4" /> Log an Event
         </Button>
       </div>
 
@@ -221,8 +221,7 @@ export function ActivityTab({
 
       {feed.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          No activity yet. Log an incident or add a note as things happen —
-          details fade fast.
+          No events logged yet. Log an event or add a note as things happen — details fade fast. Your file. Documented and proven.
         </Card>
       ) : (
         <ol className="space-y-3">
@@ -233,7 +232,7 @@ export function ActivityTab({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
-                        <AlertCircle className="h-3 w-3" /> Incident
+                        <AlertCircle className="h-3 w-3" /> Event
                         <span className="font-normal text-muted-foreground">
                           · {new Date(f.data.occurred_at).toLocaleString()}
                         </span>
