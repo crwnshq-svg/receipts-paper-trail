@@ -88,7 +88,7 @@ function NewCase() {
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => navigate({ to: "/cases" })}>Cancel</Button>
               <Button type="submit" disabled={loading || !title} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                {loading ? "Starting…" : "Start Record"}
+                {loading ? "Starting…" : "Start a File"}
               </Button>
             </div>
           </form>
