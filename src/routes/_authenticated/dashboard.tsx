@@ -16,7 +16,7 @@ import { FREE_STORAGE_BYTES, FREE_AI_QUESTIONS } from "@/lib/constants";
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Pull Up Receipts" }] }),
   component: Dashboard,
 });
 
