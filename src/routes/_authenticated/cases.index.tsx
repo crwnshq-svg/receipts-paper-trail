@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cases/")({
-  head: () => ({ meta: [{ title: "Records — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Files — Pull Up Receipts" }] }),
   component: CasesList,
 });
 
