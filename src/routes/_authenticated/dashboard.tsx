@@ -197,30 +197,30 @@ function Dashboard() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="font-serif text-3xl font-semibold">
-                {profile?.full_name ? `Welcome, ${profile.full_name.split(" ")[0]}` : "Your dashboard"}
+                {profile?.full_name ? `Welcome, ${profile.full_name.split(" ")[0]}` : "Your files"}
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">Your record, organized.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Your file, organized.</p>
               <p className="mt-1.5 text-sm text-foreground/80">{statusLine}</p>
             </div>
             <Link to="/cases/new">
               <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm">
-                <Plus className="mr-1 h-4 w-4" /> New Record
+                <Plus className="mr-1 h-4 w-4" /> Start a File
               </Button>
             </Link>
           </div>
 
           {/* Quick actions */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <QuickAction icon={PenSquare} label="Log an Incident" target={qa("incidents")} disabled={!hasCases} />
-            <QuickAction icon={Upload} label="Upload a Document" target={qa("documents")} disabled={!hasCases} />
-            <QuickAction icon={MessageSquare} label="Ask the AI" target={qa("ai")} disabled={!hasCases} />
+            <QuickAction icon={PenSquare} label="Log an Event" target={qa("incidents")} disabled={!hasCases} />
+            <QuickAction icon={Upload} label="Upload Evidence" target={qa("documents")} disabled={!hasCases} />
+            <QuickAction icon={MessageSquare} label="Ask RECEIPTS AI" target={qa("ai")} disabled={!hasCases} />
           </div>
 
           <Separator />
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <StatCard icon={FolderOpen} label="Records" value={String(caseList.length)} />
+            <StatCard icon={FolderOpen} label="Files" value={String(caseList.length)} />
             <Card className="rounded-xl p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" /> Plan
@@ -249,7 +249,7 @@ function Dashboard() {
               </div>
               <Progress value={pct} className="mt-2 h-1.5" />
             </Card>
-            <StatCard icon={ListChecks} label="Incidents" value={String(incidentsAll.length)} />
+            <StatCard icon={ListChecks} label="Events" value={String(incidentsAll.length)} />
             <Card className="rounded-xl p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                 <Brain className="h-3.5 w-3.5" /> AI Questions
