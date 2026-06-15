@@ -8,7 +8,7 @@ import { DISCLAIMER } from "./constants";
 const DISCLAIMER_FOOTER = `---\n${DISCLAIMER}`;
 
 function ensureFooter(text: string) {
-  if (text.includes("Receipts is a document preparation tool")) return text;
+  if (text.includes("Pull Up Receipts is a document preparation tool")) return text;
   return `${text.trimEnd()}\n\n${DISCLAIMER_FOOTER}`;
 }
 
