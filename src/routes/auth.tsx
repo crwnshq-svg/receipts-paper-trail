@@ -106,8 +106,8 @@ function AuthPage() {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-bold text-center">Welcome</h1>
-          <p className="mt-1 text-center text-sm text-muted-foreground">Your record. Your rights.</p>
+          <h1 className="text-2xl font-bold text-center">Welcome to Pull Up Receipts</h1>
+          <p className="mt-1 text-center text-sm text-muted-foreground">Your file. Your rights.</p>
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="mt-6">
             <TabsList className="grid w-full grid-cols-2">
