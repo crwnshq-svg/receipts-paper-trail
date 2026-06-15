@@ -132,7 +132,7 @@ export function DocumentCard({
                 <Skeleton className="h-3 w-full" />
                 <Skeleton className="h-3 w-4/5" />
                 <p className="text-[10px] text-muted-foreground italic">
-                  {reanalyzing ? "Re-analyzing…" : "Analyzing document…"}
+                  {reanalyzing ? "Re-analyzing evidence…" : "Analyzing evidence…"}
                 </p>
               </div>
             ) : editing ? (
