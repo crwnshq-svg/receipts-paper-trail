@@ -84,15 +84,15 @@ export const Route = createFileRoute("/api/chat")({
 
 function buildCaseContext(caseRow: any, incidents: any[], documents: any[]) {
   const lines: string[] = [];
-  const level = caseRow.status_level === "case" ? "Case" : "Record";
-  lines.push(`Status level: ${level} (use this term when referring to the user's situation; a Record is informal documentation, a Case is escalated formal action).`);
-  lines.push(`Title: ${caseRow.title}`);
+  const level = caseRow.status_level === "case" ? "Case" : "File";
+  lines.push(`Status level: ${level} (use this term when referring to the user's container; a File is informal documentation, a Case is escalated formal action).`);
+  lines.push(`File title (other party): ${caseRow.title}`);
   lines.push(`Dispute type: ${caseRow.dispute_type}`);
   if (caseRow.opposing_party) lines.push(`Opposing party: ${caseRow.opposing_party}`);
   if (caseRow.description) lines.push(`Description: ${caseRow.description}`);
   lines.push(`Started: ${new Date(caseRow.created_at).toLocaleDateString()}`);
   lines.push("");
-  lines.push(`INCIDENTS (${incidents.length}):`);
+  lines.push(`EVENTS (${incidents.length}):`);
   incidents.forEach((i, idx) => {
     lines.push(`${idx + 1}. [${new Date(i.occurred_at).toLocaleString()}] ${i.title}`);
     if (i.who_involved) lines.push(`   Who: ${i.who_involved}`);
