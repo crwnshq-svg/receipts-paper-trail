@@ -208,7 +208,7 @@ function AccountPage() {
             <Sparkles className="h-3.5 w-3.5" /> AI Response Style
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Choose how Receipts AI talks to you. Both modes give the same accurate information.
+            Choose how RECEIPTS AI talks to you. Both modes give the same accurate information.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <button
