@@ -107,15 +107,15 @@ function Landing() {
             </h2>
             <div className="mt-10 grid gap-6 sm:grid-cols-3">
               {[
-                {
+              {
                   n: "1",
-                  title: "Start your case",
-                  body: "Pick what kind of dispute it is and give it a name. Done in a minute.",
+                  title: "Start a file",
+                  body: "Pick what kind of dispute it is and name the other party. Done in a minute.",
                 },
                   {
                     n: "2",
                     title: "Build your paper trail",
-                    body: "Upload documents, log incidents as they happen. We organize, timestamp it all, and provide insights.",
+                    body: "Upload evidence, log events as they happen. We organize, timestamp it all, and provide insights.",
                   },
                   {
                     n: "3",
