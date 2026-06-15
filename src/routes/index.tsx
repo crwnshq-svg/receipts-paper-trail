@@ -142,11 +142,11 @@ function Landing() {
               {
                 icon: FolderLock,
                 title: "Store Everything",
-                body: "Your evidence vault. Contracts, photos, Videos, emails. Store everything, because everything matters.\u00a0",
+                body: "Your Evidence Vault. Contracts, photos, videos, emails. Store everything, because everything matters.\u00a0",
               },
               {
                 icon: Pencil,
-                title: "Log Every Incident",
+                title: "Log Every Event",
                 body: "Your running timeline. Every date, every detail, every ignored request captured so nothing gets forgotten.\u00a0",
               },
               {
@@ -176,7 +176,7 @@ function Landing() {
               Simple pricing
             </h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
-              Start free. Upgrade when your case grows.
+              Start free. Upgrade when your file grows.
             </p>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               <PriceCard
@@ -184,9 +184,9 @@ function Landing() {
                 price="$0"
                 period=""
                 features={[
-                  "1 active case",
-                  "75 MB document vault",
-                  "Incident log",
+                  "1 active file",
+                  "75 MB Evidence Vault",
+                  "Event log",
                   "3 AI questions",
                 ]}
               />
