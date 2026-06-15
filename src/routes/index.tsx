@@ -195,7 +195,7 @@ function Landing() {
                 price="$15"
                 period="/month"
                 features={[
-                  "Unlimited cases",
+                  "Unlimited files",
                   "Unlimited storage",
                   "Unlimited AI chat",
                   "Document generation",
@@ -218,7 +218,7 @@ function Landing() {
             </div>
             <p className="mx-auto mt-6 max-w-xl text-center text-xs text-muted-foreground">
               $49 Case Package add-on available to paid subscribers — a
-              court-ready PDF of your full case.
+              court-ready PDF of your full file.
             </p>
           </div>
         </section>
