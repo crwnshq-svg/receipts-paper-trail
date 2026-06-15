@@ -7,13 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Receipts — Pull Up Your Receipts" },
+      { title: "Pull Up Receipts — Pull Up Your Receipts" },
       {
         name: "description",
         content:
           "Document disputes with landlords, employers, or neighbors. Build a clear, timestamped paper trail and hold them accountable.",
       },
-      { property: "og:title", content: "Receipts — Pull Up Your Receipts" },
+      { property: "og:title", content: "Pull Up Receipts — Pull Up Your Receipts" },
       {
         property: "og:description",
         content:
