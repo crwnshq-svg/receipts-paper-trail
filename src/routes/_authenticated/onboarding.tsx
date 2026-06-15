@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { ReceiptText, ArrowLeft, Upload, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({ meta: [{ title: "Welcome — Pull Up Receipts" }] }),
@@ -43,7 +45,14 @@ function OnboardingPage() {
   const [a, setA] = useState<Answers>(EMPTY);
   const [history, setHistory] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  const [privacyAck, setPrivacyAck] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function recordPrivacyAck() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("profiles").update({ privacy_acknowledged_at: new Date().toISOString() } as never).eq("id", user.id);
+  }
 
   // hydrate from existing profile so partial completions resume
   useEffect(() => {
@@ -119,8 +128,10 @@ function OnboardingPage() {
   }
 
   async function skipAll() {
+    if (!privacyAck) return;
     setBusy(true);
     try {
+      await recordPrivacyAck();
       await completeOnboarding();
       navigate({ to: "/dashboard", replace: true });
     } finally { setBusy(false); }
@@ -209,6 +220,9 @@ function OnboardingPage() {
             busy={busy}
             onUploadClick={() => fileRef.current?.click()}
             onSkipUpload={() => handleFinishUpload(null)}
+            privacyAck={privacyAck}
+            setPrivacyAck={setPrivacyAck}
+            recordPrivacyAck={recordPrivacyAck}
           />
         </div>
       </main>
@@ -231,6 +245,7 @@ function OnboardingPage() {
 
 function StepView({
   step, a, setA, goTo, busy, onUploadClick, onSkipUpload,
+  privacyAck, setPrivacyAck, recordPrivacyAck,
 }: {
   step: number;
   a: Answers;
@@ -239,6 +254,9 @@ function StepView({
   busy: boolean;
   onUploadClick: () => void;
   onSkipUpload: () => void;
+  privacyAck: boolean;
+  setPrivacyAck: React.Dispatch<React.SetStateAction<boolean>>;
+  recordPrivacyAck: () => Promise<void>;
 }) {
   // helpers
   const nextRentalAfterIs = (val: boolean | null) => (val === true ? 8 : 11);
@@ -257,9 +275,41 @@ function StepView({
               Pull Up Receipts is your personal file for any situation where you need to protect yourself.
               A few quick questions will help your AI companion give you better guidance from day one.
             </p>
-            <div className="mt-8 space-y-3">
-              <Button onClick={() => goTo(2)} className="w-full h-11">Get Started</Button>
-              <button onClick={onSkipUpload} disabled={busy} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4">
+
+            <div className="mt-7 rounded-2xl border border-border bg-secondary/30 p-5 text-left">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-accent" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your privacy</span>
+              </div>
+              <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+                Your data is yours alone. Everything you add is private to your account, encrypted in storage and in transit, and never shared with other users. AI responses are processed by Anthropic. They do not use your data to train their models.
+              </p>
+              <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+                This is a beta product. A formal Privacy Policy is coming before public launch.
+              </p>
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg p-2 -mx-2 hover:bg-secondary/50">
+                <Checkbox
+                  checked={privacyAck}
+                  onCheckedChange={(v) => setPrivacyAck(v === true)}
+                  className="mt-0.5"
+                />
+                <span className="text-[13px] leading-snug">I understand and want to continue.</span>
+              </label>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <Button
+                onClick={() => { recordPrivacyAck().catch(() => {}); goTo(2); }}
+                disabled={!privacyAck || busy}
+                className="w-full h-11"
+              >
+                Get Started
+              </Button>
+              <button
+                onClick={() => { recordPrivacyAck().catch(() => {}); onSkipUpload(); }}
+                disabled={!privacyAck || busy}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+              >
                 Skip everything
               </button>
             </div>
