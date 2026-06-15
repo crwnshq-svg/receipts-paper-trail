@@ -126,6 +126,9 @@ function AccountPage() {
           </div>
         </Card>
 
+        <ProfileInfoCard profile={profile} />
+
+
         <Card className="p-5">
           <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
             <CreditCard className="h-3.5 w-3.5" /> Subscription
