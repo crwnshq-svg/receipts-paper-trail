@@ -160,7 +160,7 @@ export function DocumentCard({
                   </button>
                   <button onClick={reanalyze} disabled={reanalyzing}
                     className="opacity-60 hover:opacity-100 disabled:opacity-30"
-                    title="Re-analyze with AI">
+                    title="Re-analyze Evidence">
                     <RefreshCw className={`h-3 w-3 ${reanalyzing ? "animate-spin" : ""}`} />
                   </button>
                 </div>
