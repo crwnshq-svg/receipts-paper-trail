@@ -1,4 +1,4 @@
-// Weekly insight refresh — re-analyzes recent documents for users inactive 7+ days.
+// Weekly insight refresh — re-analyzes recent evidence for users inactive 7+ days.
 // Schedule via pg_cron weekly.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
