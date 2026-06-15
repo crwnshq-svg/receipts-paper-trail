@@ -138,14 +138,14 @@ function Dashboard() {
   // greeting status line
   const activeCount = caseList.filter((c) => c.status === "active").length;
   const totalUnreadInsights = insightsAll.length;
-  let statusLine = "No records yet — start documenting your situation today.";
+  let statusLine = "No files yet — start a file today. Your file. Documented and proven.";
   if (hasCases) {
     if (totalUnreadInsights > 0) {
       const caseIdsWithInsights = new Set(insightsAll.map((i) => i.case_id));
-      statusLine = `You have unread insights on ${caseIdsWithInsights.size} record${caseIdsWithInsights.size === 1 ? "" : "s"}.`;
+      statusLine = `You have unread insights on ${caseIdsWithInsights.size} file${caseIdsWithInsights.size === 1 ? "" : "s"}.`;
     } else {
       const last = mostRecent?.updated_at;
-      statusLine = `You have ${activeCount} active record${activeCount === 1 ? "" : "s"}.${last ? ` Last activity ${relTime(last)}.` : ""}`;
+      statusLine = `You have ${activeCount} active file${activeCount === 1 ? "" : "s"}.${last ? ` Last activity ${relTime(last)}.` : ""}`;
     }
   }
 
@@ -161,11 +161,11 @@ function Dashboard() {
   const activity: Activity[] = [
     ...documentsAll.map<Activity>((d) => ({
       id: `d-${d.id}`, type: "doc", at: d.created_at, caseId: d.case_id,
-      text: `Uploaded "${d.file_name}" to ${caseTitleById.get(d.case_id) ?? "a record"}`,
+      text: `Uploaded "${d.file_name}" to ${caseTitleById.get(d.case_id) ?? "a file"}`,
     })),
     ...incidentsAll.map<Activity>((i) => ({
       id: `i-${i.id}`, type: "incident", at: i.created_at, caseId: i.case_id,
-      text: `Logged incident "${i.title}" in ${caseTitleById.get(i.case_id) ?? "a record"}`,
+      text: `Logged event "${i.title}" in ${caseTitleById.get(i.case_id) ?? "a file"}`,
     })),
     ...insightsAll.map<Activity>((n) => ({
       id: `n-${n.id}`, type: "insight", at: n.created_at, caseId: n.case_id,
@@ -173,7 +173,7 @@ function Dashboard() {
     })),
     ...generatedAll.map<Activity>((g) => ({
       id: `g-${g.id}`, type: "generated", at: g.created_at, caseId: g.case_id,
-      text: `Generated ${g.document_type.replace(/_/g, " ")} for ${caseTitleById.get(g.case_id) ?? "a record"}`,
+      text: `Generated ${g.document_type.replace(/_/g, " ")} for ${caseTitleById.get(g.case_id) ?? "a file"}`,
     })),
   ].sort((a, b) => +new Date(b.at) - +new Date(a.at)).slice(0, 5);
 
