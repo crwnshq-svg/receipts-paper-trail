@@ -16,6 +16,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedResourcesRouteImport } from './routes/_authenticated/resources'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
@@ -56,6 +57,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
 const AuthenticatedResourcesRoute = AuthenticatedResourcesRouteImport.update({
   id: '/resources',
   path: '/resources',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedNotificationsRoute =
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AuthenticatedAccountRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/account': typeof AuthenticatedAccountRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/dashboard'
     | '/notifications'
+    | '/onboarding'
     | '/resources'
     | '/api/chat'
     | '/cases/$caseId'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/dashboard'
     | '/notifications'
+    | '/onboarding'
     | '/resources'
     | '/api/chat'
     | '/cases/$caseId'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account'
     | '/_authenticated/dashboard'
     | '/_authenticated/notifications'
+    | '/_authenticated/onboarding'
     | '/_authenticated/resources'
     | '/api/chat'
     | '/_authenticated/cases/$caseId'
@@ -251,6 +263,13 @@ declare module '@tanstack/react-router' {
       path: '/resources'
       fullPath: '/resources'
       preLoaderRoute: typeof AuthenticatedResourcesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/notifications': {
@@ -324,6 +343,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRoute
   AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRouteWithChildren
   AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
@@ -334,6 +354,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedResourcesRoute: AuthenticatedResourcesRoute,
   AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRouteWithChildren,
   AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,

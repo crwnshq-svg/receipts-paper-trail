@@ -141,6 +141,41 @@ export interface PartnerLite {
   contact_url?: string | null;
 }
 
+export interface OnboardingProfile {
+  first_name?: string | null;
+  city?: string | null;
+  state?: string | null;
+  is_renting?: boolean | null;
+  lease_type?: string | null;
+  rental_duration?: string | null;
+  has_landlord_issues?: boolean | null;
+  is_employed?: boolean | null;
+  work_type?: string | null;
+  has_workplace_issues?: boolean | null;
+}
+
+function buildUserProfileBlock(p?: OnboardingProfile | null): string {
+  if (!p) return "";
+  const lines: string[] = [];
+  if (p.first_name) lines.push(`- Name: ${p.first_name}`);
+  if (p.city || p.state) lines.push(`- Location: ${[p.city, p.state].filter(Boolean).join(", ")}`);
+  const rental: string[] = [];
+  if (p.is_renting === true) rental.push("currently renting");
+  else if (p.is_renting === false) rental.push("not renting");
+  if (p.lease_type) rental.push(`lease: ${p.lease_type}`);
+  if (p.rental_duration) rental.push(`duration: ${p.rental_duration}`);
+  if (p.has_landlord_issues === true) rental.push("has active landlord issues");
+  if (rental.length) lines.push(`- Rental: ${rental.join(", ")}`);
+  const work: string[] = [];
+  if (p.is_employed === true) work.push("employed");
+  else if (p.is_employed === false) work.push("not employed");
+  if (p.work_type) work.push(`role: ${p.work_type}`);
+  if (p.has_workplace_issues === true) work.push("has active workplace issues");
+  if (work.length) lines.push(`- Work: ${work.join(", ")}`);
+  if (lines.length === 0) return "";
+  return `\n\nUSER PROFILE CONTEXT — use this to personalize guidance. Reference these details naturally when relevant. NEVER announce that you have profile data or list it back to the user; weave it in conversationally.\n${lines.join("\n")}`;
+}
+
 /** Chat system prompt — returns structured JSON. */
 export function buildChatSystemPrompt(args: {
   tone: AiTone;
@@ -148,6 +183,7 @@ export function buildChatSystemPrompt(args: {
   partners: PartnerLite[];
   userState?: string | null;
   firstName?: string | null;
+  profile?: OnboardingProfile | null;
 }) {
   const partnerBlock = args.partners.length === 0
     ? "(No partners are currently listed for this case type and location.)"
@@ -155,7 +191,9 @@ export function buildChatSystemPrompt(args: {
         `- id:${p.id} | ${p.name} — ${p.specialty}${p.state ? ` (${p.state})` : ""}${p.contact_email ? ` | email:${p.contact_email}` : ""}${p.contact_phone ? ` | phone:${p.contact_phone}` : ""}${p.contact_url ? ` | url:${p.contact_url}` : ""}`
       ).join("\n");
 
-  return `You are RECEIPTS AI, an advocate built into Pull Up Receipts, a personal legal documentation app. You are helping ${args.firstName ?? "the user"} with their dispute. You are explicitly ON THE USER'S SIDE within the bounds of not providing legal advice. You have the user's full file in context.
+  const profileBlock = buildUserProfileBlock(args.profile);
+
+  return `You are RECEIPTS AI, an advocate built into Pull Up Receipts, a personal legal documentation app. You are helping ${args.firstName ?? "the user"} with their dispute. You are explicitly ON THE USER'S SIDE within the bounds of not providing legal advice. You have the user's full file in context.${profileBlock}
 
 ${toneRules(args.tone)}
 

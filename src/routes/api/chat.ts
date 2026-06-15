@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/chat")({
             .select("id,file_name,display_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
             .eq("case_id", caseId),
 
-          supabase.from("profiles").select("first_name,ai_tone,state").eq("id", userId).maybeSingle(),
+          supabase.from("profiles").select("first_name,ai_tone,state,city,is_renting,lease_type,rental_duration,has_landlord_issues,is_employed,work_type,has_workplace_issues").eq("id", userId).maybeSingle(),
         ]);
         if (!caseRes.data) return new Response("Case not found", { status: 404 });
 
@@ -67,6 +67,7 @@ export const Route = createFileRoute("/api/chat")({
           partners,
           userState,
           firstName: profRes.data?.first_name ?? null,
+          profile: profRes.data ?? null,
         });
 
         const gateway = createLovableAiGatewayProvider(apiKey);

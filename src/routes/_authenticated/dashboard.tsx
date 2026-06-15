@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, DISPUTE_LABELS, Disclaimer } from "@/components/app-shell";
@@ -52,6 +53,7 @@ const RESOURCE_BY_MODULE: Record<string, string> = {
 };
 
 function Dashboard() {
+  const navigate = useNavigate();
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
@@ -61,6 +63,13 @@ function Dashboard() {
       return data;
     },
   });
+
+  useEffect(() => {
+    if (profile && profile.onboarding_completed === false) {
+      navigate({ to: "/onboarding", replace: true });
+    }
+  }, [profile, navigate]);
+
 
   const { data: cases } = useQuery({
     queryKey: ["cases"],

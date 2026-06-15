@@ -126,6 +126,9 @@ function AccountPage() {
           </div>
         </Card>
 
+        <ProfileInfoCard profile={profile} />
+
+
         <Card className="p-5">
           <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
             <CreditCard className="h-3.5 w-3.5" /> Subscription
@@ -275,5 +278,68 @@ function NotifRow({
       </div>
       <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
+  );
+}
+
+const LANGUAGE_LABELS: Record<string, string> = { English: "English", Spanish: "Spanish", Other: "Other" };
+const LEASE_LABELS: Record<string, string> = {
+  written: "Written lease", month_to_month: "Month to month", none: "No written agreement", unsure: "Not sure",
+};
+const DURATION_LABELS: Record<string, string> = {
+  "<6mo": "Less than 6 months", "6mo-1y": "6 months to 1 year", "1-3y": "1 to 3 years", ">3y": "More than 3 years",
+};
+
+function rentalSummary(p: any): string | null {
+  if (p?.is_renting === true) {
+    const parts = ["Renting"];
+    if (p.lease_type) parts.push(LEASE_LABELS[p.lease_type] ?? p.lease_type);
+    if (p.rental_duration) parts.push(DURATION_LABELS[p.rental_duration] ?? p.rental_duration);
+    if (p.has_landlord_issues === true) parts.push("Active landlord issues");
+    return parts.join(" • ");
+  }
+  if (p?.is_renting === false) return "Not currently renting";
+  return null;
+}
+
+function workSummary(p: any): string | null {
+  if (p?.is_employed === true) {
+    const parts = ["Employed"];
+    if (p.work_type) parts.push(p.work_type);
+    if (p.has_workplace_issues === true) parts.push("Active workplace issues");
+    return parts.join(" • ");
+  }
+  if (p?.is_employed === false) return "Not currently employed";
+  return null;
+}
+
+function ProfileInfoCard({ profile }: { profile: any }) {
+  if (!profile) return null;
+  const rows: { label: string; value: string | null }[] = [
+    { label: "First name", value: profile.first_name || null },
+    { label: "City", value: profile.city || null },
+    { label: "State", value: profile.state || null },
+    { label: "Primary language", value: profile.primary_language ? (LANGUAGE_LABELS[profile.primary_language] ?? profile.primary_language) : null },
+    { label: "Rental situation", value: rentalSummary(profile) },
+    { label: "Work situation", value: workSummary(profile) },
+  ];
+  const filled = rows.filter((r) => r.value);
+  if (filled.length === 0) return null;
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+        <User className="h-3.5 w-3.5" /> Profile Information
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        From your onboarding answers. Used to personalize guidance from RECEIPTS AI.
+      </p>
+      <div className="mt-4 divide-y divide-border">
+        {filled.map((r) => (
+          <div key={r.label} className="flex items-start justify-between gap-4 py-2.5">
+            <span className="text-sm text-muted-foreground">{r.label}</span>
+            <span className="text-sm font-medium text-right">{r.value}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
