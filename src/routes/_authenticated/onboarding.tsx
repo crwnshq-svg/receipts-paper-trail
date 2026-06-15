@@ -245,6 +245,7 @@ function OnboardingPage() {
 
 function StepView({
   step, a, setA, goTo, busy, onUploadClick, onSkipUpload,
+  privacyAck, setPrivacyAck, recordPrivacyAck,
 }: {
   step: number;
   a: Answers;
@@ -253,6 +254,9 @@ function StepView({
   busy: boolean;
   onUploadClick: () => void;
   onSkipUpload: () => void;
+  privacyAck: boolean;
+  setPrivacyAck: React.Dispatch<React.SetStateAction<boolean>>;
+  recordPrivacyAck: () => Promise<void>;
 }) {
   // helpers
   const nextRentalAfterIs = (val: boolean | null) => (val === true ? 8 : 11);
