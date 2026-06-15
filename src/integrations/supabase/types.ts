@@ -651,52 +651,82 @@ export type Database = {
           ai_questions_used: number
           ai_tone: string
           case_package_credits: number
+          city: string | null
           created_at: string
           email: string | null
           first_name: string | null
           full_name: string | null
+          has_landlord_issues: boolean | null
+          has_workplace_issues: boolean | null
           id: string
+          is_employed: boolean | null
+          is_renting: boolean | null
           last_active_at: string | null
+          lease_type: string | null
+          onboarding_completed: boolean
+          primary_language: string | null
+          rental_duration: string | null
           state: string | null
           stripe_customer_id: string | null
           subscription_status: string
           subscription_tier: Database["public"]["Enums"]["subscription_tier"]
           updated_at: string
           welcomed_at: string | null
+          work_type: string | null
         }
         Insert: {
           ai_questions_used?: number
           ai_tone?: string
           case_package_credits?: number
+          city?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           full_name?: string | null
+          has_landlord_issues?: boolean | null
+          has_workplace_issues?: boolean | null
           id: string
+          is_employed?: boolean | null
+          is_renting?: boolean | null
           last_active_at?: string | null
+          lease_type?: string | null
+          onboarding_completed?: boolean
+          primary_language?: string | null
+          rental_duration?: string | null
           state?: string | null
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string
           welcomed_at?: string | null
+          work_type?: string | null
         }
         Update: {
           ai_questions_used?: number
           ai_tone?: string
           case_package_credits?: number
+          city?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           full_name?: string | null
+          has_landlord_issues?: boolean | null
+          has_workplace_issues?: boolean | null
           id?: string
+          is_employed?: boolean | null
+          is_renting?: boolean | null
           last_active_at?: string | null
+          lease_type?: string | null
+          onboarding_completed?: boolean
+          primary_language?: string | null
+          rental_duration?: string | null
           state?: string | null
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string
           welcomed_at?: string | null
+          work_type?: string | null
         }
         Relationships: []
       }
