@@ -45,7 +45,14 @@ function OnboardingPage() {
   const [a, setA] = useState<Answers>(EMPTY);
   const [history, setHistory] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  const [privacyAck, setPrivacyAck] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function recordPrivacyAck() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("profiles").update({ privacy_acknowledged_at: new Date().toISOString() } as never).eq("id", user.id);
+  }
 
   // hydrate from existing profile so partial completions resume
   useEffect(() => {
