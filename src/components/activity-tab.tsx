@@ -611,7 +611,7 @@ function IncidentDialog({
               disabled={saving}
               className="bg-primary text-primary-foreground"
             >
-              {saving ? "Saving…" : "Save incident"}
+              {saving ? "Saving…" : "Save event"}
             </Button>
           </DialogFooter>
         </form>
