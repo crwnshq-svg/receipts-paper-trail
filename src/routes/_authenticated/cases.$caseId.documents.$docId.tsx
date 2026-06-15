@@ -134,7 +134,7 @@ function DocumentReview() {
           <Link
             to="/cases/$caseId" params={{ caseId }} search={{ tab: "ai" }}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to case
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to file
           </Link>
           <div className="mt-3 flex items-start gap-3">
             <div className="rounded-md bg-accent/10 p-2"><FileText className="h-5 w-5 text-accent" /></div>
