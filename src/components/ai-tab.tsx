@@ -199,7 +199,7 @@ function ChatPanel(props: {
         <div className="border-b p-4 flex items-center gap-2">
           <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
           <div>
-            <div className="font-medium text-sm">Receipts AI</div>
+            <div className="font-medium text-sm">RECEIPTS AI</div>
             <div className="text-xs text-muted-foreground">Loading conversation…</div>
           </div>
         </div>
