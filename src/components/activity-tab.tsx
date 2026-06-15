@@ -536,7 +536,7 @@ function IncidentDialog({
         document_ids: docIds as never,
       }).select("id").single();
       if (error) throw error;
-      toast.success("Incident logged");
+      toast.success("Event logged");
       onOpenChange(false);
       reset();
       onSaved(inserted?.id);
@@ -552,7 +552,7 @@ function IncidentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log an Incident</DialogTitle>
+          <DialogTitle>Log an Event</DialogTitle>
         </DialogHeader>
         <form onSubmit={add} className="space-y-3">
           <Field label="Title" aiSuggested={prefilled.title}>
