@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS privacy_acknowledged_at timestamptz;

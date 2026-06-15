@@ -665,6 +665,7 @@ export type Database = {
           lease_type: string | null
           onboarding_completed: boolean
           primary_language: string | null
+          privacy_acknowledged_at: string | null
           rental_duration: string | null
           state: string | null
           stripe_customer_id: string | null
@@ -692,6 +693,7 @@ export type Database = {
           lease_type?: string | null
           onboarding_completed?: boolean
           primary_language?: string | null
+          privacy_acknowledged_at?: string | null
           rental_duration?: string | null
           state?: string | null
           stripe_customer_id?: string | null
@@ -719,6 +721,7 @@ export type Database = {
           lease_type?: string | null
           onboarding_completed?: boolean
           primary_language?: string | null
+          privacy_acknowledged_at?: string | null
           rental_duration?: string | null
           state?: string | null
           stripe_customer_id?: string | null
