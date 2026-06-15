@@ -30,7 +30,7 @@ const searchSchema = z.object({
 }).optional();
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
-  head: () => ({ meta: [{ title: "Case — Receipts" }] }),
+  head: () => ({ meta: [{ title: "File — Pull Up Receipts" }] }),
   validateSearch: searchSchema,
   component: CaseDetail,
 });
@@ -87,14 +87,14 @@ function CaseDetail() {
   const effectiveUsed = aiUsed ?? (profile?.ai_questions_used ?? 0);
 
   async function deleteCase() {
-    if (!confirm("Delete this record and all its incidents and documents? This cannot be undone.")) return;
+    if (!confirm("Delete this file and all its events and evidence? This cannot be undone.")) return;
     if (docs) {
       const paths = docs.map((d: any) => d.storage_path);
       if (paths.length) await supabase.storage.from("case-documents").remove(paths);
     }
     const { error } = await supabase.from("cases").delete().eq("id", caseId);
     if (error) { toast.error(error.message); return; }
-    toast.success("Record deleted");
+    toast.success("File deleted");
     navigate({ to: "/cases" });
   }
 
@@ -112,28 +112,31 @@ function CaseDetail() {
   }
 
   if (isLoading) return <AppShell><Card className="p-8 text-center text-sm text-muted-foreground">Loading…</Card></AppShell>;
-  if (!caseRow) return <AppShell><Card className="p-8 text-center">Case not found.</Card></AppShell>;
+  if (!caseRow) return <AppShell><Card className="p-8 text-center">File not found.</Card></AppShell>;
+
+  const partyName = caseRow.opposing_party && caseRow.opposing_party.trim().length > 0
+    ? caseRow.opposing_party
+    : caseRow.title;
 
   return (
     <AppShell>
       <div className="space-y-6">
         <div>
           <Link to="/cases" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to records
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to files
           </Link>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="font-serif text-3xl font-semibold">{caseRow.title}</h1>
+              <h1 className="font-serif text-3xl font-semibold">{partyName}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {(() => {
                   const lvl = (caseRow as any).status_level === "case" ? "case" : "record";
                   const cls = lvl === "case"
                     ? "bg-red-500/15 text-red-400 border border-red-500/30"
                     : "bg-amber-500/15 text-amber-400 border border-amber-500/30";
-                  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{lvl === "case" ? "Case" : "Record"}</span>;
+                  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{lvl === "case" ? "Case" : "File"}</span>;
                 })()}
                 <span className="rounded-full bg-secondary px-2 py-0.5">{DISPUTE_LABELS[caseRow.dispute_type]}</span>
-                {caseRow.opposing_party && <span>vs. {caseRow.opposing_party}</span>}
                 <span>· Started {new Date(caseRow.created_at).toLocaleDateString()}</span>
               </div>
             </div>
@@ -150,8 +153,8 @@ function CaseDetail() {
               <div className="flex items-start gap-3">
                 <ShieldAlert className="mt-0.5 h-4 w-4 text-red-400 shrink-0" />
                 <div>
-                  <div className="text-sm font-medium">Your documentation suggests this situation has escalated.</div>
-                  <div className="text-xs text-muted-foreground">Ready to mark this as a Case?</div>
+                  <div className="text-sm font-medium">Your file has enough documented events and evidence that it may be time to escalate to a Case.</div>
+                  <div className="text-xs text-muted-foreground">Would you like to create a Case from this File?</div>
                 </div>
               </div>
               <Button size="sm" onClick={promoteToCase} className="bg-red-500/90 text-white hover:bg-red-500">
@@ -164,9 +167,9 @@ function CaseDetail() {
         <Tabs value={initialTab} onValueChange={(v) => switchTab(v as any)}>
           <TabsList>
             <TabsTrigger value="incidents">Activity ({incidents?.length ?? 0})</TabsTrigger>
-            <TabsTrigger value="documents">Documents ({docs?.length ?? 0})</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="ai">AI tools</TabsTrigger>
+            <TabsTrigger value="documents">Evidence Vault ({docs?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
+            <TabsTrigger value="ai">RECEIPTS AI</TabsTrigger>
           </TabsList>
 
           <TabsContent value="incidents" className="mt-4">
@@ -287,14 +290,13 @@ function DocumentsTab({ caseId, docs, isPaid, autoUpload, onChange, onConsumed, 
           accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg" />
         <Button onClick={() => fileRef.current?.click()} disabled={uploading}
           className="bg-primary text-primary-foreground hover:bg-accent">
-          <Upload className="mr-1 h-4 w-4" /> {uploading ? "Uploading…" : "Upload document"}
+          <Upload className="mr-1 h-4 w-4" /> {uploading ? "Uploading…" : "Add Evidence"}
         </Button>
       </div>
 
       {docs.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          Upload anything that matters. We keep it encrypted and organized until
-          you need it.&nbsp;
+          No evidence uploaded yet. Upload anything that matters — we keep it encrypted and organized until you need it.
         </Card>
       ) : (
         <div className="grid gap-2">

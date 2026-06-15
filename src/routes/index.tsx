@@ -7,13 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Receipts — Pull Up Your Receipts" },
+      { title: "Pull Up Receipts — Pull Up Your Receipts" },
       {
         name: "description",
         content:
           "Document disputes with landlords, employers, or neighbors. Build a clear, timestamped paper trail and hold them accountable.",
       },
-      { property: "og:title", content: "Receipts — Pull Up Your Receipts" },
+      { property: "og:title", content: "Pull Up Receipts — Pull Up Your Receipts" },
       {
         property: "og:description",
         content:
@@ -107,15 +107,15 @@ function Landing() {
             </h2>
             <div className="mt-10 grid gap-6 sm:grid-cols-3">
               {[
-                {
+              {
                   n: "1",
-                  title: "Start your case",
-                  body: "Pick what kind of dispute it is and give it a name. Done in a minute.",
+                  title: "Start a file",
+                  body: "Pick what kind of dispute it is and name the other party. Done in a minute.",
                 },
                   {
                     n: "2",
                     title: "Build your paper trail",
-                    body: "Upload documents, log incidents as they happen. We organize, timestamp it all, and provide insights.",
+                    body: "Upload evidence, log events as they happen. We organize, timestamp it all, and provide insights.",
                   },
                   {
                     n: "3",
@@ -142,11 +142,11 @@ function Landing() {
               {
                 icon: FolderLock,
                 title: "Store Everything",
-                body: "Your evidence vault. Contracts, photos, Videos, emails. Store everything, because everything matters.\u00a0",
+                body: "Your Evidence Vault. Contracts, photos, videos, emails. Store everything, because everything matters.\u00a0",
               },
               {
                 icon: Pencil,
-                title: "Log Every Incident",
+                title: "Log Every Event",
                 body: "Your running timeline. Every date, every detail, every ignored request captured so nothing gets forgotten.\u00a0",
               },
               {
@@ -176,7 +176,7 @@ function Landing() {
               Simple pricing
             </h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
-              Start free. Upgrade when your case grows.
+              Start free. Upgrade when your file grows.
             </p>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               <PriceCard
@@ -184,9 +184,9 @@ function Landing() {
                 price="$0"
                 period=""
                 features={[
-                  "1 active case",
-                  "75 MB document vault",
-                  "Incident log",
+                  "1 active file",
+                  "75 MB Evidence Vault",
+                  "Event log",
                   "3 AI questions",
                 ]}
               />
@@ -195,7 +195,7 @@ function Landing() {
                 price="$15"
                 period="/month"
                 features={[
-                  "Unlimited cases",
+                  "Unlimited files",
                   "Unlimited storage",
                   "Unlimited AI chat",
                   "Document generation",
@@ -218,7 +218,7 @@ function Landing() {
             </div>
             <p className="mx-auto mt-6 max-w-xl text-center text-xs text-muted-foreground">
               $49 Case Package add-on available to paid subscribers — a
-              court-ready PDF of your full case.
+              court-ready PDF of your full file.
             </p>
           </div>
         </section>
@@ -235,8 +235,8 @@ function Landing() {
             </Link>
           </div>
           <p className="mx-auto mt-4 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
-            Receipts is a document preparation tool and does not provide legal
-            advice. © {new Date().getFullYear()} Receipts.
+            Pull Up Receipts is a document preparation tool and does not provide legal
+            advice. © {new Date().getFullYear()} Pull Up Receipts.
           </p>
         </div>
       </footer>

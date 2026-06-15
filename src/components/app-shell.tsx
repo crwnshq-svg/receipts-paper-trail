@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
-    { to: "/cases", label: "Records", icon: FolderOpen, badge: 0 },
+    { to: "/cases", label: "Files", icon: FolderOpen, badge: 0 },
     { to: "/notifications", label: "Alerts", icon: Bell, badge: unreadCount },
     { to: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
     { to: "/account", label: "Account", icon: UserCircle, badge: 0 },
@@ -107,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
               <Scale className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-serif text-lg font-semibold">Receipts</span>
+            <span className="font-serif text-lg font-semibold">Pull Up Receipts</span>
           </Link>
           <nav className="hidden gap-1 md:flex">
             {nav.map((n) => (
@@ -206,7 +206,7 @@ function PushPermissionPrompt() {
         <div className="flex-1">
           <div className="font-medium text-sm">Stay updated</div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Get notified when new insights appear on your documents.
+            Get notified when new insights appear on your evidence.
           </p>
           <div className="mt-3 flex gap-2">
             <Button size="sm" onClick={enable} className="bg-primary text-primary-foreground">Enable</Button>
@@ -244,7 +244,7 @@ export const STATUS_LABELS: Record<string, string> = {
 export function Disclaimer({ className }: { className?: string }) {
   return (
     <p className={cn("text-[11px] leading-relaxed text-muted-foreground", className)}>
-      Receipts does not provide legal advice. Nothing in this product creates an attorney-client relationship.
+      Pull Up Receipts does not provide legal advice. Nothing in this product creates an attorney-client relationship.
       For legal advice, consult a licensed attorney in your jurisdiction.
     </p>
   );

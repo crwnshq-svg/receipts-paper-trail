@@ -24,7 +24,7 @@ import { FREE_AI_QUESTIONS } from "@/lib/constants";
 import { setPrefill, popPrefill } from "@/lib/prefill";
 
 const DISCLAIMER_LINE =
-  "Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
+  "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
 
 const DOCUMENT_TYPES = [
   "Demand Letter",
@@ -199,7 +199,7 @@ function ChatPanel(props: {
         <div className="border-b p-4 flex items-center gap-2">
           <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
           <div>
-            <div className="font-medium text-sm">Receipts AI</div>
+            <div className="font-medium text-sm">RECEIPTS AI</div>
             <div className="text-xs text-muted-foreground">Loading conversation…</div>
           </div>
         </div>
@@ -312,8 +312,8 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
         <div className="flex items-center gap-2">
           <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
           <div>
-            <div className="font-medium text-sm">Receipts AI</div>
-            <div className="text-xs text-muted-foreground">Case-specific guidance from your evidence</div>
+            <div className="font-medium text-sm">RECEIPTS AI</div>
+            <div className="text-xs text-muted-foreground">File-specific guidance from your evidence</div>
           </div>
         </div>
         <div className="text-xs text-muted-foreground">
@@ -330,7 +330,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
       <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
         {messages.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10">
-            Ask anything about your case. The AI has your incidents and documents as context.
+            Ask anything about your file. I have your full file in context — every event and every piece of evidence.
             <div className="mt-3 grid gap-2 max-w-md mx-auto text-left">
               {[
                 "What are my strongest pieces of evidence?",
@@ -362,7 +362,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={isPaid || remaining > 0 ? "Ask about your case…" : "Free questions used — upgrade to continue"}
+          placeholder={isPaid || remaining > 0 ? "Ask about your file…" : "Free questions used — upgrade to continue"}
           disabled={isLoading || (!isPaid && remaining === 0)}
           autoFocus
         />
@@ -591,7 +591,7 @@ function PartnerCard({ partner }: { partner: StructuredPartner }) {
   return (
     <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 space-y-2">
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-accent">
-        <BadgeCheck className="h-3.5 w-3.5" /> Verified Receipts Partner
+        <BadgeCheck className="h-3.5 w-3.5" /> Verified Pull Up Receipts Partner
       </div>
       <div>
         <div className="font-semibold text-sm">{partner.name}</div>
@@ -755,7 +755,7 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
     const { data } = await supabase.auth.getUser();
     const email = data.user?.email;
     if (!email || !result) return;
-    const subject = encodeURIComponent(`Receipts — ${selectedType}`);
+    const subject = encodeURIComponent(`Pull Up Receipts — ${selectedType}`);
     const body = encodeURIComponent(result);
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   }
@@ -767,7 +767,7 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
         <h3 className="font-medium">Generate a document</h3>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Pick a document type. We'll draft it using your case context.
+        Pick a document type. We'll draft it using your file context.
       </p>
 
       {step === "result" && result && (
@@ -940,14 +940,14 @@ function BuildYourDocument(props: {
         </p>
       </div>
 
-      {/* Incidents */}
+      {/* Events */}
       <section>
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-          Incidents ({incCount}/{incidents?.length ?? 0})
+          Events ({incCount}/{incidents?.length ?? 0})
         </div>
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           {(incidents ?? []).length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No incidents logged yet.</p>
+            <p className="text-xs text-muted-foreground italic">No events logged yet.</p>
           )}
           {(incidents ?? []).map((inc) => {
             const checked = props.selectedIncidents.includes(inc.id);
@@ -969,14 +969,14 @@ function BuildYourDocument(props: {
         </div>
       </section>
 
-      {/* Documents */}
+      {/* Evidence */}
       <section>
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-          Documents ({docCount}/{docs?.length ?? 0})
+          Evidence ({docCount}/{docs?.length ?? 0})
         </div>
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           {(docs ?? []).length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No documents uploaded yet.</p>
+            <p className="text-xs text-muted-foreground italic">No evidence uploaded yet.</p>
           )}
           {(docs ?? []).map((d) => {
             const checked = props.selectedDocs.includes(d.id);
@@ -1006,7 +1006,7 @@ function BuildYourDocument(props: {
         <Textarea
           value={props.keyFacts}
           onChange={(e) => props.setKeyFacts(e.target.value)}
-          placeholder="Add any context the AI should know — party names, amounts owed, specific demands, key dates, anything not captured in your incidents or documents."
+          placeholder="Add any context the AI should know — party names, amounts owed, specific demands, key dates, anything not captured in your events or evidence."
           rows={4}
         />
       </section>
@@ -1014,11 +1014,11 @@ function BuildYourDocument(props: {
       {/* Summary + generate */}
       <div className="border-t pt-4 space-y-2">
         <div className="text-xs text-center text-muted-foreground">
-          Generating from <strong>{incCount}</strong> incident{incCount === 1 ? "" : "s"} and <strong>{docCount}</strong> document{docCount === 1 ? "" : "s"}.
+          Generating from <strong>{incCount}</strong> event{incCount === 1 ? "" : "s"} and <strong>{docCount}</strong> piece{docCount === 1 ? "" : "s"} of evidence.
         </div>
         {!hasSelection && (
           <p className="text-xs text-center text-muted-foreground italic">
-            Select at least one incident or document to include.
+            Select at least one event or piece of evidence to include.
           </p>
         )}
         <Button onClick={props.onGenerate} disabled={!hasSelection || props.generating}
@@ -1035,7 +1035,7 @@ function ResultEditor(props: {
   onBack: () => void; onDownload: () => void; onEmail: () => void;
 }) {
   // Ensure non-removable disclaimer footer
-  const FOOTER_MARKER = "---\nReceipts is a document preparation tool";
+  const FOOTER_MARKER = "---\nPull Up Receipts is a document preparation tool";
   const hasFooter = props.value.includes(FOOTER_MARKER);
   return (
     <div className="space-y-3">

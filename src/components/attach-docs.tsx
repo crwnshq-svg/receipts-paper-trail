@@ -126,12 +126,12 @@ export function AttachDocs({
         <Popover>
           <PopoverTrigger asChild>
             <Button type="button" variant="outline" size="sm">
-              <Paperclip className="mr-1.5 h-3.5 w-3.5" /> Attach from Vault
+              <Paperclip className="mr-1.5 h-3.5 w-3.5" /> Attach from Evidence Vault
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-2" align="start">
             <Input
-              placeholder="Search documents…"
+              placeholder="Search evidence…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="h-8 text-sm"
@@ -139,7 +139,7 @@ export function AttachDocs({
             <div className="mt-2 max-h-60 overflow-auto">
               {filtered.length === 0 ? (
                 <div className="px-2 py-6 text-center text-xs text-muted-foreground">
-                  No documents in your vault yet.
+                  No evidence in your Evidence Vault yet.
                 </div>
               ) : (
                 <ul className="space-y-0.5">

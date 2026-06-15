@@ -5,11 +5,11 @@ import { Home, Briefcase, Users, FileText } from "lucide-react";
 export const Route = createFileRoute("/get-started")({
   head: () => ({
     meta: [
-      { title: "Get started — Receipts" },
+      { title: "Get started — Pull Up Receipts" },
       {
         name: "description",
         content:
-          "Pick the kind of dispute you're dealing with and create your free Receipts account.",
+          "Pick the kind of dispute you're dealing with and create your free Pull Up Receipts account.",
       },
     ],
   }),

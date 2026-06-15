@@ -132,7 +132,7 @@ export function DocumentCard({
                 <Skeleton className="h-3 w-full" />
                 <Skeleton className="h-3 w-4/5" />
                 <p className="text-[10px] text-muted-foreground italic">
-                  {reanalyzing ? "Re-analyzing…" : "Analyzing document…"}
+                  {reanalyzing ? "Re-analyzing evidence…" : "Analyzing evidence…"}
                 </p>
               </div>
             ) : editing ? (
@@ -160,7 +160,7 @@ export function DocumentCard({
                   </button>
                   <button onClick={reanalyze} disabled={reanalyzing}
                     className="opacity-60 hover:opacity-100 disabled:opacity-30"
-                    title="Re-analyze with AI">
+                    title="Re-analyze Evidence">
                     <RefreshCw className={`h-3 w-3 ${reanalyzing ? "animate-spin" : ""}`} />
                   </button>
                 </div>

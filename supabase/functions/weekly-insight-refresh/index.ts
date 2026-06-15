@@ -1,4 +1,4 @@
-// Weekly insight refresh — re-analyzes recent documents for users inactive 7+ days.
+// Weekly insight refresh — re-analyzes recent evidence for users inactive 7+ days.
 // Schedule via pg_cron weekly.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -34,11 +34,11 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 1024,
-            system: "Return ONLY a JSON array (max 2 items) of NEW insights about this document. Each item: {insight_type, insight_title, brief_description, full_guidance}. Use only hedged language. End full_guidance with: This is not legal advice. Review with a qualified attorney for guidance specific to your situation.",
+            system: "Return ONLY a JSON array (max 2 items) of NEW insights about this piece of evidence. Each item: {insight_type, insight_title, brief_description, full_guidance}. Use only hedged language. End full_guidance with: This is not legal advice. Review with a qualified attorney for guidance specific to your situation.",
             messages: [
               {
                 role: "user",
-                content: `Document: ${d.file_name}\nSummary: ${d.ai_summary ?? "(none)"}\n\nWhat new considerations might have come up in the past week?`,
+                content: `Evidence: ${d.file_name}\nSummary: ${d.ai_summary ?? "(none)"}\n\nWhat new considerations might have come up in the past week?`,
               },
             ],
           }),

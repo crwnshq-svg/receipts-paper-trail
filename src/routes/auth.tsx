@@ -20,8 +20,8 @@ export const Route = createFileRoute("/auth")({
   validateSearch: search,
   head: () => ({
     meta: [
-      { title: "Sign in — Receipts" },
-      { name: "description", content: "Sign in or create your free Receipts account." },
+      { title: "Sign in — Pull Up Receipts" },
+      { name: "description", content: "Sign in or create your free Pull Up Receipts account." },
     ],
   }),
   ssr: false,
@@ -106,8 +106,8 @@ function AuthPage() {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-bold text-center">Welcome</h1>
-          <p className="mt-1 text-center text-sm text-muted-foreground">Your record. Your rights.</p>
+          <h1 className="text-2xl font-bold text-center">Welcome to Pull Up Receipts</h1>
+          <p className="mt-1 text-center text-sm text-muted-foreground">Your file. Your rights.</p>
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="mt-6">
             <TabsList className="grid w-full grid-cols-2">
@@ -141,7 +141,7 @@ function AuthPage() {
                 <label className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
                   <Checkbox checked={agreed} onCheckedChange={(c) => setAgreed(c === true)} className="mt-0.5" />
                   <span>
-                    I agree that Receipts is a document preparation tool and does not provide legal advice.
+                    I agree that Pull Up Receipts is a document preparation tool and does not provide legal advice.
                   </span>
                 </label>
                 <Button type="submit" className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>

@@ -25,7 +25,7 @@ import { FREE_STORAGE_BYTES, STORAGE_WARNING_BYTES, FREE_AI_QUESTIONS } from "@/
 import { updateAiTone } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/account")({
-  head: () => ({ meta: [{ title: "Account — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Account — Pull Up Receipts" }] }),
   component: AccountPage,
 });
 
@@ -111,7 +111,7 @@ function AccountPage() {
       <div className="space-y-6">
         <div>
           <h1 className="font-serif text-3xl font-semibold">Account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Manage your plan, notifications, and access.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Manage your Pull Up Receipts plan, notifications, and access.</p>
         </div>
 
         <Card className="p-5">
@@ -195,8 +195,8 @@ function AccountPage() {
             />
             <NotifRow
               id="case-updates"
-              label="Case updates"
-              desc="Activity on your incidents and documents."
+              label="File updates"
+              desc="Activity on your events and evidence."
               checked={caseUpdates}
               onChange={(v) => setNotif("case_updates", v, setCaseUpdates)}
             />
@@ -208,7 +208,7 @@ function AccountPage() {
             <Sparkles className="h-3.5 w-3.5" /> AI Response Style
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Choose how Receipts AI talks to you. Both modes give the same accurate information.
+            Choose how RECEIPTS AI talks to you. Both modes give the same accurate information.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <button

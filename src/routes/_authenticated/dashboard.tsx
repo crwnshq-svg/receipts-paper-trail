@@ -16,7 +16,7 @@ import { FREE_STORAGE_BYTES, FREE_AI_QUESTIONS } from "@/lib/constants";
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Pull Up Receipts" }] }),
   component: Dashboard,
 });
 
@@ -138,14 +138,14 @@ function Dashboard() {
   // greeting status line
   const activeCount = caseList.filter((c) => c.status === "active").length;
   const totalUnreadInsights = insightsAll.length;
-  let statusLine = "No records yet — start documenting your situation today.";
+  let statusLine = "No files yet — start a file today. Your file. Documented and proven.";
   if (hasCases) {
     if (totalUnreadInsights > 0) {
       const caseIdsWithInsights = new Set(insightsAll.map((i) => i.case_id));
-      statusLine = `You have unread insights on ${caseIdsWithInsights.size} record${caseIdsWithInsights.size === 1 ? "" : "s"}.`;
+      statusLine = `You have unread insights on ${caseIdsWithInsights.size} file${caseIdsWithInsights.size === 1 ? "" : "s"}.`;
     } else {
       const last = mostRecent?.updated_at;
-      statusLine = `You have ${activeCount} active record${activeCount === 1 ? "" : "s"}.${last ? ` Last activity ${relTime(last)}.` : ""}`;
+      statusLine = `You have ${activeCount} active file${activeCount === 1 ? "" : "s"}.${last ? ` Last activity ${relTime(last)}.` : ""}`;
     }
   }
 
@@ -161,11 +161,11 @@ function Dashboard() {
   const activity: Activity[] = [
     ...documentsAll.map<Activity>((d) => ({
       id: `d-${d.id}`, type: "doc", at: d.created_at, caseId: d.case_id,
-      text: `Uploaded "${d.file_name}" to ${caseTitleById.get(d.case_id) ?? "a record"}`,
+      text: `Uploaded "${d.file_name}" to ${caseTitleById.get(d.case_id) ?? "a file"}`,
     })),
     ...incidentsAll.map<Activity>((i) => ({
       id: `i-${i.id}`, type: "incident", at: i.created_at, caseId: i.case_id,
-      text: `Logged incident "${i.title}" in ${caseTitleById.get(i.case_id) ?? "a record"}`,
+      text: `Logged event "${i.title}" in ${caseTitleById.get(i.case_id) ?? "a file"}`,
     })),
     ...insightsAll.map<Activity>((n) => ({
       id: `n-${n.id}`, type: "insight", at: n.created_at, caseId: n.case_id,
@@ -173,7 +173,7 @@ function Dashboard() {
     })),
     ...generatedAll.map<Activity>((g) => ({
       id: `g-${g.id}`, type: "generated", at: g.created_at, caseId: g.case_id,
-      text: `Generated ${g.document_type.replace(/_/g, " ")} for ${caseTitleById.get(g.case_id) ?? "a record"}`,
+      text: `Generated ${g.document_type.replace(/_/g, " ")} for ${caseTitleById.get(g.case_id) ?? "a file"}`,
     })),
   ].sort((a, b) => +new Date(b.at) - +new Date(a.at)).slice(0, 5);
 
@@ -197,30 +197,30 @@ function Dashboard() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="font-serif text-3xl font-semibold">
-                {profile?.full_name ? `Welcome, ${profile.full_name.split(" ")[0]}` : "Your dashboard"}
+                {profile?.full_name ? `Welcome, ${profile.full_name.split(" ")[0]}` : "Your files"}
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">Your record, organized.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Your file, organized.</p>
               <p className="mt-1.5 text-sm text-foreground/80">{statusLine}</p>
             </div>
             <Link to="/cases/new">
               <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm">
-                <Plus className="mr-1 h-4 w-4" /> New Record
+                <Plus className="mr-1 h-4 w-4" /> Start a File
               </Button>
             </Link>
           </div>
 
           {/* Quick actions */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <QuickAction icon={PenSquare} label="Log an Incident" target={qa("incidents")} disabled={!hasCases} />
-            <QuickAction icon={Upload} label="Upload a Document" target={qa("documents")} disabled={!hasCases} />
-            <QuickAction icon={MessageSquare} label="Ask the AI" target={qa("ai")} disabled={!hasCases} />
+            <QuickAction icon={PenSquare} label="Log an Event" target={qa("incidents")} disabled={!hasCases} />
+            <QuickAction icon={Upload} label="Upload Evidence" target={qa("documents")} disabled={!hasCases} />
+            <QuickAction icon={MessageSquare} label="Ask RECEIPTS AI" target={qa("ai")} disabled={!hasCases} />
           </div>
 
           <Separator />
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <StatCard icon={FolderOpen} label="Records" value={String(caseList.length)} />
+            <StatCard icon={FolderOpen} label="Files" value={String(caseList.length)} />
             <Card className="rounded-xl p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" /> Plan
@@ -249,7 +249,7 @@ function Dashboard() {
               </div>
               <Progress value={pct} className="mt-2 h-1.5" />
             </Card>
-            <StatCard icon={ListChecks} label="Incidents" value={String(incidentsAll.length)} />
+            <StatCard icon={ListChecks} label="Events" value={String(incidentsAll.length)} />
             <Card className="rounded-xl p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                 <Brain className="h-3.5 w-3.5" /> AI Questions
@@ -267,14 +267,14 @@ function Dashboard() {
             </Card>
           </div>
 
-          {/* Recent records */}
+          {/* Recent files */}
           <div>
-            <h2 className="font-serif text-xl font-semibold">Recent records</h2>
+            <h2 className="font-serif text-xl font-semibold">Recent files</h2>
             {!hasCases ? (
               <Card className="mt-3 rounded-xl p-8 text-center shadow-sm">
-                <p className="text-sm text-muted-foreground">No records yet. Start by creating one.</p>
+                <p className="text-sm text-muted-foreground">No files yet. Start by creating one.</p>
                 <Link to="/cases/new">
-                  <Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">Start your first Record</Button>
+                  <Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">Start a File</Button>
                 </Link>
               </Card>
             ) : (
@@ -289,15 +289,19 @@ function Dashboard() {
                   const strengthColor = strength >= 60 ? "bg-emerald-500" : strength >= 30 ? "bg-amber-500" : "bg-red-500";
                   
 
-                  let nextAction = "Keep documenting — every detail matters";
-                  if (docs === 0) nextAction = "Upload your contract or agreement";
-                  else if (inc < 3) nextAction = "Log more incidents to strengthen your record";
+                  let nextAction = "Keep documenting — every event matters";
+                  if (docs === 0) nextAction = "Upload your contract or agreement as evidence";
+                  else if (inc < 3) nextAction = "Log more events to strengthen this file";
                   else if (strength >= 60 && gens === 0) nextAction = "Ready to generate a document";
 
                   const statusLevel = (c as any).status_level === "case" ? "case" : "record";
                   const levelClass = statusLevel === "case"
                     ? "bg-red-500/15 text-red-400 border-red-500/30"
                     : "bg-amber-500/15 text-amber-400 border-amber-500/30";
+
+                  const partyName = c.opposing_party && c.opposing_party.trim().length > 0
+                    ? c.opposing_party
+                    : c.title;
 
                   return (
                     <Link key={c.id} to="/cases/$caseId" params={{ caseId: c.id }}>
@@ -309,17 +313,17 @@ function Dashboard() {
                         )}
                         <div className="flex flex-wrap items-center gap-2 pr-16">
                           <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${levelClass}`}>
-                            {statusLevel === "case" ? "Case" : "Record"}
+                            {statusLevel === "case" ? "Case" : "File"}
                           </span>
                           <span className="text-[11px] text-muted-foreground">
                             {DISPUTE_LABELS[c.dispute_type]}
                           </span>
                         </div>
-                        <div className="mt-2 font-medium leading-tight">{c.title}</div>
+                        <div className="mt-2 font-medium leading-tight">{partyName}</div>
 
                         <div className="mt-3">
                           <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                            <span>Record strength</span><span>{strength}%</span>
+                            <span>File strength</span><span>{strength}%</span>
                           </div>
                           <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                             <div className={`h-full ${strengthColor}`} style={{ width: `${Math.min(100, strength)}%` }} />
@@ -327,8 +331,8 @@ function Dashboard() {
                         </div>
 
                         <div className="mt-3 flex flex-wrap gap-1.5">
-                          <Chip>{inc} incident{inc === 1 ? "" : "s"}</Chip>
-                          <Chip>{docs} doc{docs === 1 ? "" : "s"}</Chip>
+                          <Chip>{inc} event{inc === 1 ? "" : "s"}</Chip>
+                          <Chip>{docs} evidence</Chip>
                           <Chip>{days === 0 ? "today" : `${days}d open`}</Chip>
                         </div>
 
@@ -349,7 +353,7 @@ function Dashboard() {
             <h2 className="font-serif text-xl font-semibold">Recent activity</h2>
             <Card className="mt-3 rounded-xl p-5 shadow-sm">
               {activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Your activity will appear here as you build your record.</p>
+                <p className="text-sm text-muted-foreground">Your activity will appear here as you build your file.</p>
               ) : (
                 <ul className="space-y-3">
                   {activity.map((a) => (
@@ -429,7 +433,7 @@ function QuickAction({ icon: Icon, label, target, disabled }: { icon: any; label
     return (
       <Tooltip>
         <TooltipTrigger asChild><div>{button}</div></TooltipTrigger>
-        <TooltipContent>Start a record first</TooltipContent>
+        <TooltipContent>Start a file first</TooltipContent>
       </Tooltip>
     );
   }

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cases/")({
-  head: () => ({ meta: [{ title: "Records — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Files — Pull Up Receipts" }] }),
   component: CasesList,
 });
 
@@ -25,10 +25,10 @@ function CasesList() {
     <AppShell>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="font-serif text-3xl font-semibold">Your Records</h1>
+          <h1 className="font-serif text-3xl font-semibold">Your Files</h1>
           <Link to="/cases/new">
             <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm">
-              <Plus className="mr-1 h-4 w-4" /> New Record
+              <Plus className="mr-1 h-4 w-4" /> Start a File
             </Button>
           </Link>
         </div>
@@ -37,13 +37,16 @@ function CasesList() {
           <Card className="p-8 text-center text-sm text-muted-foreground">Loading…</Card>
         ) : !cases || cases.length === 0 ? (
           <Card className="p-8 text-center">
-            <p className="text-sm text-muted-foreground">You haven't started a record yet.</p>
-            <Link to="/cases/new"><Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">Start your first Record</Button></Link>
+            <p className="text-sm text-muted-foreground">No files yet.</p>
+            <Link to="/cases/new"><Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">Start a File</Button></Link>
           </Card>
         ) : (
           <div className="grid gap-3">
             {cases.map((c) => {
               const isCase = (c as any).status_level === "case";
+              const partyName = c.opposing_party && c.opposing_party.trim().length > 0
+                ? c.opposing_party
+                : c.title;
               return (
                 <Link key={c.id} to="/cases/$caseId" params={{ caseId: c.id }}>
                   <Card className="p-4 transition-colors hover:bg-secondary">
@@ -51,11 +54,11 @@ function CasesList() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${isCase ? "bg-red-500/15 text-red-400 border-red-500/30" : "bg-amber-500/15 text-amber-400 border-amber-500/30"}`}>
-                            {isCase ? "Case" : "Record"}
+                            {isCase ? "Case" : "File"}
                           </span>
-                          <span className="font-medium truncate">{c.title}</span>
+                          <span className="font-medium truncate">{partyName}</span>
                         </div>
-                        {c.opposing_party && (
+                        {c.opposing_party && c.opposing_party !== partyName && (
                           <div className="mt-0.5 text-xs text-muted-foreground">vs. {c.opposing_party}</div>
                         )}
                         <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">

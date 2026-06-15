@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/resources")({
-  head: () => ({ meta: [{ title: "Resources — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Resources — Pull Up Receipts" }] }),
   component: ResourcesPage,
 });
 

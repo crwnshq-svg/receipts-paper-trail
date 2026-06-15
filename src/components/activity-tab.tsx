@@ -121,7 +121,7 @@ export function ActivityTab({
   }, [incidents, notes]);
 
   async function removeIncident(id: string) {
-    if (!confirm("Delete this incident?")) return;
+    if (!confirm("Delete this event?")) return;
     const { error } = await supabase.from("incidents").delete().eq("id", id);
     if (error) toast.error(error.message);
     else {
@@ -178,7 +178,7 @@ export function ActivityTab({
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Answer added to incident");
+      toast.success("Answer added to event");
       setAnswerQ(null);
       onChange();
     }
@@ -198,7 +198,7 @@ export function ActivityTab({
           onClick={() => setIncidentOpen(true)}
           className="bg-primary text-primary-foreground hover:bg-accent"
         >
-          <Plus className="mr-1 h-4 w-4" /> Log Incident
+          <Plus className="mr-1 h-4 w-4" /> Log an Event
         </Button>
       </div>
 
@@ -221,8 +221,7 @@ export function ActivityTab({
 
       {feed.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          No activity yet. Log an incident or add a note as things happen —
-          details fade fast.
+          No events logged yet. Log an event or add a note as things happen — details fade fast. Your file. Documented and proven.
         </Card>
       ) : (
         <ol className="space-y-3">
@@ -233,7 +232,7 @@ export function ActivityTab({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
-                        <AlertCircle className="h-3 w-3" /> Incident
+                        <AlertCircle className="h-3 w-3" /> Event
                         <span className="font-normal text-muted-foreground">
                           · {new Date(f.data.occurred_at).toLocaleString()}
                         </span>
@@ -537,7 +536,7 @@ function IncidentDialog({
         document_ids: docIds as never,
       }).select("id").single();
       if (error) throw error;
-      toast.success("Incident logged");
+      toast.success("Event logged");
       onOpenChange(false);
       reset();
       onSaved(inserted?.id);
@@ -553,7 +552,7 @@ function IncidentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log an Incident</DialogTitle>
+          <DialogTitle>Log an Event</DialogTitle>
         </DialogHeader>
         <form onSubmit={add} className="space-y-3">
           <Field label="Title" aiSuggested={prefilled.title}>
@@ -612,7 +611,7 @@ function IncidentDialog({
               disabled={saving}
               className="bg-primary text-primary-foreground"
             >
-              {saving ? "Saving…" : "Save incident"}
+              {saving ? "Saving…" : "Save event"}
             </Button>
           </DialogFooter>
         </form>
@@ -691,7 +690,7 @@ function NoteDialog({
               onChange={(e) => setContent(e.target.value)}
               required
               rows={4}
-              placeholder="A thought, reminder, or observation that doesn't rise to a formal incident."
+              placeholder="A thought, reminder, or observation that doesn't rise to a formal event."
             />
           </Field>
 
