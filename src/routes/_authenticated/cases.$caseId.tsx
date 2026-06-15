@@ -112,28 +112,31 @@ function CaseDetail() {
   }
 
   if (isLoading) return <AppShell><Card className="p-8 text-center text-sm text-muted-foreground">Loading…</Card></AppShell>;
-  if (!caseRow) return <AppShell><Card className="p-8 text-center">Case not found.</Card></AppShell>;
+  if (!caseRow) return <AppShell><Card className="p-8 text-center">File not found.</Card></AppShell>;
+
+  const partyName = caseRow.opposing_party && caseRow.opposing_party.trim().length > 0
+    ? caseRow.opposing_party
+    : caseRow.title;
 
   return (
     <AppShell>
       <div className="space-y-6">
         <div>
           <Link to="/cases" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to records
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to files
           </Link>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="font-serif text-3xl font-semibold">{caseRow.title}</h1>
+              <h1 className="font-serif text-3xl font-semibold">{partyName}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {(() => {
                   const lvl = (caseRow as any).status_level === "case" ? "case" : "record";
                   const cls = lvl === "case"
                     ? "bg-red-500/15 text-red-400 border border-red-500/30"
                     : "bg-amber-500/15 text-amber-400 border border-amber-500/30";
-                  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{lvl === "case" ? "Case" : "Record"}</span>;
+                  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{lvl === "case" ? "Case" : "File"}</span>;
                 })()}
                 <span className="rounded-full bg-secondary px-2 py-0.5">{DISPUTE_LABELS[caseRow.dispute_type]}</span>
-                {caseRow.opposing_party && <span>vs. {caseRow.opposing_party}</span>}
                 <span>· Started {new Date(caseRow.created_at).toLocaleDateString()}</span>
               </div>
             </div>
@@ -150,8 +153,8 @@ function CaseDetail() {
               <div className="flex items-start gap-3">
                 <ShieldAlert className="mt-0.5 h-4 w-4 text-red-400 shrink-0" />
                 <div>
-                  <div className="text-sm font-medium">Your documentation suggests this situation has escalated.</div>
-                  <div className="text-xs text-muted-foreground">Ready to mark this as a Case?</div>
+                  <div className="text-sm font-medium">Your file has enough documented events and evidence that it may be time to escalate to a Case.</div>
+                  <div className="text-xs text-muted-foreground">Would you like to create a Case from this File?</div>
                 </div>
               </div>
               <Button size="sm" onClick={promoteToCase} className="bg-red-500/90 text-white hover:bg-red-500">
@@ -164,9 +167,9 @@ function CaseDetail() {
         <Tabs value={initialTab} onValueChange={(v) => switchTab(v as any)}>
           <TabsList>
             <TabsTrigger value="incidents">Activity ({incidents?.length ?? 0})</TabsTrigger>
-            <TabsTrigger value="documents">Documents ({docs?.length ?? 0})</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="ai">AI tools</TabsTrigger>
+            <TabsTrigger value="documents">Evidence Vault ({docs?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
+            <TabsTrigger value="ai">RECEIPTS AI</TabsTrigger>
           </TabsList>
 
           <TabsContent value="incidents" className="mt-4">
