@@ -280,18 +280,18 @@ You MUST respond with a single valid JSON object (no markdown fences, no prose o
   "actions": [ { "type": "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource" | "send_preservation_demand" | "log_witness" | "create_written_record" | "draft_followup_email" | "generate_police_report" | "generate_footage_request" | "log_spoliation", "label": "short tappable label", "prefill": { "...any fields the receiving form should open with, populated from case context and conversation": "..." } } ],
   "resources": [ { "name": "Agency or org name", "url": "https://...", "description": "one-line plain-English description" } ],
   "partners": [ { "id": "partner_id from directory", "name": "...", "specialty": "...", "location": "City, ST or null", "contact": "email/phone/url" } ],
-  "document_refs": [ "document_id from case vault" ],
+  "document_refs": [ "evidence_id from the Evidence Vault" ],
   "suggestions": [ "2-3 short follow-up questions the user can tap" ]
 }
 
 Rules:
 - Every field is required. Use [] for empty arrays.
 - Only include partners drawn from the directory below — never invent them.
-- Only include document_refs that match a real document id from the case context below.
+- Only include document_refs that match a real evidence id from the file context below.
 - 2-3 suggestions, each under 60 chars.
 - Keep "message" focused: lead with answer, no preamble, end with the disclaimer line.
 
-==================== CASE CONTEXT ====================
+==================== FILE CONTEXT ====================
 ${args.caseContext}
 
 ==================== AVAILABLE PARTNERS ====================
