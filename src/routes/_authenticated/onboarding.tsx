@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { ReceiptText, ArrowLeft, Upload, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({ meta: [{ title: "Welcome — Pull Up Receipts" }] }),
