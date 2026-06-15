@@ -330,7 +330,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
       <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
         {messages.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10">
-            Ask anything about your case. The AI has your incidents and documents as context.
+            Ask anything about your file. I have your full file in context — every event and every piece of evidence.
             <div className="mt-3 grid gap-2 max-w-md mx-auto text-left">
               {[
                 "What are my strongest pieces of evidence?",
