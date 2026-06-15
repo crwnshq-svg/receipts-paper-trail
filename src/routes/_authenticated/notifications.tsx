@@ -60,7 +60,7 @@ function NotificationsPage() {
         <div>
           <h1 className="font-serif text-3xl font-semibold">Notifications</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Updates from your cases and broadcasts from Receipts.
+            Updates from your files and broadcasts from Pull Up Receipts.
           </p>
         </div>
 
