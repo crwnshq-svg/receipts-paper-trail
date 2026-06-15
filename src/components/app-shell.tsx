@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
-    { to: "/cases", label: "Records", icon: FolderOpen, badge: 0 },
+    { to: "/cases", label: "Files", icon: FolderOpen, badge: 0 },
     { to: "/notifications", label: "Alerts", icon: Bell, badge: unreadCount },
     { to: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
     { to: "/account", label: "Account", icon: UserCircle, badge: 0 },
@@ -107,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
               <Scale className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-serif text-lg font-semibold">Receipts</span>
+            <span className="font-serif text-lg font-semibold">Pull Up Receipts</span>
           </Link>
           <nav className="hidden gap-1 md:flex">
             {nav.map((n) => (
