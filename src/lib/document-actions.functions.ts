@@ -72,7 +72,7 @@ export const aiEditGeneratedDocument = createServerFn({ method: "POST" })
 - Apply the user's instruction to the relevant section(s) only; leave everything else unchanged.
 - Preserve the document's voice, formatting, and structure.
 - Never make definitive legal conclusions; keep hedged language ("may", "appears to", "could").
-- Keep the closing disclaimer footer ("Receipts is a document preparation tool…") at the end.`;
+- Keep the closing disclaimer footer ("Pull Up Receipts is a document preparation tool…") at the end.`;
 
     const prompt = `CURRENT DOCUMENT:\n\n${doc.content}\n\n---\n\nINSTRUCTION FROM USER:\n${data.instruction}\n\nReturn the full revised document.`;
 
