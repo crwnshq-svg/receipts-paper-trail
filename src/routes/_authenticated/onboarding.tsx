@@ -128,8 +128,10 @@ function OnboardingPage() {
   }
 
   async function skipAll() {
+    if (!privacyAck) return;
     setBusy(true);
     try {
+      await recordPrivacyAck();
       await completeOnboarding();
       navigate({ to: "/dashboard", replace: true });
     } finally { setBusy(false); }
