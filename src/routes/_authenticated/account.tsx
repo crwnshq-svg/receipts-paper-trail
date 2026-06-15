@@ -195,8 +195,8 @@ function AccountPage() {
             />
             <NotifRow
               id="case-updates"
-              label="Case updates"
-              desc="Activity on your incidents and documents."
+              label="File updates"
+              desc="Activity on your events and evidence."
               checked={caseUpdates}
               onChange={(v) => setNotif("case_updates", v, setCaseUpdates)}
             />
