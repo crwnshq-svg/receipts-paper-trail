@@ -90,6 +90,37 @@ function tryParseStructured(raw: string): Structured | null {
   } catch { return null; }
 }
 
+// Pull the (possibly partial) value of the top-level "message" field from a
+// streaming JSON response so the user sees text immediately instead of a
+// blank "Composing…" placeholder while bytes arrive.
+function extractPartialMessage(raw: string): string | null {
+  if (!raw) return null;
+  let text = raw.trim();
+  const fence = text.match(/^```(?:json)?\s*([\s\S]*)$/i);
+  if (fence) text = fence[1].trim();
+  if (!text.startsWith("{")) return null;
+  const keyIdx = text.search(/"message"\s*:\s*"/);
+  if (keyIdx === -1) return null;
+  const startQuote = text.indexOf('"', text.indexOf(":", keyIdx)) + 1;
+  let out = "";
+  let i = startQuote;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === "\\" && i + 1 < text.length) {
+      const next = text[i + 1];
+      const map: Record<string, string> = { n: "\n", t: "\t", r: "\r", '"': '"', "\\": "\\", "/": "/" };
+      out += map[next] ?? next;
+      i += 2;
+      continue;
+    }
+    if (ch === '"') return out; // closed
+    out += ch;
+    i++;
+  }
+  // Unterminated string — still streaming. Return what we have so far.
+  return out;
+}
+
 // ============================== Top-level tab ==============================
 
 export function AiTab({ caseId, isPaid, questionsUsed }: {
@@ -276,16 +307,19 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
   async function doSend(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
-    try {
-      const result = await consume();
-      onConsumed(typeof result.used === "number" ? result.used : 0);
-    } catch (err: any) {
-      if (err?.message?.includes("FREE_LIMIT_REACHED")) {
-        onLimitHit();
-        return;
-      }
-      toast.error(err?.message ?? "Could not send");
-      return;
+    // Fire the question-counter decrement in parallel — don't block streaming on it.
+    if (!isPaid) {
+      consume()
+        .then((result) => {
+          onConsumed(typeof result.used === "number" ? result.used : 0);
+        })
+        .catch((err: any) => {
+          if (err?.message?.includes("FREE_LIMIT_REACHED")) {
+            onLimitHit();
+          } else {
+            console.warn("consumeAiQuestion failed", err);
+          }
+        });
     }
     setInput("");
     await sendMessage({ text: trimmed });
@@ -396,17 +430,19 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
   const structured = tryParseStructured(text);
 
   if (!structured) {
-    // Plain-text fallback (or still-streaming). Never show JSON errors.
-    const looksLikeJsonStart = text.trim().startsWith("{");
-    const display = looksLikeJsonStart ? "" : text;
+    // Still streaming OR plain-text fallback. If the response is a JSON object
+    // mid-stream, pull the partial "message" field so the user sees text
+    // immediately instead of waiting for the closing brace.
+    const trimmed = text.trim();
+    const partial = trimmed.startsWith("{") || trimmed.startsWith("```")
+      ? extractPartialMessage(text)
+      : null;
+    const display = partial !== null ? partial : (trimmed.startsWith("{") ? "" : text);
     return (
       <div className="max-w-[95%] text-sm space-y-2">
-        <div className="whitespace-pre-wrap">{display || <span className="text-muted-foreground italic">Composing…</span>}</div>
-        {display && (
-          <div className="pt-2 border-t border-border/60 text-[11px] text-muted-foreground italic">
-            {DISCLAIMER_LINE}
-          </div>
-        )}
+        <div className="whitespace-pre-wrap">
+          {display || <span className="text-muted-foreground italic">Composing…</span>}
+        </div>
       </div>
     );
   }
