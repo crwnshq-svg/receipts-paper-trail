@@ -5,7 +5,7 @@ export const HEDGED_CLOSING =
   "This is not legal advice. Review with a qualified attorney for guidance specific to your situation.";
 
 export const FULL_DISCLAIMER =
-  "Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
+  "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
 
 export const HEDGED_LANGUAGE_RULES = `
 LANGUAGE RULES — apply to every sentence you produce:
