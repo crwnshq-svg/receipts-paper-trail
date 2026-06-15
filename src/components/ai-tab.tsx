@@ -755,7 +755,7 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
     const { data } = await supabase.auth.getUser();
     const email = data.user?.email;
     if (!email || !result) return;
-    const subject = encodeURIComponent(`Receipts — ${selectedType}`);
+    const subject = encodeURIComponent(`Pull Up Receipts — ${selectedType}`);
     const body = encodeURIComponent(result);
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   }
@@ -767,7 +767,7 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
         <h3 className="font-medium">Generate a document</h3>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Pick a document type. We'll draft it using your case context.
+        Pick a document type. We'll draft it using your file context.
       </p>
 
       {step === "result" && result && (
