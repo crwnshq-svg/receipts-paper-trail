@@ -106,10 +106,10 @@ function buildCaseContext(caseRow: any, incidents: any[], documents: any[]) {
   const TOTAL_BUDGET = 32000;
   const perDoc = documents.length > 0 ? Math.max(2000, Math.floor(TOTAL_BUDGET / documents.length)) : 0;
 
-  lines.push(`DOCUMENTS (${documents.length}) — full content included for investigation:`);
+  lines.push(`EVIDENCE (${documents.length}) — full content included for investigation:`);
   documents.forEach((d, idx) => {
     lines.push("");
-    lines.push(`--- DOCUMENT ${idx + 1} ---`);
+    lines.push(`--- EVIDENCE ${idx + 1} ---`);
     lines.push(`id: ${d.id}`);
     lines.push(`file_name: ${d.display_name || d.file_name}${d.display_name ? ` (original: ${d.file_name})` : ""}`);
     if (d.detected_type) lines.push(`detected_type: ${d.detected_type}`);
@@ -128,7 +128,7 @@ function buildCaseContext(caseRow: any, incidents: any[], documents: any[]) {
       lines.push(`EXTRACTED TEXT:`);
       lines.push(trimmed);
     }
-    lines.push(`--- END DOCUMENT ${idx + 1} ---`);
+    lines.push(`--- END EVIDENCE ${idx + 1} ---`);
   });
   return lines.join("\n");
 }
