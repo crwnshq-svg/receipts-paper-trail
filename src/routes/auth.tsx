@@ -141,7 +141,7 @@ function AuthPage() {
                 <label className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
                   <Checkbox checked={agreed} onCheckedChange={(c) => setAgreed(c === true)} className="mt-0.5" />
                   <span>
-                    I agree that Receipts is a document preparation tool and does not provide legal advice.
+                    I agree that Pull Up Receipts is a document preparation tool and does not provide legal advice.
                   </span>
                 </label>
                 <Button type="submit" className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>
