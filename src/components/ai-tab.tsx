@@ -362,7 +362,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={isPaid || remaining > 0 ? "Ask about your case…" : "Free questions used — upgrade to continue"}
+          placeholder={isPaid || remaining > 0 ? "Ask about your file…" : "Free questions used — upgrade to continue"}
           disabled={isLoading || (!isPaid && remaining === 0)}
           autoFocus
         />
