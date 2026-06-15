@@ -87,14 +87,14 @@ function CaseDetail() {
   const effectiveUsed = aiUsed ?? (profile?.ai_questions_used ?? 0);
 
   async function deleteCase() {
-    if (!confirm("Delete this record and all its incidents and documents? This cannot be undone.")) return;
+    if (!confirm("Delete this file and all its events and evidence? This cannot be undone.")) return;
     if (docs) {
       const paths = docs.map((d: any) => d.storage_path);
       if (paths.length) await supabase.storage.from("case-documents").remove(paths);
     }
     const { error } = await supabase.from("cases").delete().eq("id", caseId);
     if (error) { toast.error(error.message); return; }
-    toast.success("Record deleted");
+    toast.success("File deleted");
     navigate({ to: "/cases" });
   }
 
