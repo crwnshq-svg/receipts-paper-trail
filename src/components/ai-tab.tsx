@@ -430,17 +430,19 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
   const structured = tryParseStructured(text);
 
   if (!structured) {
-    // Plain-text fallback (or still-streaming). Never show JSON errors.
-    const looksLikeJsonStart = text.trim().startsWith("{");
-    const display = looksLikeJsonStart ? "" : text;
+    // Still streaming OR plain-text fallback. If the response is a JSON object
+    // mid-stream, pull the partial "message" field so the user sees text
+    // immediately instead of waiting for the closing brace.
+    const trimmed = text.trim();
+    const partial = trimmed.startsWith("{") || trimmed.startsWith("```")
+      ? extractPartialMessage(text)
+      : null;
+    const display = partial !== null ? partial : (trimmed.startsWith("{") ? "" : text);
     return (
       <div className="max-w-[95%] text-sm space-y-2">
-        <div className="whitespace-pre-wrap">{display || <span className="text-muted-foreground italic">Composing…</span>}</div>
-        {display && (
-          <div className="pt-2 border-t border-border/60 text-[11px] text-muted-foreground italic">
-            {DISCLAIMER_LINE}
-          </div>
-        )}
+        <div className="whitespace-pre-wrap">
+          {display || <span className="text-muted-foreground italic">Composing…</span>}
+        </div>
       </div>
     );
   }
