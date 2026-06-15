@@ -301,11 +301,11 @@ export const analyzeIncident = createServerFn({ method: "POST" })
 
     const { data: incident } = await supabase
       .from("incidents").select("*").eq("id", data.incidentId).eq("user_id", userId).maybeSingle();
-    if (!incident) throw new Error("Incident not found");
+    if (!incident) throw new Error("Event not found");
 
     const { data: caseRow } = await supabase
       .from("cases").select("*").eq("id", incident.case_id).maybeSingle();
-    if (!caseRow) throw new Error("Case not found");
+    if (!caseRow) throw new Error("File not found");
 
     const { data: profile } = await supabase
       .from("profiles").select("state").eq("id", userId).maybeSingle();
@@ -322,9 +322,9 @@ export const analyzeIncident = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway(CHAT_MODEL); // haiku — passive analysis
 
-    const systemPrompt = `You are Receipts AI analyzing a newly logged incident in the context of a user's case.
+    const systemPrompt = `You are RECEIPTS AI analyzing a newly logged event in the context of a user's file.
 
-CASE: "${caseRow.title}" (${caseRow.dispute_type})
+FILE: "${caseRow.title}" (${caseRow.dispute_type})
 ${profile?.state ? `JURISDICTION: ${profile.state}` : ""}
 
 Return ONLY a JSON object (no prose, no markdown fences) with exactly these two fields:
@@ -338,13 +338,13 @@ Return ONLY a JSON object (no prose, no markdown fences) with exactly these two 
     }
   ],
   "clarifying_questions": [
-    "A single specific question that would strengthen this incident record if answered"
+    "A single specific question that would strengthen this event record if answered"
   ]
 }
 
 Rules:
-- insights: 0 to 2 items. Only include when there is genuine signal (a pattern across incidents, a right the user may not know, a deadline implied). Empty array if nothing meaningful.
-- clarifying_questions: 1 to 2 items. Targeted and specific to what is ACTUALLY missing from this incident — never generic. Examples: "Was anyone else present who saw what happened?", "Do you remember the exact time the manager said this?", "Is there a written copy of the notice they handed you?". Avoid: "Can you add more detail?", "What else happened?".
+- insights: 0 to 2 items. Only include when there is genuine signal (a pattern across events, a right the user may not know, a deadline implied). Empty array if nothing meaningful.
+- clarifying_questions: 1 to 2 items. Targeted and specific to what is ACTUALLY missing from this event — never generic. Examples: "Was anyone else present who saw what happened?", "Do you remember the exact time the manager said this?", "Is there a written copy of the notice they handed you?". Avoid: "Can you add more detail?", "What else happened?".
 ${HEDGED_LANGUAGE_RULES}`;
 
     const userPrompt = `NEW INCIDENT JUST LOGGED:
