@@ -90,7 +90,7 @@ function OnboardingPage() {
       payload[k] = v;
     }
     if (Object.keys(payload).length === 0) return;
-    await supabase.from("profiles").update(payload).eq("id", user.id);
+    await supabase.from("profiles").update(payload as never).eq("id", user.id);
   }
 
   async function completeOnboarding() {
