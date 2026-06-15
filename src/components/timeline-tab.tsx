@@ -91,8 +91,8 @@ export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
 
   function exportTxt() {
     const lines = [
-      `Receipts — Case Timeline`,
-      `Case: ${caseRow?.title ?? ""}`,
+      `Pull Up Receipts — File Timeline`,
+      `File: ${caseRow?.title ?? ""}`,
       `Exported: ${new Date().toLocaleString()}`,
       ``,
       `------------------------------------------------------`,
@@ -108,7 +108,7 @@ export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `receipts-timeline-${caseId}.txt`;
+    a.download = `pull-up-receipts-timeline-${caseId}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -117,7 +117,7 @@ export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Button onClick={exportTxt} variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-1" /> Export Timeline
+          <Download className="h-4 w-4 mr-1" /> Export Activity Timeline
         </Button>
       </div>
 
