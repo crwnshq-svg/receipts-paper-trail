@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Home, Briefcase, Users, FileText } from "lucide-react";
+import { Home, Briefcase, Users, ReceiptText } from "lucide-react";
 
 export const Route = createFileRoute("/get-started")({
   head: () => ({
@@ -44,7 +44,7 @@ function GetStarted() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <FileText className="h-4 w-4 text-primary-foreground" />
+              <ReceiptText className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="text-base font-semibold tracking-tight">
               Pull Up Receipts

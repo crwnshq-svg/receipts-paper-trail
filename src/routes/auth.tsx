@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 
 const search = z.object({
@@ -98,7 +98,7 @@ function AuthPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <FileText className="h-4 w-4 text-primary-foreground" />
+              <ReceiptText className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="text-base font-semibold tracking-tight">Pull Up Receipts</span>
           </Link>

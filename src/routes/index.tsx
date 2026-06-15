@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText, Pencil, FolderLock, Check } from "lucide-react";
+import { FileText, Pencil, FolderLock, Check, ReceiptText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -28,7 +28,7 @@ function Wordmark() {
   return (
     <Link to="/" className="flex items-center gap-2">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-        <FileText className="h-4 w-4 text-primary-foreground" />
+        <ReceiptText className="h-4 w-4 text-primary-foreground" />
       </div>
       <span className="text-base font-semibold tracking-tight">
         Pull Up Receipts
