@@ -111,7 +111,7 @@ function AccountPage() {
       <div className="space-y-6">
         <div>
           <h1 className="font-serif text-3xl font-semibold">Account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Manage your plan, notifications, and access.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Manage your Pull Up Receipts plan, notifications, and access.</p>
         </div>
 
         <Card className="p-5">
