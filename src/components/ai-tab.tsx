@@ -24,7 +24,7 @@ import { FREE_AI_QUESTIONS } from "@/lib/constants";
 import { setPrefill, popPrefill } from "@/lib/prefill";
 
 const DISCLAIMER_LINE =
-  "Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
+  "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
 
 const DOCUMENT_TYPES = [
   "Demand Letter",
