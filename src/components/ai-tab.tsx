@@ -969,14 +969,14 @@ function BuildYourDocument(props: {
         </div>
       </section>
 
-      {/* Documents */}
+      {/* Evidence */}
       <section>
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-          Documents ({docCount}/{docs?.length ?? 0})
+          Evidence ({docCount}/{docs?.length ?? 0})
         </div>
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           {(docs ?? []).length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No documents uploaded yet.</p>
+            <p className="text-xs text-muted-foreground italic">No evidence uploaded yet.</p>
           )}
           {(docs ?? []).map((d) => {
             const checked = props.selectedDocs.includes(d.id);
@@ -1006,7 +1006,7 @@ function BuildYourDocument(props: {
         <Textarea
           value={props.keyFacts}
           onChange={(e) => props.setKeyFacts(e.target.value)}
-          placeholder="Add any context the AI should know — party names, amounts owed, specific demands, key dates, anything not captured in your incidents or documents."
+          placeholder="Add any context the AI should know — party names, amounts owed, specific demands, key dates, anything not captured in your events or evidence."
           rows={4}
         />
       </section>
@@ -1014,11 +1014,11 @@ function BuildYourDocument(props: {
       {/* Summary + generate */}
       <div className="border-t pt-4 space-y-2">
         <div className="text-xs text-center text-muted-foreground">
-          Generating from <strong>{incCount}</strong> incident{incCount === 1 ? "" : "s"} and <strong>{docCount}</strong> document{docCount === 1 ? "" : "s"}.
+          Generating from <strong>{incCount}</strong> event{incCount === 1 ? "" : "s"} and <strong>{docCount}</strong> piece{docCount === 1 ? "" : "s"} of evidence.
         </div>
         {!hasSelection && (
           <p className="text-xs text-center text-muted-foreground italic">
-            Select at least one incident or document to include.
+            Select at least one event or piece of evidence to include.
           </p>
         )}
         <Button onClick={props.onGenerate} disabled={!hasSelection || props.generating}
