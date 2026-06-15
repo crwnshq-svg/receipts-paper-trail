@@ -312,8 +312,8 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
         <div className="flex items-center gap-2">
           <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
           <div>
-            <div className="font-medium text-sm">Receipts AI</div>
-            <div className="text-xs text-muted-foreground">Case-specific guidance from your evidence</div>
+            <div className="font-medium text-sm">RECEIPTS AI</div>
+            <div className="text-xs text-muted-foreground">File-specific guidance from your evidence</div>
           </div>
         </div>
         <div className="text-xs text-muted-foreground">
