@@ -244,7 +244,7 @@ export const STATUS_LABELS: Record<string, string> = {
 export function Disclaimer({ className }: { className?: string }) {
   return (
     <p className={cn("text-[11px] leading-relaxed text-muted-foreground", className)}>
-      Receipts does not provide legal advice. Nothing in this product creates an attorney-client relationship.
+      Pull Up Receipts does not provide legal advice. Nothing in this product creates an attorney-client relationship.
       For legal advice, consult a licensed attorney in your jurisdiction.
     </p>
   );
