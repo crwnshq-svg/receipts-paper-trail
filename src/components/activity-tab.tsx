@@ -690,7 +690,7 @@ function NoteDialog({
               onChange={(e) => setContent(e.target.value)}
               required
               rows={4}
-              placeholder="A thought, reminder, or observation that doesn't rise to a formal incident."
+              placeholder="A thought, reminder, or observation that doesn't rise to a formal event."
             />
           </Field>
 
