@@ -940,14 +940,14 @@ function BuildYourDocument(props: {
         </p>
       </div>
 
-      {/* Incidents */}
+      {/* Events */}
       <section>
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-          Incidents ({incCount}/{incidents?.length ?? 0})
+          Events ({incCount}/{incidents?.length ?? 0})
         </div>
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           {(incidents ?? []).length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No incidents logged yet.</p>
+            <p className="text-xs text-muted-foreground italic">No events logged yet.</p>
           )}
           {(incidents ?? []).map((inc) => {
             const checked = props.selectedIncidents.includes(inc.id);
