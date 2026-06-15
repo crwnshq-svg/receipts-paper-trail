@@ -16,12 +16,12 @@ type Entry = {
 };
 
 const TYPE_STYLES: Record<Entry["type"], { dot: string; badge: string; label: string }> = {
-  incident:      { dot: "bg-red-500",    badge: "bg-red-100 text-red-700",       label: "Incident logged" },
+  incident:      { dot: "bg-red-500",    badge: "bg-red-100 text-red-700",       label: "Event logged" },
   note:          { dot: "bg-gray-400",   badge: "bg-gray-100 text-gray-700",     label: "Note" },
-  document:      { dot: "bg-blue-500",   badge: "bg-blue-100 text-blue-700",     label: "Document uploaded" },
+  document:      { dot: "bg-blue-500",   badge: "bg-blue-100 text-blue-700",     label: "Evidence uploaded" },
   ai_insight:    { dot: "bg-amber-500",  badge: "bg-amber-100 text-amber-700",   label: "AI insight" },
   doc_generated: { dot: "bg-emerald-500",badge: "bg-emerald-100 text-emerald-700", label: "Document generated" },
-  case_created:  { dot: "bg-gray-400",   badge: "bg-gray-100 text-gray-700",     label: "Record created" },
+  case_created:  { dot: "bg-gray-400",   badge: "bg-gray-100 text-gray-700",     label: "File created" },
 };
 
 export function TimelineTab({ caseId, caseRow, onJumpToTab }: {
