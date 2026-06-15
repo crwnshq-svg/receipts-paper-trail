@@ -25,7 +25,7 @@ import { FREE_STORAGE_BYTES, STORAGE_WARNING_BYTES, FREE_AI_QUESTIONS } from "@/
 import { updateAiTone } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/account")({
-  head: () => ({ meta: [{ title: "Account — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Account — Pull Up Receipts" }] }),
   component: AccountPage,
 });
 
