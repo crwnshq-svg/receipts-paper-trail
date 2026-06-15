@@ -105,7 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/dashboard" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
-              <Scale className="h-4 w-4 text-primary-foreground" />
+              <ReceiptText className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="font-serif text-lg font-semibold">Pull Up Receipts</span>
           </Link>
