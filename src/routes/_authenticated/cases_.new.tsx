@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cases_/new")({
-  head: () => ({ meta: [{ title: "Start a Record — Receipts" }] }),
+  head: () => ({ meta: [{ title: "Start a File — Pull Up Receipts" }] }),
   component: NewCase,
 });
 
