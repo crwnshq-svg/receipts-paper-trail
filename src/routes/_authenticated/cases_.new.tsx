@@ -37,10 +37,10 @@ function NewCase() {
         description: description || null,
       }).select().single();
       if (error) throw error;
-      toast.success("Record started");
+      toast.success("File started");
       navigate({ to: "/cases/$caseId", params: { caseId: data.id } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not start record");
+      toast.error(err instanceof Error ? err.message : "Could not start file");
     } finally {
       setLoading(false);
     }
