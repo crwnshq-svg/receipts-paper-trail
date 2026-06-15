@@ -10,7 +10,7 @@ export const CASE_PACKAGE_REGEN_PRICE = 9;
 export const CERTIFIED_MAIL_PRICE = 10.99;
 
 export const DISCLAIMER =
-  "Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation, consult a licensed attorney.";
+  "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation, consult a licensed attorney.";
 
 export const MODULES = {
   landlord_tenant: {
