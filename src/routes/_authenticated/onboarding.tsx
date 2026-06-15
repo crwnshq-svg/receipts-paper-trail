@@ -220,6 +220,9 @@ function OnboardingPage() {
             busy={busy}
             onUploadClick={() => fileRef.current?.click()}
             onSkipUpload={() => handleFinishUpload(null)}
+            privacyAck={privacyAck}
+            setPrivacyAck={setPrivacyAck}
+            recordPrivacyAck={recordPrivacyAck}
           />
         </div>
       </main>
