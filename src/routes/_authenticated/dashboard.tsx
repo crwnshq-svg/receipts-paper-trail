@@ -53,6 +53,7 @@ const RESOURCE_BY_MODULE: Record<string, string> = {
 };
 
 function Dashboard() {
+  const navigate = useNavigate();
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
@@ -62,6 +63,13 @@ function Dashboard() {
       return data;
     },
   });
+
+  useEffect(() => {
+    if (profile && profile.onboarding_completed === false) {
+      navigate({ to: "/onboarding", replace: true });
+    }
+  }, [profile, navigate]);
+
 
   const { data: cases } = useQuery({
     queryKey: ["cases"],
