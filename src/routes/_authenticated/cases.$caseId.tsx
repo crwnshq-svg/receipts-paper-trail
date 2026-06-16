@@ -14,6 +14,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Plus, Upload, Trash2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { EditableText } from "@/components/editable-text";
+import { DeleteCaseDialog } from "@/components/delete-case-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AiTab } from "@/components/ai-tab";
 import { ActivityTab } from "@/components/activity-tab";
 import { DocumentCard } from "@/components/document-card";
@@ -84,18 +93,15 @@ function CaseDetail() {
   const isPaid = profile?.subscription_tier === "monthly" || profile?.subscription_tier === "annual";
   const [aiUsed, setAiUsed] = useState<number | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const effectiveUsed = aiUsed ?? (profile?.ai_questions_used ?? 0);
 
-  async function deleteCase() {
-    if (!confirm("Delete this file and all its events and evidence? This cannot be undone.")) return;
-    if (docs) {
-      const paths = docs.map((d: any) => d.storage_path);
-      if (paths.length) await supabase.storage.from("case-documents").remove(paths);
-    }
-    const { error } = await supabase.from("cases").delete().eq("id", caseId);
-    if (error) { toast.error(error.message); return; }
-    toast.success("File deleted");
-    navigate({ to: "/cases" });
+  async function updateCaseField(patch: Record<string, any>) {
+    const { error } = await supabase.from("cases").update(patch).eq("id", caseId);
+    if (error) { toast.error(error.message); throw error; }
+    qc.invalidateQueries({ queryKey: ["case", caseId] });
+    qc.invalidateQueries({ queryKey: ["cases"] });
+    toast.success("Updated");
   }
 
   async function promoteToCase() {
