@@ -407,3 +407,174 @@ function QuickAction({ icon: Icon, label, target, disabled }: { icon: any; label
     </Link>
   );
 }
+
+function FileCard({ c, inc, docs, insights, gens }: {
+  c: any; inc: number; docs: number; insights: number; gens: number;
+}) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const strength = c.strength_score ?? 0;
+  const days = Math.max(0, Math.floor((Date.now() - +new Date(c.created_at)) / 86400000));
+  const strengthColor = strength >= 60 ? "bg-emerald-500" : strength >= 30 ? "bg-amber-500" : "bg-red-500";
+
+  let nextAction = "Keep documenting — every event matters";
+  if (docs === 0) nextAction = "Upload your contract or agreement as evidence";
+  else if (inc < 3) nextAction = "Log more events to strengthen this file";
+  else if (strength >= 60 && gens === 0) nextAction = "Ready to generate a document";
+
+  const statusLevel = c.status_level === "case" ? "case" : "record";
+  const levelClass = statusLevel === "case"
+    ? "bg-red-500/15 text-red-400 border-red-500/30"
+    : "bg-amber-500/15 text-amber-400 border-amber-500/30";
+
+  const partyName = c.opposing_party && c.opposing_party.trim().length > 0
+    ? c.opposing_party
+    : c.title;
+
+  async function saveName() {
+    const next = draft.trim();
+    if (!next || next === partyName) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      const patch = c.opposing_party && c.opposing_party.trim().length > 0
+        ? { opposing_party: next }
+        : { title: next };
+      const { error } = await supabase.from("cases").update(patch as any).eq("id", c.id);
+      if (error) throw error;
+      toast.success("Renamed");
+      qc.invalidateQueries({ queryKey: ["cases"] });
+      qc.invalidateQueries({ queryKey: ["case", c.id] });
+      setEditing(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not rename");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="relative">
+      <Link to="/cases/$caseId" params={{ caseId: c.id }}>
+        <Card className="relative rounded-xl p-5 shadow-sm transition-colors hover:bg-secondary/60 h-full">
+          {insights > 0 && (
+            <div className="absolute right-12 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400 border border-amber-500/30">
+              <Lightbulb className="h-3 w-3" /> {insights}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2 pr-16">
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${levelClass}`}>
+              {statusLevel === "case" ? "Case" : "File"}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {DISPUTE_LABELS[c.dispute_type]}
+            </span>
+          </div>
+
+          {editing ? (
+            <div
+              className="mt-2 flex items-center gap-1"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            >
+              <Input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                disabled={saving}
+                className="h-8"
+              />
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveName(); }}
+                disabled={saving}
+                className="rounded p-1 text-emerald-500 hover:bg-secondary"
+                aria-label="Save"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditing(false); }}
+                disabled={saving}
+                className="rounded p-1 text-muted-foreground hover:bg-secondary"
+                aria-label="Cancel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="mt-2 flex items-center gap-2 font-medium leading-tight">
+              <span className="truncate">{partyName}</span>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDraft(partyName); setEditing(true); }}
+                className="opacity-60 hover:opacity-100"
+                aria-label="Edit file name"
+                title="Edit name"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>File strength</span><span>{strength}%</span>
+            </div>
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className={`h-full ${strengthColor}`} style={{ width: `${Math.min(100, strength)}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <Chip>{inc} event{inc === 1 ? "" : "s"}</Chip>
+            <Chip>{docs} evidence</Chip>
+            <Chip>{days === 0 ? "today" : `${days}d open`}</Chip>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+            <span className="truncate">{nextAction}</span>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+          </div>
+        </Card>
+      </Link>
+
+      <div className="absolute right-2 top-2 z-10">
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="File options"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMenuOpen(false); setDraft(partyName); setEditing(true); }}>
+              <Pencil className="mr-2 h-4 w-4" /> Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => { e.preventDefault(); setMenuOpen(false); setShowDelete(true); }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <DeleteCaseDialog
+        open={showDelete}
+        onOpenChange={setShowDelete}
+        caseId={c.id}
+        caseLabel={partyName}
+      />
+    </div>
+  );
+}
