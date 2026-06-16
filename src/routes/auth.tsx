@@ -42,6 +42,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
   useEffect(() => { if (mode) setTab(mode); }, [mode]);
 
@@ -54,7 +55,7 @@ function AuthPage() {
     setLoading(true);
     try {
       if (tab === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: window.location.origin + "/dashboard",
@@ -66,8 +67,15 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Account created. You're in.");
-        navigate({ to: "/dashboard" });
+        // If Supabase returned a session, email confirmation is disabled — go straight in.
+        if (data.session) {
+          toast.success("Account created. You're in.");
+          navigate({ to: "/dashboard" });
+        } else {
+          // Sign the user out of any partial session and show the verification screen.
+          await supabase.auth.signOut();
+          setPendingVerificationEmail(email);
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
