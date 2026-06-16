@@ -1,88 +1,64 @@
-# Plan: Conversational RECEIPTS AI Overhaul
+# 7-Part Overhaul Plan
 
-This is a large, interconnected change. Below is what I'll build, grouped by part. I'll flag a few decisions where I need your call before I start.
+## Part 1 — Unscoped RECEIPTS AI entry point
+- New route `src/routes/_authenticated/ai.tsx` rendering a chat surface with `caseId=null`.
+- Add **AI** nav item in `app-shell.tsx` (between Files and Alerts) on desktop nav + mobile bottom nav (becomes 6 items).
+- Add persistent **Floating Action Button** in `AppShell` (bottom-right, above mobile nav) that links to `/ai`. Hidden when already on `/ai`.
+- Refactor `ai-tab.tsx` to accept optional `caseId`. When null:
+  - Seed first assistant beat: *"What's going on?"*
+  - Do not load any case's prior conversation; use a fresh session-scoped thread.
+  - Route user intent: describing new situation → kick off conversational File creation flow (Part 5 from prior turn, reused as a server fn `inferCaseDraft`); referencing existing File → if 1 active File, confirm chip; if >1, ask which; uploads → use existing chat upload routing.
 
-## Part 1 — Summary length rule (small, isolated)
+## Part 2 — "Ask about this" on Events
+- In `activity-tab.tsx`, under each event row add a small ghost button with `MessageCircle` icon: *"Ask about this"*.
+- Click navigates to the File's AI tab with query param `?ask=event:<incident_id>`.
+- `ai-tab.tsx` reads the param on mount, fetches the incident (title, description, occurred_at, category, severity, attached document refs), and immediately sends a synthetic system-context + auto-streams the first assistant response. No user input required, no pre-filled composer.
 
-**File:** `src/lib/insight-prompts.ts`
+## Part 3 — Event editing with timestamp integrity
+- Migration: `ALTER TABLE incidents ADD COLUMN edited_at timestamptz NULL;`
+- In `activity-tab.tsx` event row, add `Pencil` icon → opens existing IncidentDialog in edit mode prefilled with current values.
+- On save: update event fields + set `edited_at = now()`; never touch `created_at` or `occurred_at` unless user explicitly changes the date field.
+- No visible "edited" badge.
 
-- Replace the 4-sentence / 4-part structure in the document and event summarization system prompts with: **"Max 2 sentences, 1 preferred. State the single most important fact the document/event factually establishes; if a second sentence fits, say why it matters to the case. No speculation. Never tell the user to review it themselves."**
-- Applies to: document summaries, event summaries, post-upload reactions.
+## Part 4 — Alert Detail redesign
+- New route `src/routes/_authenticated/notifications.$notificationId.tsx`.
+- Update `notifications.tsx` list rows to link to this detail route instead of jumping to the File.
+- Detail view sections (in order):
+  1. **Full alert content** — title, body, why it matters, link to related case (text link, not auto-redirect). Uses existing gold-standard formatting.
+  2. **"Discuss with RECEIPTS AI" button** — navigates to scoped AI (File AI tab if `related_case_id`, otherwise `/ai`) with `?ask=alert:<id>`, triggering same auto-first-response pattern as Part 2.
+  3. **Resource card** — one specific resource matched by alert `type` / case `module_type`. Pull from existing Resources content (`resources.tsx` data). Fallback: nearest topical match; never a generic "browse Resources" link.
+- On mount, mark notification read (update `is_read=true`, `read_at=now()`) and invalidate `notifications-unread`.
 
-## Part 2 — Sequenced chat bubbles
+## Part 5 — Alerts list filter + collapse
+- Add segmented filter at top of `notifications.tsx`: **All / Unread / Read** (default All).
+- Unread rows: full card (title + body preview + timestamp + case chip).
+- Read rows: condensed single line — title, muted "read" pill, relative timestamp. Click expands inline OR navigates to detail (use detail nav for consistency with Part 4); add a chevron-toggle for inline expand-in-place as a secondary affordance.
 
-**Files:** `src/components/ai-tab.tsx`, `src/lib/insight-prompts.ts` (chat system prompt), possibly `src/routes/api/chat.ts`.
+## Part 6 — Returning user check-in
+- Fires once per fresh app launch (sessionStorage flag `receipts:checkin-shown`).
+- Implemented in `AppShell` `useEffect`. Check priority:
+  1. Query active cases for: passive AI flags with `severity='high'` not dismissed OR upcoming deadlines (within 7 days). If found → popup names the File + issue, CTA: *"Tell me what's new"* → `/cases/:id` AI tab with auto-first-response on the issue.
+  2. Else if active cases exist → friendly prompt naming most-recently-updated File. CTA toggle: *"Log an event"* (opens IncidentDialog) or *"Upload evidence"* (file picker on that File).
+  3. Else (no active files) → no popup.
+- UI: small bottom-right card (reuse pattern from PushPermissionPrompt), with dismiss.
 
-- Update chat system prompt: respond as a sequence of short beats separated by a delimiter (e.g. `\n---\n` or `<<<BEAT>>>`). Beat 1 = direct one-sentence answer. Beat 2 = supporting detail. Beat 3 = optional action/resource. Each beat 1–2 sentences max.
-- On the client, split the streamed assistant text on the delimiter and render each chunk as its own bubble. Once the stream finishes, reveal bubbles 2+ on a staggered timer (~900ms) with a fade/translate-y CSS transition.
-- During streaming, show only the first beat live; subsequent beats animate in after stream end so the staggering reads cleanly.
+## Part 7 — Dashboard stat card interactivity
+- In `dashboard.tsx`, wrap each of the 5 stat cards in a `<Link>` (or button) with:
+  - `cursor-pointer hover:bg-secondary/60 transition-colors`
+  - Files → `/cases`
+  - Plan → `/account`
+  - Storage → `/account` (storage section) OR most-recent case's vault if no storage page exists
+  - Events → new `/events` aggregated route (lists all incidents across files) — small new route
+  - AI Questions → `/account` for free tier; static (no link, no hover) when plan is unlimited
 
-## Part 3 — Clarifying-question component
+## Technical notes
+- New table column: `incidents.edited_at timestamptz null`.
+- New routes: `/ai`, `/notifications/$notificationId`, `/events`.
+- AI auto-first-response uses existing `streamText` flow; pass initial system context as a hidden user-role message and call `sendMessage` programmatically on mount when `?ask=...` is present.
+- FAB: fixed bottom-20 right-4 on mobile (above bottom nav), bottom-6 right-6 desktop.
 
-**New file:** `src/components/clarifying-question.tsx`
-
-- Softly tinted card (uses `bg-info`/equivalent semantic token already in `styles.css`), small "one quick thing" label, the question, then either:
-  - Tap-to-answer chips (binary / short set), or
-  - Short text input (when open-ended).
-- Three render contexts, all using the same component:
-  1. Inline under a just-logged Event/Note (timeline-tab).
-  2. Persistent badge on the File Overview screen (cases.$caseId.tsx).
-  3. Final beat in an AI chat bubble sequence (ai-tab).
-- **Hard rule — one live question per File at a time.** Implement via a new `case_clarifying_questions` table (one active row per case) OR a single nullable `active_clarifying_question` jsonb column on `cases`. **I'll use a jsonb column on `cases`** — simpler, enforces "one at a time" by design, no extra table.
-- System-prompt rule: AI may only interrupt an in-progress action for time-sensitive evidence (camera-overwrite, deadline within hours, evidence being destroyed). Otherwise it waits for a natural pause.
-
-## Part 4 — Partner card redesign
-
-**Files:** `src/components/ai-tab.tsx` (partner card render), `src/lib/insight-prompts.ts` (system prompt rules).
-
-- Soft green-tinted background (semantic `success` token at low opacity), check icon, "Verified Pull Up Receipts Partner" label in green, name, specialty + location on one line, Contact button.
-- Below card: muted gray line — "No pressure either way — your file stays just as strong if you keep going solo."
-- System-prompt rule: surface only on (a) genuine escalation/pattern moment, or (b) explicit user request. **Frequency cap: max 1 partner card per chat session.** I'll track this client-side in `ai-tab.tsx` session state (resets on page reload), and instruct the model in the system prompt with the current session count.
-
-## Part 5 — Conversational File creation
-
-**File:** `src/routes/_authenticated/cases_.new.tsx` (full rewrite).
-
-- Replace the current form with a bubble-style 2-step flow:
-  1. AI bubble: "What's going on?" → open text input.
-  2. On submit, call a new server function `inferCaseDraft` (`src/lib/cases.functions.ts`) that uses the AI gateway to infer `dispute_type` ∈ {landlord_tenant, employer_employee, other} and `opposing_party` from the free text.
-  3. AI bubble: "Sounds like a landlord situation with **Willow Grove Apartments** — that right?" with **Yes** / **Let me fix that** chips. "Let me fix that" reveals two compact editable chips (module + party name).
-- On confirm: create the case with the confirmed module + party, store the user's original text as `description`, navigate to the new case.
-
-## Part 6 — Conversational Event logging
-
-**File:** `src/components/timeline-tab.tsx` (the "add event" UI section).
-
-- Replace the form with: AI bubble "What happened?" → open textarea (defaults `occurred_at` to `new Date()` silently).
-- On submit, save a minimal event immediately (so we don't lose data), then run a new `inferEventMetadata` server function in the background. Show "Logging this as **Illegal Entry** — sound right?" chip with **Yes** / **Change category** options.
-- If related evidence/past events detected, show them as small tappable suggestion chips to attach (writes to `incident_documents` join — I'll check the existing schema; if no join table exists I'll skip evidence linking and just surface them as visual chips referencing existing relations).
-- After save, hand off to the Part 3 clarifying-question component inline.
-
-## Part 7 — Conversational evidence upload + in-chat upload
-
-**Files:** `src/components/ai-tab.tsx`, `src/components/document-card.tsx` (or upload entry point — I'll locate it), `src/lib/document-intelligence.functions.ts`.
-
-- After upload, AI reacts with one short sentence (per Part 1) + a confirm chip: "Got it — this looks like your lease, section 8 specifically. Save it as that?" → **Yes** / **Rename**.
-- Allow drag/drop + file picker in the chat composer (`ai-tab.tsx`). Routing:
-  - Inside a File's AI tab or Event AI thread → attach silently to that File.
-  - Unscoped AI companion + exactly 1 active File → confirm chip "Add this to your **[File]** file?" Yes / Choose different.
-  - Unscoped + multiple active Files → ask which, list as chips.
-  - No active Files or user says "new situation" → kick off Part 5 flow with the upload pre-attached.
-- The chat reaction stays one short sentence; full analysis lives in the Evidence Vault document card.
-
-**Decision needed:** there isn't currently an "unscoped AI companion" route in the app — the AI tab lives inside a specific case. Options:
-- (A) Add a new `/ai` route for unscoped chat, and implement the routing logic there.
-- (B) Only implement the in-File / in-Event in-chat upload paths now, and defer the unscoped routing (Part 7's last 3 bullets) until the unscoped surface exists.
-
-## Database changes
-
-One small migration:
-- Add `active_clarifying_question jsonb` column to `public.cases` (nullable), with appropriate GRANT update permission for `authenticated` on that column.
-
-## Things I'd like you to confirm before I start
-
-1. **Part 7 unscoped chat** — option (A) build a new `/ai` page, or (B) defer that subset?
-2. **Bubble delimiter** — I'll use `\n---\n` between beats in the model output. OK, or prefer a different marker?
-3. **Frequency cap on partner cards** — session-scoped (resets on reload) is simplest. Or do you want it persisted per-conversation in the DB?
-
-Once you answer (or say "your call, go"), I'll implement everything in one pass.
+## Decisions needed
+1. **Storage card target** — `/account` (billing/plan area) OR a new dedicated `/storage` page listing files by size? I'll default to `/account` unless you say otherwise.
+2. **Events aggregated view** — should `/events` show all events flat across files (with file name on each row), or grouped by file? Default: flat, newest first, filterable by file.
+3. **Read alert expand** — tap-to-expand inline (revealing body in place) OR always navigate to detail page? Plan covers both; I'll default to **navigate to detail** for consistency with the new Alert Detail. Confirm if you want inline expand instead.
+4. **FAB on `/ai`** — hide it (it would be redundant) or keep it visible everywhere uniformly? Default: hide on `/ai`.
