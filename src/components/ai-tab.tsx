@@ -496,7 +496,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
 function ChatComposer({
   caseId, disabled, placeholder, input, setInput, onSubmit, onUploaded, isLoading,
 }: {
-  caseId: string; disabled: boolean; placeholder: string;
+  caseId: string | null; disabled: boolean; placeholder: string;
   input: string; setInput: (s: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onUploaded: (filename: string) => void;
@@ -508,6 +508,10 @@ function ChatComposer({
   const [dragOver, setDragOver] = useState(false);
 
   async function handleFile(file: File) {
+    if (!caseId) {
+      toast.error("Open a File first to attach evidence.");
+      return;
+    }
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -566,9 +570,9 @@ function ChatComposer({
         type="button"
         variant="outline"
         size="icon"
-        disabled={uploading || disabled}
+        disabled={uploading || disabled || !caseId}
         onClick={() => fileRef.current?.click()}
-        title="Attach evidence"
+        title={caseId ? "Attach evidence" : "Open a File first to attach evidence"}
       >
         {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
       </Button>
@@ -593,12 +597,22 @@ function ChatComposer({
 // ============================== Structured message renderer ==============================
 
 function ChatMessage({ message, caseId, onTapSuggestion }: {
-  message: UIMessage; caseId: string; onTapSuggestion: (text: string) => void;
+  message: UIMessage; caseId: string | null; onTapSuggestion: (text: string) => void;
 }) {
   const text = message.parts.map((p: any) => p.type === "text" ? p.text : "").join("");
   const isUser = message.role === "user";
 
   if (isUser) {
+    // Hide synthetic [CONTEXT] auto-prompts (sent by Ask-about-this / alert discussion).
+    if (text.trim().startsWith("[CONTEXT]")) {
+      return (
+        <div className="flex justify-end">
+          <div className="max-w-[85%] rounded-full bg-secondary px-3 py-1 text-[11px] text-muted-foreground italic">
+            Asking RECEIPTS AI to react…
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%] rounded-2xl bg-primary text-primary-foreground px-4 py-2 text-sm whitespace-pre-wrap">
