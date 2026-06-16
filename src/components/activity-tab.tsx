@@ -219,6 +219,24 @@ export function ActivityTab({
         onSaved={refetchNotes}
       />
 
+      {(() => {
+        // ONE live clarifying question per File at a time.
+        // Pick the most recently created event that still has unanswered questions.
+        const sortedByCreated = [...incidents].sort(
+          (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
+        );
+        const live = sortedByCreated.find((i) => toQuestions(i.clarifying_questions).length > 0);
+        if (!live) return null;
+        const liveQ = toQuestions(live.clarifying_questions)[0];
+        return (
+          <ClarifyingQuestion
+            question={liveQ}
+            onAnswer={(ans) => submitAnswer(live.id, liveQ, ans)}
+            onDismiss={() => dismissQuestions(live.id)}
+          />
+        );
+      })()}
+
 
       {feed.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
