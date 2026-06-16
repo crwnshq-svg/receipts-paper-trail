@@ -1,54 +1,55 @@
-## Scope
+# Plan: Email Verification + Editable File Names + Delete File
 
-Four related features for the case detail and app shell. I'll use Lovable AI Gateway (Gemini) rather than the Anthropic Claude models you named — this project doesn't have an Anthropic key and the gateway uses Gemini models. The hedged-language guardrails work the same regardless of model. If you want true Anthropic Claude, add an `ANTHROPIC_API_KEY` and I'll swap the calls.
+## Part 1 — Email Verification Gate
 
-## Part 1 — Case Timeline tab
+**Auth config**
+- Call `supabase--configure_auth` with `auto_confirm_email: false` so signup sends a confirmation email.
+- Keep `signUp({ options: { emailRedirectTo: window.location.origin + "/dashboard" } })` already in place.
 
-- Add a 4th tab "Timeline" on `/cases/$caseId`.
-- Build a virtual timeline by unioning rows from `cases` (created), `incidents`, `documents`, `generated_documents`, and a new `ai_insights` source.
-- Each entry: colored dot (red/blue/yellow/green/gray), timestamp, type badge, brief description.
-- Tapping an entry scrolls/switches to the corresponding tab and highlights the item (`?focus=<id>` query param).
-- "Export Timeline" button → generates a `.txt` download client-side (faster than PDF and works offline).
+**Branded confirmation email**
+- Scaffold auth email templates via `email_domain--scaffold_auth_email_templates` (requires email domain). If no email domain is set, surface the setup dialog so the user provisions one; meanwhile the default Supabase email still works.
+- Update the `signup` template: subject "Verify your email for Pull Up Receipts", button labeled "Verify My Email", brand styled.
 
-## Part 2 — Document intelligence
+**In-app gate**
+- New component `EmailVerificationGate` (in `src/components/email-verification-gate.tsx`) that renders a full-screen card: heading, copy "Please check your email and verify your address to continue.", and a `Resend verification email` button with a 60s cooldown (local state countdown; calls `supabase.auth.resend({ type: 'signup', email })`). Also a "I've verified — refresh" button that calls `supabase.auth.refreshSession()` + `router.invalidate()`.
+- Modify `src/routes/_authenticated/route.tsx` so the `beforeLoad` still allows entry, but the component checks `user.email_confirmed_at`. If missing, render `<EmailVerificationGate>` instead of `<Outlet>`. This blocks both dashboard and onboarding while user is signed in but unverified.
 
-- New column `documents.ai_summary` (text, nullable).
-- New table `document_insights` (fields exactly as spec).
-- New server fn `analyzeDocument(documentId)` invoked right after upload:
-  1. Generate 4-sentence plain-English summary; for images, send `image_url` part to use vision.
-  2. Cross-reference call against case context → 0–3 insight rows.
-- Show skeleton on doc card while `ai_summary` is null and analysis is in flight.
-- Edit button → inline textarea + save.
-- Yellow lightbulb icon when insights exist; modal shows title + brief description + Follow Up + Dismiss.
-- Follow Up: paid → open AI tab with pre-loaded context. Free → confirm "Use a Question to Follow Up", call `consumeAiQuestion`, then open chat. Both pass insight context via `sessionStorage` key the AI tab reads on mount.
-- Add `profiles.last_active_at` (timestamptz); update via lightweight server fn called from app shell on mount (throttled to once per session).
-- Weekly cron via Supabase Edge Function `weekly-insight-refresh` (pg_cron → calls TanStack route). Re-analyzes recent docs for users inactive ≥ 7 days.
+## Part 2 — Editable File Fields
 
-## Part 3 — Notifications
+**Reusable inline editor**
+- New `EditableField` component pattern matching evidence-card pencil pattern (read existing pattern in `src/components/document-card.tsx` first).
+- Fields editable: `cases.title` (file name), `cases.opposing_party` (other party), `cases.dispute_type` (module — Select).
 
-- New table `notifications` (per spec).
-- New table `admin_notifications` (per spec) with a trigger that fans out to `notifications` for matching users (by case module type and profile location).
-- `documents` insight generation also inserts a notification.
-- Bottom nav badge: unread count via realtime subscription on `notifications`.
-- `/notifications` route: list, mark-as-read on view, tap → navigate to case/document.
-- Web Push: register service worker, request permission after first sign-in, store subscription in `push_subscriptions` table. Edge function `send-push` triggered when a notification is created AND user is inactive ≥ 7 days.
+**Where to add pencils**
+- `src/routes/_authenticated/cases.$caseId.tsx` — header (title, opposing_party, dispute_type).
+- `src/routes/_authenticated/dashboard.tsx` — file cards (title only, pencil opens small modal).
+- `src/routes/_authenticated/cases.index.tsx` — Files list cards (title only).
 
-> Web Push requires VAPID keys. I'll generate them and store as `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` secrets — no user action needed.
+**Persistence + cache**
+- On save: `supabase.from('cases').update({...}).eq('id', caseId)` then `queryClient.invalidateQueries({ queryKey: ['cases'] })` and `['case', caseId]`. AI chat references read from the same cache, so refresh is automatic.
 
-## Part 4 — Hedged language guardrails
+## Part 3 — Delete File with Confirmation
 
-- Central `INSIGHT_SYSTEM_PROMPT` constant containing the hedged-language rules and required closing disclaimer.
-- All insight + summary generation uses it.
-- Server post-processor ensures the disclaimer is appended if the model omits it.
+**UI**
+- Add a dropdown menu (three dots) on dashboard file cards and a `Delete file` button in the File Overview header.
+- Shared `DeleteCaseDialog` with title "Delete this file", warning text "This action cannot be undone.", checkbox "Also delete all evidence, events, and notes associated with this file" (default unchecked), Cancel + Delete buttons.
 
-## Technical details
+**Delete logic**
+- Always cascade (per spec: when unchecked, still cascade to avoid orphans, but show extra subtle note). Implementation: explicitly delete from `incidents`, `documents`, `document_insights`, `notes`, `generated_documents`, `ai_conversations`, `passive_ai_flags`, then `cases` row — all scoped to the case_id. Run inside a server function `deleteCase` (createServerFn + requireSupabaseAuth) so RLS-protected deletes happen reliably.
+- After success: `queryClient.invalidateQueries({ queryKey: ['cases'] })`, toast, navigate to `/dashboard`.
 
-- AI model: `google/gemini-3-flash-preview` via Lovable AI Gateway (existing setup).
-- Migrations: one for `documents.ai_summary` + `document_insights` + `profiles.last_active_at`, one for `notifications` + `admin_notifications` + fan-out trigger + `push_subscriptions`.
-- Files added: `src/routes/_authenticated/cases.$caseId.tsx` (Timeline tab inline), `src/components/document-card.tsx`, `src/components/insight-modal.tsx`, `src/routes/_authenticated/notifications.tsx`, `src/lib/document-intelligence.functions.ts`, `src/lib/notifications.functions.ts`, `src/lib/activity.functions.ts`, `public/sw-push.js`, `supabase/functions/weekly-insight-refresh/index.ts`, `supabase/functions/send-push/index.ts`.
+## Files to add
+- `src/components/email-verification-gate.tsx`
+- `src/components/editable-text.tsx` (inline pencil edit)
+- `src/components/delete-case-dialog.tsx`
+- `src/lib/cases.functions.ts` (deleteCase server fn)
 
-## Confirm before I start
+## Files to edit
+- `src/routes/_authenticated/route.tsx` — verification gate
+- `src/routes/_authenticated/cases.$caseId.tsx` — editable header + delete button
+- `src/routes/_authenticated/dashboard.tsx` — editable name + delete menu on cards
+- `src/routes/_authenticated/cases.index.tsx` — editable name on cards (optional pencil)
+- Auth email template files after scaffold (subject + button copy + brand)
 
-1. OK to use Lovable AI Gemini instead of Anthropic Claude? (Cheaper, no key needed. Hedged-language guardrails are identical.)
-2. OK for me to provision VAPID keys for web push automatically?
-3. Export Timeline as `.txt` (instant, no extra deps) — or do you specifically want PDF?
+## Open questions
+None — proceeding with cascade-always semantics for delete as the spec describes.
