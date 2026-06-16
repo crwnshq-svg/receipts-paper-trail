@@ -658,14 +658,14 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
   const structured = tryParseStructured(text);
 
   if (!structured) {
-    // Still streaming OR plain-text fallback. If the response is a JSON object
-    // mid-stream, pull the partial "message" field so the user sees text
-    // immediately instead of waiting for the closing brace.
+    // Either still streaming, or strict JSON parse failed. In both cases pull
+    // out the partial/recoverable "message" field so the user NEVER sees raw
+    // JSON, code fences, or an empty bubble. Only if there's no JSON shape at
+    // all do we render the raw text directly (plain-text fallback).
     const trimmed = text.trim();
-    const partial = trimmed.startsWith("{") || trimmed.startsWith("```")
-      ? extractPartialMessage(text)
-      : null;
-    const display = partial !== null ? partial : (trimmed.startsWith("{") ? "" : text);
+    const looksJson = trimmed.startsWith("{") || trimmed.startsWith("```");
+    const partial = looksJson ? extractPartialMessage(text) : null;
+    const display = looksJson ? (partial ?? "") : text;
     return (
       <div className="max-w-[95%] text-sm space-y-2">
         <div className="whitespace-pre-wrap">
@@ -675,17 +675,26 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
     );
   }
 
-  // Split message body into beats: Beat 1 always shown, subsequent beats stagger in.
-  // Extract a trailing "[Q] ..." beat as a clarifying-question card instead of a bubble.
-  const rawBeats = structured.message
-    .split(/\n---\n/g)
-    .map((b) => b.trim())
-    .filter(Boolean);
-  let clarifying: string | null = null;
-  const beats: string[] = [];
-  for (const b of rawBeats) {
-    if (b.startsWith("[Q]") && clarifying === null) clarifying = b.replace(/^\[Q\]\s*/, "");
-    else beats.push(b);
+  // Prefer the structured beats[] array when the model provides it. Fall back
+  // to splitting message text on legacy "\n---\n" markers for backward
+  // compatibility, and lift any trailing "[Q] ..." beat into clarifying.
+  let beats: string[];
+  let clarifying: string | null = structured.clarifying_question ?? null;
+  if (structured.beats && structured.beats.length > 0) {
+    beats = structured.beats;
+  } else {
+    const rawBeats = structured.message
+      .split(/\n\s*---\s*\n/g)
+      .map((b) => b.trim())
+      .filter(Boolean);
+    beats = [];
+    for (const b of rawBeats) {
+      if (b.startsWith("[Q]") && clarifying === null) {
+        clarifying = b.replace(/^\[Q\]\s*/, "");
+      } else {
+        beats.push(b);
+      }
+    }
   }
 
   return (
