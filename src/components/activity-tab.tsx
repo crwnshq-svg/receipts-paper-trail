@@ -279,41 +279,9 @@ export function ActivityTab({
                   </div>
                 </Card>
 
-                {(() => {
-                  const questions = toQuestions(f.data.clarifying_questions);
-                  if (questions.length === 0) return null;
-                  return (
-                    <Card className="border-l-4 border-l-sky-400 bg-sky-500/5 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-300">
-                          <Sparkles className="h-3 w-3" />
-                          A couple of things that could strengthen this entry
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => dismissQuestions(f.data.id)}
-                          className="text-muted-foreground hover:text-foreground"
-                          aria-label="Dismiss"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <ul className="mt-2 space-y-1">
-                        {questions.map((q, idx) => (
-                          <li key={idx}>
-                            <button
-                              type="button"
-                              onClick={() => setAnswerQ({ incidentId: f.data.id, question: q })}
-                              className="w-full rounded-md px-2 py-1.5 text-left text-sm text-foreground/90 hover:bg-sky-500/10 transition-colors"
-                            >
-                              {q}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </Card>
-                  );
-                })()}
+                {/* Per-event clarifying-question card removed.
+                    A single live clarifying question is rendered ABOVE the feed
+                    (one live question per File at a time). */}
               </li>
 
             ) : (
