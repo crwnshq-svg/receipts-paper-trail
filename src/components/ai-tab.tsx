@@ -126,8 +126,8 @@ function extractPartialMessage(raw: string): string | null {
 
 // ============================== Top-level tab ==============================
 
-export function AiTab({ caseId, isPaid, questionsUsed }: {
-  caseId: string; isPaid: boolean; questionsUsed: number;
+export function AiTab({ caseId, isPaid, questionsUsed, ask }: {
+  caseId: string | null; isPaid: boolean; questionsUsed: number; ask?: string | null;
 }) {
   const [used, setUsed] = useState(questionsUsed);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -169,11 +169,14 @@ export function AiTab({ caseId, isPaid, questionsUsed }: {
         caseId={caseId}
         isPaid={isPaid}
         remaining={remaining}
+        ask={ask ?? null}
         onConsumed={(newUsed) => setUsed(newUsed)}
         onLimitHit={() => setShowUpgrade(true)}
       />
 
-      <DocumentGenerator caseId={caseId} isPaid={isPaid} onLocked={() => setShowUpgrade(true)} />
+      {caseId && (
+        <DocumentGenerator caseId={caseId} isPaid={isPaid} onLocked={() => setShowUpgrade(true)} />
+      )}
 
       <Dialog open={showUpgrade} onOpenChange={setShowUpgrade}>
         <DialogContent>
