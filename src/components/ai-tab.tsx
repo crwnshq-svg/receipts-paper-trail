@@ -598,7 +598,7 @@ function ChatComposer({
         const { error: upErr } = await supabase.storage
           .from("case-documents")
           .upload(path, file, { contentType: file.type });
-        if (upErr) console.warn("pending upload failed", upErr);
+        if (upErr) throw upErr;
         toast.success("Got it — I'll ask where to file this.");
         onUploaded(file.name);
       }
