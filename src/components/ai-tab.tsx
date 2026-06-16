@@ -546,9 +546,28 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
     );
   }
 
+  // Split message body into beats: Beat 1 always shown, subsequent beats stagger in.
+  // Extract a trailing "[Q] ..." beat as a clarifying-question card instead of a bubble.
+  const rawBeats = structured.message
+    .split(/\n---\n/g)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  let clarifying: string | null = null;
+  const beats: string[] = [];
+  for (const b of rawBeats) {
+    if (b.startsWith("[Q]") && clarifying === null) clarifying = b.replace(/^\[Q\]\s*/, "");
+    else beats.push(b);
+  }
+
   return (
-    <div className="max-w-[95%] text-sm space-y-3">
-      <MessageBody markdown={structured.message} />
+    <div className="max-w-[95%] text-sm space-y-2">
+      <StaggeredBeats beats={beats} />
+      {clarifying && (
+        <ClarifyingQuestion
+          question={clarifying}
+          onAnswer={(ans) => onTapSuggestion(ans)}
+        />
+      )}
       {structured.actions && structured.actions.length > 0 && (
         <ActionCards caseId={caseId} actions={structured.actions} />
       )}
@@ -579,12 +598,29 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
   );
 }
 
-function MessageBody({ markdown }: { markdown: string }) {
-  // Render plain text, with **bold** inline replacement, preserving disclaimer at bottom.
-  const paragraphs = markdown.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+function StaggeredBeats({ beats }: { beats: string[] }) {
+  // Show beats one-by-one with a 900ms stagger; first beat is immediate.
+  const [visible, setVisible] = useState(1);
+  useEffect(() => {
+    setVisible(1);
+    if (beats.length <= 1) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 1; i < beats.length; i++) {
+      const delay = i * 1000;
+      timers.push(setTimeout(() => setVisible((v) => Math.max(v, i + 1)), delay));
+    }
+    return () => { timers.forEach(clearTimeout); };
+  }, [beats.join("\n---\n")]);
+
   return (
-    <div className="space-y-2 whitespace-pre-wrap leading-relaxed">
-      {paragraphs.map((p, i) => <p key={i} dangerouslySetInnerHTML={{ __html: renderInline(p) }} />)}
+    <div className="space-y-2">
+      {beats.slice(0, visible).map((b, i) => (
+        <div
+          key={i}
+          className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-bottom-1 duration-300"
+          dangerouslySetInnerHTML={{ __html: renderInline(b) }}
+        />
+      ))}
     </div>
   );
 }
