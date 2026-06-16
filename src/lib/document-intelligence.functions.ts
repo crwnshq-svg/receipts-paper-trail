@@ -18,16 +18,27 @@ const DocIdInput = z.object({ documentId: z.string().uuid() });
 const IMAGE_MIMES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"];
 const PDF_MIME = "application/pdf";
 
-// Extracts text from a PDF buffer. Returns empty string if extraction fails
-// or the PDF has no embedded text layer (e.g. a scanned image PDF) — callers
-// should fall back to vision analysis in that case.
+// Extracts text from a PDF buffer using pdfjs-dist (Mozilla's PDF.js).
+// Unlike pdf-parse, this works reliably in serverless/edge build environments
+// since it has no filesystem access on import. Returns empty string if
+// extraction fails or the PDF has no embedded text layer (e.g. a scanned
+// image PDF) — callers should fall back to vision analysis in that case.
 async function extractPdfText(buffer: ArrayBuffer): Promise<string> {
   try {
-    const pdfParse = (await import("pdf-parse")).default;
-    const result = await pdfParse(Buffer.from(buffer));
-    return (result.text ?? "").trim();
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+    const pdfDoc = await loadingTask.promise;
+    const pageTexts: string[] = [];
+    const maxPages = Math.min(pdfDoc.numPages, 30);
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map((item: any) => item.str ?? "").join(" ");
+      pageTexts.push(pageText);
+    }
+    return pageTexts.join("\n\n").trim();
   } catch (err) {
-    console.error("pdf-parse extraction failed", err);
+    console.error("pdfjs extraction failed", err);
     return "";
   }
 }
