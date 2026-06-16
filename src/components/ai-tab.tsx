@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Send, Sparkles, Lock, FileText, Download, Mail, Loader2, ArrowLeft,
-  ArrowRight, ExternalLink, Phone, BadgeCheck, FileSearch, Paperclip, Check,
+  ArrowRight, ExternalLink, Phone, FileSearch, Paperclip, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
