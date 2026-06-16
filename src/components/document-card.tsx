@@ -31,6 +31,8 @@ export function DocumentCard({
   const [draft, setDraft] = useState(doc.ai_summary ?? "");
   const [openInsight, setOpenInsight] = useState<InsightRow | null>(null);
   const [reanalyzing, setReanalyzing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const updateSummary = useServerFn(updateDocumentSummary);
   const analyze = useServerFn(analyzeDocument);
   const rename = useServerFn(renameDocument);
