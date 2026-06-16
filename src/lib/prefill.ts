@@ -6,10 +6,17 @@ export type PrefillScope = "incident" | "document" | "case";
 
 const KEY = (scope: PrefillScope) => `receipts.prefill.${scope}`;
 
+export const PREFILL_EVENT = "receipts:prefill";
+
 export function setPrefill(scope: PrefillScope, data: Record<string, any>) {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(KEY(scope), JSON.stringify(data));
+    // Notify already-mounted forms so they can pop the new prefill on the
+    // spot — without this, navigating to a route whose prefill-consuming
+    // component is already mounted (e.g. tapping a "generate document"
+    // action while already on the AI tab) silently drops the prefill.
+    window.dispatchEvent(new CustomEvent(PREFILL_EVENT, { detail: { scope } }));
   } catch {
     /* ignore quota errors */
   }
