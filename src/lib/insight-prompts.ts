@@ -462,7 +462,7 @@ Same JSON shape as the scoped chat:
   "message": "string — clean natural sentences, no \\n---\\n, no [Q], no fences",
   "beats": [ "string — one bubble of 1–2 natural sentences" ],
   "clarifying_question": "string or null",
-  "actions": [ { "type": "open_file" | "attach_evidence_to_file" | "open_evidence_vault" | "open_resources" | "open_alert" | "log_incident" | "upload_evidence", "label": "short tappable label", "prefill": { "caseId": "<id from ACTIVE FILES below when applicable>" } } ],
+  "actions": [ { "type": "open_file" | "attach_evidence_to_file" | "open_evidence_vault" | "open_resources" | "open_alert" | "log_incident" | "upload_evidence" | "generate_document" | "send_preservation_demand" | "create_written_record" | "draft_followup_email" | "generate_police_report" | "generate_footage_request" | "log_spoliation" | "log_witness", "label": "short tappable label", "prefill": { "caseId": "<id from ACTIVE FILES below when applicable>", "documentType": "<one of the supported document types when type is generate_document>" } } ],
   "resources": [],
   "partners": [],
   "document_refs": [],
