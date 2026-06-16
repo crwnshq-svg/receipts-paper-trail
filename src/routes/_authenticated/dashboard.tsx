@@ -239,51 +239,64 @@ function Dashboard() {
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <StatCard icon={FolderOpen} label="Files" value={String(caseList.length)} />
-            <Card className="rounded-xl p-5 shadow-sm">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" /> Plan
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="font-serif text-2xl font-semibold capitalize">{tier}</div>
-                {isPaid ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                    <CheckCircle2 className="h-3 w-3" /> Active
-                  </span>
-                ) : (
-                  <Link to="/account">
-                    <Button size="sm" className="h-7 bg-accent text-accent-foreground hover:bg-accent/90 text-xs">
+            <StatLinkCard icon={FolderOpen} label="Files" value={String(caseList.length)} to="/cases" />
+
+            <Link to="/account" className="block group">
+              <Card className="rounded-xl p-5 shadow-sm cursor-pointer transition-colors hover:bg-secondary/60 h-full">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" /> Plan
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="font-serif text-2xl font-semibold capitalize">{tier}</div>
+                  {isPaid ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                      <CheckCircle2 className="h-3 w-3" /> Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-md bg-accent text-accent-foreground px-2 py-0.5 text-[11px] font-medium group-hover:bg-accent/90">
                       Upgrade
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </Card>
-            <Card className="rounded-xl p-5 shadow-sm">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <FileText className="h-3.5 w-3.5" /> Storage
-              </div>
-              <div className="mt-2 font-serif text-lg font-semibold">
-                {formatBytes(used)} <span className="text-xs font-normal text-muted-foreground">/ 75 MB</span>
-              </div>
-              <Progress value={pct} className="mt-2 h-1.5" />
-            </Card>
-            <StatCard icon={ListChecks} label="Events" value={String(incidentsAll.length)} />
-            <Card className="rounded-xl p-5 shadow-sm">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <Brain className="h-3.5 w-3.5" /> AI Questions
-              </div>
-              <div className="mt-2 font-serif text-2xl font-semibold flex items-center gap-2">
-                {isPaid ? (
-                  <>
-                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                    <span className="text-lg">Unlimited</span>
-                  </>
-                ) : (
-                  <span>{aiRemaining}<span className="text-sm font-normal text-muted-foreground"> of {FREE_AI_QUESTIONS}</span></span>
-                )}
-              </div>
-            </Card>
+                    </span>
+                  )}
+                </div>
+              </Card>
+            </Link>
+
+            <Link to="/account" className="block">
+              <Card className="rounded-xl p-5 shadow-sm cursor-pointer transition-colors hover:bg-secondary/60 h-full">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5" /> Storage
+                </div>
+                <div className="mt-2 font-serif text-lg font-semibold">
+                  {formatBytes(used)} <span className="text-xs font-normal text-muted-foreground">/ 75 MB</span>
+                </div>
+                <Progress value={pct} className="mt-2 h-1.5" />
+              </Card>
+            </Link>
+
+            <StatLinkCard icon={ListChecks} label="Events" value={String(incidentsAll.length)} to="/events" />
+
+            {isPaid ? (
+              <Card className="rounded-xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <Brain className="h-3.5 w-3.5" /> AI Questions
+                </div>
+                <div className="mt-2 font-serif text-2xl font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  <span className="text-lg">Unlimited</span>
+                </div>
+              </Card>
+            ) : (
+              <Link to="/account" className="block">
+                <Card className="rounded-xl p-5 shadow-sm cursor-pointer transition-colors hover:bg-secondary/60 h-full">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                    <Brain className="h-3.5 w-3.5" /> AI Questions
+                  </div>
+                  <div className="mt-2 font-serif text-2xl font-semibold">
+                    {aiRemaining}<span className="text-sm font-normal text-muted-foreground"> of {FREE_AI_QUESTIONS}</span>
+                  </div>
+                </Card>
+              </Link>
+            )}
           </div>
 
           {/* Recent files */}
@@ -369,6 +382,19 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
       </div>
       <div className="mt-2 font-serif text-3xl font-semibold">{value}</div>
     </Card>
+  );
+}
+
+function StatLinkCard({ icon: Icon, label, value, to }: { icon: any; label: string; value: string; to: string }) {
+  return (
+    <Link to={to} className="block">
+      <Card className="rounded-xl p-5 shadow-sm cursor-pointer transition-colors hover:bg-secondary/60 h-full">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+          <Icon className="h-3.5 w-3.5" /> {label}
+        </div>
+        <div className="mt-2 font-serif text-3xl font-semibold">{value}</div>
+      </Card>
+    </Link>
   );
 }
 
