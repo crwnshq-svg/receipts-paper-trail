@@ -85,7 +85,8 @@ export const analyzeDocument = createServerFn({ method: "POST" })
             const { extractText, getDocumentProxy } = await import("unpdf");
             const pdf = await getDocumentProxy(buf);
             const { text } = await extractText(pdf, { mergePages: true });
-            const cleaned = (typeof text === "string" ? text : Array.isArray(text) ? text.join("\n\n") : "").trim();
+            const joined: string = typeof text === "string" ? text : Array.isArray(text) ? (text as string[]).join("\n\n") : "";
+            const cleaned = joined.trim();
             const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
             if (cleaned.length > 200 && letterCount > 50) {
               pdfHasUsableText = true;
