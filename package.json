@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.82",
-    "pdfjs-dist": "^4.0.379",
     "@ai-sdk/openai-compatible": "^2.0.48",
     "@ai-sdk/react": "^3.0.201",
     "@hookform/resolvers": "^5.2.2",
