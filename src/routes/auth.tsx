@@ -114,6 +114,33 @@ function AuthPage() {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
+          {pendingVerificationEmail ? (
+            <div className="text-center space-y-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/15">
+                <Mail className="h-6 w-6 text-accent" />
+              </div>
+              <h1 className="text-2xl font-bold">Check your email</h1>
+              <p className="text-sm text-muted-foreground">
+                We sent a verification link to{" "}
+                <span className="font-medium text-foreground">{pendingVerificationEmail}</span>.
+                Click the link in that email to verify your address, then sign in to continue.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                You won't be able to log in until your email is verified.
+              </p>
+              <Button
+                className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => {
+                  setPendingVerificationEmail(null);
+                  setPassword("");
+                  setTab("signin");
+                }}
+              >
+                Go to sign in
+              </Button>
+            </div>
+          ) : (
+            <>
           <h1 className="text-2xl font-bold text-center">Welcome to Pull Up Receipts</h1>
           <p className="mt-1 text-center text-sm text-muted-foreground">Your file. Your rights.</p>
 
