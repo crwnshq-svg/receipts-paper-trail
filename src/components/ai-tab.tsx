@@ -15,13 +15,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Send, Sparkles, Lock, FileText, Download, Mail, Loader2, ArrowLeft,
-  ArrowRight, ExternalLink, Phone, BadgeCheck, FileSearch,
+  ArrowRight, ExternalLink, Phone, BadgeCheck, FileSearch, Paperclip, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
+import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { loadConversation, saveConversation } from "@/lib/conversation.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
 import { setPrefill, popPrefill } from "@/lib/prefill";
+import { ClarifyingQuestion } from "@/components/clarifying-question";
 
 const DISCLAIMER_LINE =
   "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
