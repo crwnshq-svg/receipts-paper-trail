@@ -16,6 +16,21 @@ import {
 const DocIdInput = z.object({ documentId: z.string().uuid() });
 
 const IMAGE_MIMES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"];
+const PDF_MIME = "application/pdf";
+
+// Extracts text from a PDF buffer. Returns empty string if extraction fails
+// or the PDF has no embedded text layer (e.g. a scanned image PDF) — callers
+// should fall back to vision analysis in that case.
+async function extractPdfText(buffer: ArrayBuffer): Promise<string> {
+  try {
+    const pdfParse = (await import("pdf-parse")).default;
+    const result = await pdfParse(Buffer.from(buffer));
+    return (result.text ?? "").trim();
+  } catch (err) {
+    console.error("pdf-parse extraction failed", err);
+    return "";
+  }
+}
 
 export const analyzeDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -57,9 +72,35 @@ export const analyzeDocument = createServerFn({ method: "POST" })
 
     // --- 1) summary ---
     const isImage = IMAGE_MIMES.includes(doc.mime_type ?? "");
+    const isPdf = (doc.mime_type ?? "") === PDF_MIME;
     let summary = "";
+
+    // For PDFs with no extracted_data yet, attempt extraction now and persist it.
+    if (isPdf && !stringifyExtractedForPrompt(doc.extracted_data)) {
+      try {
+        const { data: fileBlob, error: dlErr } = await supabase.storage
+          .from("case-documents").download(doc.storage_path);
+        if (!dlErr && fileBlob) {
+          const buffer = await fileBlob.arrayBuffer();
+          const extractedText = await extractPdfText(buffer);
+          if (extractedText) {
+            await supabase.from("documents")
+              .update({ extracted_data: { text: extractedText } })
+              .eq("id", doc.id);
+            doc.extracted_data = { text: extractedText };
+          }
+        }
+      } catch (err) {
+        console.error("pdf download/extract step failed", err);
+      }
+    }
+
+    // A PDF with still no extractable text is treated as scanned/image-only —
+    // fall back to vision analysis the same way images are handled.
+    const pdfNeedsVisionFallback = isPdf && !stringifyExtractedForPrompt(doc.extracted_data);
+
     try {
-      if (isImage) {
+      if (isImage || pdfNeedsVisionFallback) {
         const { data: signed } = await supabase.storage
           .from("case-documents").createSignedUrl(doc.storage_path, 300);
         const url = signed?.signedUrl;
@@ -71,7 +112,9 @@ export const analyzeDocument = createServerFn({ method: "POST" })
             content: [
               {
                 type: "text",
-                text: `This image was uploaded to a "${caseRow.dispute_type}" case titled "${caseRow.title}". Describe what the image shows and how it might be relevant as evidence. 4 sentences.`,
+                text: pdfNeedsVisionFallback
+                  ? `This PDF was uploaded to a "${caseRow.dispute_type}" case titled "${caseRow.title}". It contains no extractable text layer (likely a scanned document), so review it visually. Describe what it shows and how it might be relevant as evidence. 4 sentences.`
+                  : `This image was uploaded to a "${caseRow.dispute_type}" case titled "${caseRow.title}". Describe what the image shows and how it might be relevant as evidence. 4 sentences.`,
               },
               ...(url ? [{ type: "image" as const, image: url }] : []),
             ],
