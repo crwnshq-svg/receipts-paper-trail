@@ -759,24 +759,29 @@ function PartnerCard({ partner }: { partner: StructuredPartner }) {
   const href = contact
     ? (isEmail ? `mailto:${contact}` : isUrl ? contact : `tel:${contact}`)
     : null;
+  const subline = [partner.specialty, partner.location].filter(Boolean).join(" · ");
   return (
-    <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 space-y-2">
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-accent">
-        <BadgeCheck className="h-3.5 w-3.5" /> Verified Pull Up Receipts Partner
+    <div className="space-y-1.5">
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 space-y-2.5">
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+          <Check className="h-3.5 w-3.5" /> Verified Pull Up Receipts Partner
+        </div>
+        <div>
+          <div className="font-semibold text-[15px]">{partner.name}</div>
+          {subline && <div className="text-xs text-muted-foreground mt-0.5">{subline}</div>}
+        </div>
+        {href && (
+          <a href={href} target={isUrl ? "_blank" : undefined} rel="noopener noreferrer" className="inline-block">
+            <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700">
+              {isEmail ? <Mail className="h-3.5 w-3.5 mr-1" /> : isUrl ? <ExternalLink className="h-3.5 w-3.5 mr-1" /> : <Phone className="h-3.5 w-3.5 mr-1" />}
+              Contact
+            </Button>
+          </a>
+        )}
       </div>
-      <div>
-        <div className="font-semibold text-sm">{partner.name}</div>
-        {partner.specialty && <div className="text-xs text-muted-foreground">{partner.specialty}</div>}
-        {partner.location && <div className="text-xs text-muted-foreground mt-0.5">{partner.location}</div>}
-      </div>
-      {href && (
-        <a href={href} target={isUrl ? "_blank" : undefined} rel="noopener noreferrer">
-          <Button size="sm" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
-            {isEmail ? <Mail className="h-3.5 w-3.5 mr-1" /> : isUrl ? <ExternalLink className="h-3.5 w-3.5 mr-1" /> : <Phone className="h-3.5 w-3.5 mr-1" />}
-            Contact
-          </Button>
-        </a>
-      )}
+      <p className="text-[11px] text-muted-foreground px-1">
+        No pressure either way — your file stays just as strong if you keep going solo.
+      </p>
     </div>
   );
 }
