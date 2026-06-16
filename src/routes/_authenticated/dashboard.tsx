@@ -586,6 +586,9 @@ function FileCard({ c, inc, docs, insights, gens }: {
             <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMenuOpen(false); setDraft(partyName); setEditing(true); }}>
               <Pencil className="mr-2 h-4 w-4" /> Rename
             </DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMenuOpen(false); void exportCaseZip(c.id); }}>
+              <Download className="mr-2 h-4 w-4" /> Export (zip)
+            </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={(e) => { e.preventDefault(); setMenuOpen(false); setShowDelete(true); }}
               className="text-destructive focus:text-destructive"
