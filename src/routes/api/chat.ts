@@ -57,7 +57,7 @@ export const Route = createFileRoute("/api/chat")({
           // Unscoped chat — no file context. List user's active files for routing.
           const { data: activeCases } = await supabase
             .from("cases")
-            .select("id,title,opposing_party,dispute_type,description,updated_at,ai_summary,status_level")
+            .select("id,title,opposing_party,dispute_type,description,updated_at,status_level")
             .eq("user_id", userId)
             .eq("status", "active")
             .order("updated_at", { ascending: false })
