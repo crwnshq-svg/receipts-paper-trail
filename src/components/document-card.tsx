@@ -55,11 +55,50 @@ export function DocumentCard({
 
   const displayName = doc.display_name || doc.file_name;
 
-  async function download() {
+  const isImage = (doc.mime_type ?? "").startsWith("image/");
+
+  async function getSignedUrl(expires = 300): Promise<string | null> {
     const { data, error } = await supabase.storage
-      .from("case-documents").createSignedUrl(doc.storage_path, 60);
-    if (error || !data) { toast.error("Could not open file"); return; }
-    window.open(data.signedUrl, "_blank");
+      .from("case-documents").createSignedUrl(doc.storage_path, expires);
+    if (error || !data) { toast.error("Could not access file"); return null; }
+    return data.signedUrl;
+  }
+
+  async function download() {
+    const url = await getSignedUrl(60);
+    if (!url) return;
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = displayName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error("download failed", err);
+      // Fallback: open the URL directly
+      window.open(url, "_blank");
+    }
+  }
+
+  async function preview() {
+    setLoadingPreview(true);
+    try {
+      const url = await getSignedUrl(300);
+      if (!url) return;
+      if (isImage) {
+        setPreviewUrl(url);
+      } else {
+        // PDFs / docs: open in a new tab — browser/OS viewer is best UX here
+        window.open(url, "_blank");
+      }
+    } finally {
+      setLoadingPreview(false);
+    }
   }
 
   async function saveSummary() {
