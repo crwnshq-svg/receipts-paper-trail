@@ -171,8 +171,8 @@ function extractPartialMessage(raw: string): string | null {
 
 // ============================== Top-level tab ==============================
 
-export function AiTab({ caseId, isPaid, questionsUsed, ask }: {
-  caseId: string | null; isPaid: boolean; questionsUsed: number; ask?: string | null;
+export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
+  caseId: string | null; isPaid: boolean; questionsUsed: number; ask?: string | null; generate?: string | null;
 }) {
   const [used, setUsed] = useState(questionsUsed);
   const [showUpgrade, setShowUpgrade] = useState(false);
