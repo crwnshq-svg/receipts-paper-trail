@@ -600,7 +600,12 @@ function ChatComposer({
           .upload(path, file, { contentType: file.type });
         if (upErr) throw upErr;
         toast.success("Got it — I'll ask where to file this.");
-        onUploaded(file.name);
+        onUploaded(file.name, {
+          storagePath: path,
+          fileName: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+        });
       }
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
