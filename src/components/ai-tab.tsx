@@ -754,8 +754,8 @@ function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
           onAnswer={(ans) => onTapSuggestion(ans)}
         />
       )}
-      {structured.actions && structured.actions.length > 0 && caseId && (
-        <ActionCards caseId={caseId} actions={structured.actions} />
+      {structured.actions && structured.actions.length > 0 && (
+        <ActionCards caseId={caseId} actions={structured.actions} pendingUploadRef={pendingUploadRef} />
       )}
       {structured.partners && structured.partners.length > 0 && (
         <div className="space-y-2">
