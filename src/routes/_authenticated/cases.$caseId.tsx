@@ -29,6 +29,7 @@ import { DocumentCard } from "@/components/document-card";
 import { TimelineTab } from "@/components/timeline-tab";
 import { FREE_STORAGE_BYTES } from "@/lib/constants";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
+import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
 
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
@@ -291,41 +292,14 @@ function DocumentsTab({ caseId, docs, isPaid, autoUpload, onChange, onConsumed, 
     if (!file) return;
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not signed in");
-
-      const { data: profile } = await supabase.from("profiles").select("subscription_tier").eq("id", user.id).maybeSingle();
-      if (profile?.subscription_tier === "free") {
-        const { data: existing } = await supabase.from("documents").select("file_size").eq("user_id", user.id);
-        const used = (existing ?? []).reduce((s, d) => s + (d.file_size ?? 0), 0);
-        if (used + file.size > FREE_LIMIT_BYTES) {
-          toast.error("You've reached the 75MB free storage cap. Upgrade for unlimited storage.");
-          setUploading(false);
-          return;
-        }
-      }
-
-      const path = `${user.id}/${caseId}/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage.from("case-documents").upload(path, file, {
-        contentType: file.type,
-      });
-      if (upErr) throw upErr;
-      const { data: insertedDoc, error: dbErr } = await supabase.from("documents").insert({
-        case_id: caseId, user_id: user.id,
-        file_name: file.name, storage_path: path,
-        file_size: file.size, mime_type: file.type,
-      }).select().single();
-      if (dbErr) throw dbErr;
-      toast.success("Uploaded — analyzing…");
-      onChange();
-      // Fire and forget analysis
-      if (insertedDoc) {
-        analyze({ data: { documentId: insertedDoc.id } })
+      const inserted = await uploadEvidence({ file, caseId });
+      if (inserted) {
+        toast.success("Uploaded — analyzing…");
+        onChange();
+        analyze({ data: { documentId: inserted.id } })
           .then(() => onChange())
           .catch((err) => console.warn("analyze failed", err));
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -343,7 +317,7 @@ function DocumentsTab({ caseId, docs, isPaid, autoUpload, onChange, onConsumed, 
     <div className="space-y-4">
       <div className="flex justify-end">
         <input ref={fileRef} type="file" hidden onChange={onUpload}
-          accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg" />
+          accept={EVIDENCE_ACCEPT} />
         <Button onClick={() => fileRef.current?.click()} disabled={uploading}
           className="bg-primary text-primary-foreground hover:bg-accent">
           <Upload className="mr-1 h-4 w-4" /> {uploading ? "Uploading…" : "Add Evidence"}

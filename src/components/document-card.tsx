@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Trash2, Lightbulb, Pencil, Check, X, RefreshCw, Sparkles } from "lucide-react";
+import { FileText, Trash2, Lightbulb, Pencil, Check, X, RefreshCw, Sparkles, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,7 @@ import {
   dismissNameSuggestion,
 } from "@/lib/document-intelligence.functions";
 import { InsightModal, type InsightRow } from "./insight-modal";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export function DocumentCard({
   doc, isPaid, onRemove, onConsumed, onLimitHit,
@@ -30,6 +31,8 @@ export function DocumentCard({
   const [draft, setDraft] = useState(doc.ai_summary ?? "");
   const [openInsight, setOpenInsight] = useState<InsightRow | null>(null);
   const [reanalyzing, setReanalyzing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const updateSummary = useServerFn(updateDocumentSummary);
   const analyze = useServerFn(analyzeDocument);
   const rename = useServerFn(renameDocument);
@@ -52,11 +55,50 @@ export function DocumentCard({
 
   const displayName = doc.display_name || doc.file_name;
 
-  async function download() {
+  const isImage = (doc.mime_type ?? "").startsWith("image/");
+
+  async function getSignedUrl(expires = 300): Promise<string | null> {
     const { data, error } = await supabase.storage
-      .from("case-documents").createSignedUrl(doc.storage_path, 60);
-    if (error || !data) { toast.error("Could not open file"); return; }
-    window.open(data.signedUrl, "_blank");
+      .from("case-documents").createSignedUrl(doc.storage_path, expires);
+    if (error || !data) { toast.error("Could not access file"); return null; }
+    return data.signedUrl;
+  }
+
+  async function download() {
+    const url = await getSignedUrl(60);
+    if (!url) return;
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = displayName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error("download failed", err);
+      // Fallback: open the URL directly
+      window.open(url, "_blank");
+    }
+  }
+
+  async function preview() {
+    setLoadingPreview(true);
+    try {
+      const url = await getSignedUrl(300);
+      if (!url) return;
+      if (isImage) {
+        setPreviewUrl(url);
+      } else {
+        // PDFs / docs: open in a new tab — browser/OS viewer is best UX here
+        window.open(url, "_blank");
+      }
+    } finally {
+      setLoadingPreview(false);
+    }
   }
 
   async function saveSummary() {
@@ -116,8 +158,8 @@ export function DocumentCard({
       <div className="flex items-start gap-3">
         <FileText className="h-5 w-5 text-accent shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1">
-          <button onClick={download} className="text-left w-full">
-            <div className="truncate font-medium text-sm">{displayName}</div>
+          <button onClick={preview} disabled={loadingPreview} className="text-left w-full" title={isImage ? "Preview image" : "Open file"}>
+            <div className="truncate font-medium text-sm hover:underline">{displayName}</div>
             <div className="text-[11px] text-muted-foreground">
               {(doc.file_size / 1024).toFixed(1)} KB · {new Date(doc.created_at).toLocaleDateString()}
               {doc.display_name && (
@@ -199,12 +241,46 @@ export function DocumentCard({
               )}
             </button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => onRemove(doc)}
-            className="text-muted-foreground hover:text-destructive h-7 w-7 p-0">
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            <Button variant="ghost" size="sm" onClick={preview} disabled={loadingPreview}
+              title={isImage ? "Preview image" : "Open file"}
+              className="text-muted-foreground hover:text-foreground h-7 w-7 p-0">
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={download}
+              title="Download file"
+              className="text-muted-foreground hover:text-foreground h-7 w-7 p-0">
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onRemove(doc)}
+              title="Delete file"
+              className="text-muted-foreground hover:text-destructive h-7 w-7 p-0">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
+
+      <Dialog open={!!previewUrl} onOpenChange={(o) => { if (!o) setPreviewUrl(null); }}>
+        <DialogContent className="max-w-4xl p-2 bg-background">
+          <DialogTitle className="sr-only">{displayName}</DialogTitle>
+          {previewUrl && (
+            <div className="flex flex-col gap-2">
+              <img
+                src={previewUrl}
+                alt={displayName}
+                className="max-h-[80vh] w-auto mx-auto rounded-md object-contain"
+              />
+              <div className="flex items-center justify-between gap-2 px-2 pb-1">
+                <div className="text-xs text-muted-foreground truncate">{displayName}</div>
+                <Button size="sm" variant="outline" onClick={download}>
+                  <Download className="h-3.5 w-3.5 mr-1" /> Download
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <InsightModal
         insight={openInsight}

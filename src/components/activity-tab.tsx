@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
@@ -21,12 +21,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
 import { popPrefill } from "@/lib/prefill";
-import { analyzeIncident } from "@/lib/document-intelligence.functions";
+import { analyzeIncident, analyzeDocument } from "@/lib/document-intelligence.functions";
+import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
+import { exportCaseZip } from "@/lib/case-export";
+
 
 type Incident = {
   id: string;
@@ -82,6 +85,35 @@ export function ActivityTab({
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
   const callAnalyze = useServerFn(analyzeIncident);
+  const callAnalyzeDoc = useServerFn(analyzeDocument);
+  const evidenceFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  async function onPickEvidence(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingEvidence(true);
+    try {
+      const inserted = await uploadEvidence({ file, caseId });
+      if (inserted) {
+        toast.success("Evidence uploaded — analyzing…");
+        qc.invalidateQueries({ queryKey: ["documents", caseId] });
+        qc.invalidateQueries({ queryKey: ["storage-usage"] });
+        callAnalyzeDoc({ data: { documentId: inserted.id } })
+          .then(() => qc.invalidateQueries({ queryKey: ["documents", caseId] }))
+          .catch((err) => console.warn("analyze failed", err));
+      }
+    } finally {
+      setUploadingEvidence(false);
+      if (evidenceFileRef.current) evidenceFileRef.current.value = "";
+    }
+  }
+
+  async function onExport() {
+    setExporting(true);
+    try { await exportCaseZip(caseId); } finally { setExporting(false); }
+  }
 
 
   useEffect(() => {
@@ -190,7 +222,30 @@ export function ActivityTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <input
+          ref={evidenceFileRef}
+          type="file"
+          hidden
+          onChange={onPickEvidence}
+          accept={EVIDENCE_ACCEPT}
+        />
+        <Button
+          variant="outline"
+          onClick={onExport}
+          disabled={exporting}
+          className="border-muted-foreground/30"
+        >
+          <Download className="mr-1 h-4 w-4" /> {exporting ? "Exporting…" : "Export File (zip)"}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => evidenceFileRef.current?.click()}
+          disabled={uploadingEvidence}
+          className="border-muted-foreground/30"
+        >
+          <Upload className="mr-1 h-4 w-4" /> {uploadingEvidence ? "Uploading…" : "Add Evidence"}
+        </Button>
         <Button
           variant="outline"
           onClick={() => setNoteOpen(true)}

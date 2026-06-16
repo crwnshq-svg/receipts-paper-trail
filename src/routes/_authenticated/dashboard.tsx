@@ -17,8 +17,9 @@ import {
 import {
   Plus, FolderOpen, FileText, Clock, ListChecks, Brain, CheckCircle2,
   PenSquare, Upload, MessageSquare, Lightbulb, ArrowRight, BookOpen, Sparkles,
-  MoreVertical, Pencil, Trash2, Check, X,
+  MoreVertical, Pencil, Trash2, Check, X, Download,
 } from "lucide-react";
+import { exportCaseZip } from "@/lib/case-export";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { DeleteCaseDialog } from "@/components/delete-case-dialog";
@@ -584,6 +585,9 @@ function FileCard({ c, inc, docs, insights, gens }: {
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMenuOpen(false); setDraft(partyName); setEditing(true); }}>
               <Pencil className="mr-2 h-4 w-4" /> Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMenuOpen(false); void exportCaseZip(c.id); }}>
+              <Download className="mr-2 h-4 w-4" /> Export (zip)
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={(e) => { e.preventDefault(); setMenuOpen(false); setShowDelete(true); }}
