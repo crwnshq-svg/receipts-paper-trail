@@ -57,6 +57,56 @@ export const analyzeDocument = createServerFn({ method: "POST" })
 
     // --- 1) summary ---
     const isImage = IMAGE_MIMES.includes(doc.mime_type ?? "");
+    const isPdf = (doc.mime_type ?? "") === "application/pdf";
+
+    // --- 1a) PDF text extraction (serverless-safe, no FS access at import) ---
+    // If this is a PDF and we don't already have extracted text, download it
+    // and try to pull a text layer. If that yields nothing meaningful, we'll
+    // fall through to passing the PDF directly to the vision model below.
+    let pdfHasUsableText = false;
+    let pdfSignedUrl: string | null = null;
+    let pdfBase64: string | null = null;
+    if (isPdf) {
+      try {
+        const { data: signed } = await supabase.storage
+          .from("case-documents").createSignedUrl(doc.storage_path, 300);
+        pdfSignedUrl = signed?.signedUrl ?? null;
+
+        const existingText = stringifyExtractedForPrompt(doc.extracted_data);
+        if (!existingText && pdfSignedUrl) {
+          const res = await fetch(pdfSignedUrl);
+          const buf = new Uint8Array(await res.arrayBuffer());
+          // base64 for potential vision fallback
+          let bin = "";
+          for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+          pdfBase64 = btoa(bin);
+
+          try {
+            const { extractText, getDocumentProxy } = await import("unpdf");
+            const pdf = await getDocumentProxy(buf);
+            const { text } = await extractText(pdf, { mergePages: true });
+            const cleaned = (typeof text === "string" ? text : Array.isArray(text) ? text.join("\n\n") : "").trim();
+            const letterCount = (cleaned.match(/[A-Za-z]/g) ?? []).length;
+            if (cleaned.length > 200 && letterCount > 50) {
+              pdfHasUsableText = true;
+              const truncated = cleaned.slice(0, 40000);
+              await supabase.from("documents")
+                .update({ extracted_data: { text: truncated, source: "unpdf" } as never })
+                .eq("id", doc.id);
+              // Keep local doc in sync so downstream prompt sees it
+              (doc as any).extracted_data = { text: truncated, source: "unpdf" };
+            }
+          } catch (err) {
+            console.error("unpdf extraction failed", err);
+          }
+        } else if (existingText) {
+          pdfHasUsableText = true;
+        }
+      } catch (err) {
+        console.error("PDF download for extraction failed", err);
+      }
+    }
+
     let summary = "";
     try {
       if (isImage) {
@@ -78,6 +128,28 @@ export const analyzeDocument = createServerFn({ method: "POST" })
           }],
         });
         summary = text;
+      } else if (isPdf && !pdfHasUsableText && pdfBase64) {
+        // Scanned/image-only PDF — no extractable text layer. Send the PDF
+        // itself to Claude as a file part (vision over rendered pages).
+        const { text } = await generateText({
+          model,
+          system: buildSummarySystemPrompt({ caseTitle: caseRow.title, disputeType: caseRow.dispute_type }),
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `This PDF was uploaded to a "${caseRow.dispute_type}" case titled "${caseRow.title}". It has no extractable text layer, so read it visually. State in one sentence (max two) what the document factually is and the key specifics visible (parties, dates, amounts, subject). If space allows, a brief second sentence on why it matters as evidence.`,
+              },
+              {
+                type: "file" as const,
+                data: pdfBase64,
+                mediaType: "application/pdf",
+              },
+            ],
+          }],
+        });
+        summary = text;
       } else {
         const { text } = await generateText({
           model,
@@ -92,6 +164,7 @@ Produce the summary now. ONE sentence preferred, two maximum.`,
         });
         summary = text;
       }
+
       // Summary intentionally excludes the legal disclaimer (PART 2).
     } catch (err) {
       console.error("summary generation failed", err);
