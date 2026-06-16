@@ -394,20 +394,116 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
         )}
       </div>
 
-      <form onSubmit={handleSend} className="border-t p-3 flex gap-2">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={isPaid || remaining > 0 ? "Ask about your file…" : "Free questions used — upgrade to continue"}
-          disabled={isLoading || (!isPaid && remaining === 0)}
-          autoFocus
-        />
-        <Button type="submit" disabled={isLoading || !input.trim() || (!isPaid && remaining === 0)}
-          className="bg-primary text-primary-foreground hover:bg-accent">
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
-      </form>
+      <ChatComposer
+        caseId={caseId}
+        disabled={isLoading || (!isPaid && remaining === 0)}
+        placeholder={isPaid || remaining > 0 ? "Ask about your file…" : "Free questions used — upgrade to continue"}
+        input={input}
+        setInput={setInput}
+        onSubmit={(e) => handleSend(e)}
+        onUploaded={(filename) => {
+          void doSend(`[uploaded evidence: ${filename}]`);
+        }}
+        isLoading={isLoading}
+      />
     </Card>
+  );
+}
+
+function ChatComposer({
+  caseId, disabled, placeholder, input, setInput, onSubmit, onUploaded, isLoading,
+}: {
+  caseId: string; disabled: boolean; placeholder: string;
+  input: string; setInput: (s: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onUploaded: (filename: string) => void;
+  isLoading: boolean;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const analyze = useServerFn(analyzeDocument);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+      const path = `${user.id}/${caseId}/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("case-documents").upload(path, file, {
+        contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data: inserted, error: dbErr } = await supabase.from("documents").insert({
+        case_id: caseId, user_id: user.id,
+        file_name: file.name, storage_path: path,
+        file_size: file.size, mime_type: file.type,
+      }).select().single();
+      if (dbErr) throw dbErr;
+      toast.success("Evidence added");
+      onUploaded(file.name);
+      if (inserted) {
+        analyze({ data: { documentId: inserted.id } }).catch((err) => console.warn("analyze failed", err));
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  return (
+    <form
+      onSubmit={onSubmit}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const f = e.dataTransfer.files?.[0];
+        if (f && !disabled && !uploading) void handleFile(f);
+      }}
+      className={cn(
+        "border-t p-3 flex gap-2 transition-colors",
+        dragOver && "bg-accent/10 ring-2 ring-accent/40 ring-inset",
+      )}
+    >
+      <input
+        ref={fileRef}
+        type="file"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void handleFile(f);
+        }}
+        accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        disabled={uploading || disabled}
+        onClick={() => fileRef.current?.click()}
+        title="Attach evidence"
+      >
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+      </Button>
+      <Input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder={dragOver ? "Drop to attach evidence…" : placeholder}
+        disabled={disabled}
+        autoFocus
+      />
+      <Button
+        type="submit"
+        disabled={isLoading || !input.trim() || disabled}
+        className="bg-primary text-primary-foreground hover:bg-accent"
+      >
+        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+      </Button>
+    </form>
   );
 }
 
