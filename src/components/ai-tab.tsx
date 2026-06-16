@@ -70,6 +70,8 @@ type StructuredPartner = {
 };
 type Structured = {
   message: string;
+  beats?: string[];
+  clarifying_question?: string | null;
   actions?: StructuredAction[];
   resources?: StructuredResource[];
   partners?: StructuredPartner[];
@@ -77,30 +79,62 @@ type Structured = {
   suggestions?: string[];
 };
 
-function tryParseStructured(raw: string): Structured | null {
+// Strip markdown code fences anywhere in the text, then return the substring
+// from the first `{` to the last `}` so trailing whitespace, stray prose,
+// or commentary outside the JSON object don't break parsing.
+function stripFencesAndExtractJson(raw: string): string | null {
   if (!raw) return null;
   let text = raw.trim();
-  // Strip ```json fences if present
-  const fence = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  if (fence) text = fence[1].trim();
-  if (!text.startsWith("{")) return null;
-  // Only attempt parse when it looks like a complete object
-  if (!text.endsWith("}")) return null;
+  text = text.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first === -1 || last === -1 || last <= first) return null;
+  return text.slice(first, last + 1);
+}
+
+// Strip structural markers the model should never emit inside message text
+// (legacy "\n---\n" bubble separators and "[Q]" clarifying-question prefix).
+function scrubMarkers(s: string): string {
+  if (!s) return s;
+  return s
+    .replace(/\n\s*---\s*\n/g, "\n\n")
+    .replace(/^\s*\[Q\]\s*/gim, "")
+    .trim();
+}
+
+// SINGLE entry point for parsing an AI response into a Structured object.
+// Used by every chat surface (unscoped /ai, file-scoped AI tab, event
+// "ask about this", in-chat evidence upload). Returns null only when the
+// response is not valid structured JSON; callers fall back to rendering
+// the raw or partial text.
+function tryParseStructured(raw: string): Structured | null {
+  const json = stripFencesAndExtractJson(raw);
+  if (!json) return null;
   try {
-    const obj = JSON.parse(text);
+    const obj = JSON.parse(json);
     if (typeof obj?.message !== "string") return null;
-    return obj as Structured;
-  } catch { return null; }
+    const message = scrubMarkers(obj.message);
+    const beats = Array.isArray(obj.beats)
+      ? obj.beats.map((b: unknown) => scrubMarkers(String(b ?? ""))).filter(Boolean)
+      : undefined;
+    const clarifying_question =
+      typeof obj.clarifying_question === "string" && obj.clarifying_question.trim().length > 0
+        ? scrubMarkers(obj.clarifying_question)
+        : null;
+    return { ...obj, message, beats, clarifying_question } as Structured;
+  } catch {
+    return null;
+  }
 }
 
 // Pull the (possibly partial) value of the top-level "message" field from a
 // streaming JSON response so the user sees text immediately instead of a
-// blank "Composing…" placeholder while bytes arrive.
+// blank placeholder while bytes arrive. Also serves as a safety net when
+// the completed response fails strict JSON parsing.
 function extractPartialMessage(raw: string): string | null {
   if (!raw) return null;
   let text = raw.trim();
-  const fence = text.match(/^```(?:json)?\s*([\s\S]*)$/i);
-  if (fence) text = fence[1].trim();
+  text = text.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
   if (!text.startsWith("{")) return null;
   const keyIdx = text.search(/"message"\s*:\s*"/);
   if (keyIdx === -1) return null;
@@ -116,12 +150,11 @@ function extractPartialMessage(raw: string): string | null {
       i += 2;
       continue;
     }
-    if (ch === '"') return out; // closed
+    if (ch === '"') return scrubMarkers(out);
     out += ch;
     i++;
   }
-  // Unterminated string — still streaming. Return what we have so far.
-  return out;
+  return scrubMarkers(out);
 }
 
 // ============================== Top-level tab ==============================
