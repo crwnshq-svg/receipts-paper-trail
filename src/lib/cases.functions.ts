@@ -42,6 +42,7 @@ export const deleteCase = createServerFn({ method: "POST" })
       "notes",
       "generated_documents",
       "ai_conversations",
+      "case_packages",
     ] as const;
 
     for (const t of tables) {
