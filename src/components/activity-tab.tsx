@@ -20,9 +20,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell, Sparkles, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
+import { ClarifyingQuestion } from "@/components/clarifying-question";
 import { popPrefill } from "@/lib/prefill";
 import { analyzeIncident } from "@/lib/document-intelligence.functions";
 
@@ -218,6 +219,24 @@ export function ActivityTab({
         onSaved={refetchNotes}
       />
 
+      {(() => {
+        // ONE live clarifying question per File at a time.
+        // Pick the most recently created event that still has unanswered questions.
+        const sortedByCreated = [...incidents].sort(
+          (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
+        );
+        const live = sortedByCreated.find((i) => toQuestions(i.clarifying_questions).length > 0);
+        if (!live) return null;
+        const liveQ = toQuestions(live.clarifying_questions)[0];
+        return (
+          <ClarifyingQuestion
+            question={liveQ}
+            onAnswer={(ans) => submitAnswer(live.id, liveQ, ans)}
+            onDismiss={() => dismissQuestions(live.id)}
+          />
+        );
+      })()}
+
 
       {feed.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
@@ -278,41 +297,9 @@ export function ActivityTab({
                   </div>
                 </Card>
 
-                {(() => {
-                  const questions = toQuestions(f.data.clarifying_questions);
-                  if (questions.length === 0) return null;
-                  return (
-                    <Card className="border-l-4 border-l-sky-400 bg-sky-500/5 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-300">
-                          <Sparkles className="h-3 w-3" />
-                          A couple of things that could strengthen this entry
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => dismissQuestions(f.data.id)}
-                          className="text-muted-foreground hover:text-foreground"
-                          aria-label="Dismiss"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <ul className="mt-2 space-y-1">
-                        {questions.map((q, idx) => (
-                          <li key={idx}>
-                            <button
-                              type="button"
-                              onClick={() => setAnswerQ({ incidentId: f.data.id, question: q })}
-                              className="w-full rounded-md px-2 py-1.5 text-left text-sm text-foreground/90 hover:bg-sky-500/10 transition-colors"
-                            >
-                              {q}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </Card>
-                  );
-                })()}
+                {/* Per-event clarifying-question card removed.
+                    A single live clarifying question is rendered ABOVE the feed
+                    (one live question per File at a time). */}
               </li>
 
             ) : (
@@ -518,16 +505,19 @@ function IncidentDialog({
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
+    if (!what.trim()) return;
     setSaving(true);
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
+      // Auto-derive title from the first ~70 chars of "what happened" if blank.
+      const autoTitle = title.trim() || what.trim().split(/[.\n]/)[0].slice(0, 70).trim() || "Event";
       const { data: inserted, error } = await supabase.from("incidents").insert({
         case_id: caseId,
         user_id: user.id,
-        title,
+        title: autoTitle,
         who_involved: who || null,
         what_happened: what,
         notes: extraNotes || null,
@@ -555,60 +545,79 @@ function IncidentDialog({
           <DialogTitle>Log an Event</DialogTitle>
         </DialogHeader>
         <form onSubmit={add} className="space-y-3">
-          <Field label="Title" aiSuggested={prefilled.title}>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              placeholder="What happened, in a few words"
-            />
-          </Field>
-          <Field label="When" aiSuggested={prefilled.occurredAt}>
-            <Input
-              type="datetime-local"
-              value={occurredAt}
-              onChange={(e) => setOccurredAt(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Who was involved" aiSuggested={prefilled.who}>
-            <Input
-              value={who}
-              onChange={(e) => setWho(e.target.value)}
-              placeholder="Names or roles"
-            />
-          </Field>
-          <Field label="What happened" aiSuggested={prefilled.what}>
+          {/* AI-style opening bubble — one question at a time */}
+          <div className="rounded-2xl bg-card border px-3.5 py-2.5 text-sm">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-accent mb-1">
+              RECEIPTS AI
+            </div>
+            What happened?
+            <div className="text-xs text-muted-foreground mt-1">
+              Logged for {new Date(occurredAt).toLocaleString()} — you can change the time below.
+            </div>
+          </div>
+
+          <Field label="" aiSuggested={prefilled.what}>
             <Textarea
               value={what}
               onChange={(e) => setWhat(e.target.value)}
               required
-              rows={4}
-            />
-          </Field>
-          <Field label="Location (optional)" aiSuggested={prefilled.location}>
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-          </Field>
-          <Field label="Notes (optional)" aiSuggested={prefilled.notes}>
-            <Textarea
-              value={extraNotes}
-              onChange={(e) => setExtraNotes(e.target.value)}
-              rows={2}
+              rows={5}
+              placeholder="Tell me in your own words. I'll handle the rest after you save."
+              autoFocus
             />
           </Field>
 
-          <div className="space-y-1.5">
-            <Label>Attach Evidence</Label>
-            <AttachDocs caseId={caseId} value={docIds} onChange={setDocIds} />
-          </div>
+          <details className="group rounded-md border bg-secondary/20 px-3 py-2">
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+              Add details (optional)
+            </summary>
+            <div className="space-y-3 pt-3">
+              <Field label="Title (auto-filled if blank)" aiSuggested={prefilled.title}>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Short label for this event"
+                />
+              </Field>
+              <Field label="When" aiSuggested={prefilled.occurredAt}>
+                <Input
+                  type="datetime-local"
+                  value={occurredAt}
+                  onChange={(e) => setOccurredAt(e.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="Who was involved" aiSuggested={prefilled.who}>
+                <Input
+                  value={who}
+                  onChange={(e) => setWho(e.target.value)}
+                  placeholder="Names or roles"
+                />
+              </Field>
+              <Field label="Location" aiSuggested={prefilled.location}>
+                <Input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </Field>
+              <Field label="Notes" aiSuggested={prefilled.notes}>
+                <Textarea
+                  value={extraNotes}
+                  onChange={(e) => setExtraNotes(e.target.value)}
+                  rows={2}
+                />
+              </Field>
+              <div className="space-y-1.5">
+                <Label>Attach Evidence</Label>
+                <AttachDocs caseId={caseId} value={docIds} onChange={setDocIds} />
+              </div>
+            </div>
+          </details>
 
           <DialogFooter>
             <Button
               type="submit"
-              disabled={saving}
+              disabled={saving || !what.trim()}
               className="bg-primary text-primary-foreground"
             >
               {saving ? "Saving…" : "Save event"}

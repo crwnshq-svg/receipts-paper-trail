@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,13 +16,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Send, Sparkles, Lock, FileText, Download, Mail, Loader2, ArrowLeft,
-  ArrowRight, ExternalLink, Phone, BadgeCheck, FileSearch,
+  ArrowRight, ExternalLink, Phone, FileSearch, Paperclip, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
+import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { loadConversation, saveConversation } from "@/lib/conversation.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
 import { setPrefill, popPrefill } from "@/lib/prefill";
+import { ClarifyingQuestion } from "@/components/clarifying-question";
 
 const DISCLAIMER_LINE =
   "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
@@ -392,20 +395,116 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
         )}
       </div>
 
-      <form onSubmit={handleSend} className="border-t p-3 flex gap-2">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={isPaid || remaining > 0 ? "Ask about your file…" : "Free questions used — upgrade to continue"}
-          disabled={isLoading || (!isPaid && remaining === 0)}
-          autoFocus
-        />
-        <Button type="submit" disabled={isLoading || !input.trim() || (!isPaid && remaining === 0)}
-          className="bg-primary text-primary-foreground hover:bg-accent">
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
-      </form>
+      <ChatComposer
+        caseId={caseId}
+        disabled={isLoading || (!isPaid && remaining === 0)}
+        placeholder={isPaid || remaining > 0 ? "Ask about your file…" : "Free questions used — upgrade to continue"}
+        input={input}
+        setInput={setInput}
+        onSubmit={(e) => handleSend(e)}
+        onUploaded={(filename) => {
+          void doSend(`[uploaded evidence: ${filename}]`);
+        }}
+        isLoading={isLoading}
+      />
     </Card>
+  );
+}
+
+function ChatComposer({
+  caseId, disabled, placeholder, input, setInput, onSubmit, onUploaded, isLoading,
+}: {
+  caseId: string; disabled: boolean; placeholder: string;
+  input: string; setInput: (s: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onUploaded: (filename: string) => void;
+  isLoading: boolean;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const analyze = useServerFn(analyzeDocument);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+      const path = `${user.id}/${caseId}/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("case-documents").upload(path, file, {
+        contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data: inserted, error: dbErr } = await supabase.from("documents").insert({
+        case_id: caseId, user_id: user.id,
+        file_name: file.name, storage_path: path,
+        file_size: file.size, mime_type: file.type,
+      }).select().single();
+      if (dbErr) throw dbErr;
+      toast.success("Evidence added");
+      onUploaded(file.name);
+      if (inserted) {
+        analyze({ data: { documentId: inserted.id } }).catch((err) => console.warn("analyze failed", err));
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  return (
+    <form
+      onSubmit={onSubmit}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const f = e.dataTransfer.files?.[0];
+        if (f && !disabled && !uploading) void handleFile(f);
+      }}
+      className={cn(
+        "border-t p-3 flex gap-2 transition-colors",
+        dragOver && "bg-accent/10 ring-2 ring-accent/40 ring-inset",
+      )}
+    >
+      <input
+        ref={fileRef}
+        type="file"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void handleFile(f);
+        }}
+        accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        disabled={uploading || disabled}
+        onClick={() => fileRef.current?.click()}
+        title="Attach evidence"
+      >
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+      </Button>
+      <Input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder={dragOver ? "Drop to attach evidence…" : placeholder}
+        disabled={disabled}
+        autoFocus
+      />
+      <Button
+        type="submit"
+        disabled={isLoading || !input.trim() || disabled}
+        className="bg-primary text-primary-foreground hover:bg-accent"
+      >
+        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+      </Button>
+    </form>
   );
 }
 
@@ -447,9 +546,28 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
     );
   }
 
+  // Split message body into beats: Beat 1 always shown, subsequent beats stagger in.
+  // Extract a trailing "[Q] ..." beat as a clarifying-question card instead of a bubble.
+  const rawBeats = structured.message
+    .split(/\n---\n/g)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  let clarifying: string | null = null;
+  const beats: string[] = [];
+  for (const b of rawBeats) {
+    if (b.startsWith("[Q]") && clarifying === null) clarifying = b.replace(/^\[Q\]\s*/, "");
+    else beats.push(b);
+  }
+
   return (
-    <div className="max-w-[95%] text-sm space-y-3">
-      <MessageBody markdown={structured.message} />
+    <div className="max-w-[95%] text-sm space-y-2">
+      <StaggeredBeats beats={beats} />
+      {clarifying && (
+        <ClarifyingQuestion
+          question={clarifying}
+          onAnswer={(ans) => onTapSuggestion(ans)}
+        />
+      )}
       {structured.actions && structured.actions.length > 0 && (
         <ActionCards caseId={caseId} actions={structured.actions} />
       )}
@@ -480,12 +598,29 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
   );
 }
 
-function MessageBody({ markdown }: { markdown: string }) {
-  // Render plain text, with **bold** inline replacement, preserving disclaimer at bottom.
-  const paragraphs = markdown.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+function StaggeredBeats({ beats }: { beats: string[] }) {
+  // Show beats one-by-one with a 900ms stagger; first beat is immediate.
+  const [visible, setVisible] = useState(1);
+  useEffect(() => {
+    setVisible(1);
+    if (beats.length <= 1) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 1; i < beats.length; i++) {
+      const delay = i * 1000;
+      timers.push(setTimeout(() => setVisible((v) => Math.max(v, i + 1)), delay));
+    }
+    return () => { timers.forEach(clearTimeout); };
+  }, [beats.join("\n---\n")]);
+
   return (
-    <div className="space-y-2 whitespace-pre-wrap leading-relaxed">
-      {paragraphs.map((p, i) => <p key={i} dangerouslySetInnerHTML={{ __html: renderInline(p) }} />)}
+    <div className="space-y-2">
+      {beats.slice(0, visible).map((b, i) => (
+        <div
+          key={i}
+          className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-bottom-1 duration-300"
+          dangerouslySetInnerHTML={{ __html: renderInline(b) }}
+        />
+      ))}
     </div>
   );
 }
@@ -624,24 +759,29 @@ function PartnerCard({ partner }: { partner: StructuredPartner }) {
   const href = contact
     ? (isEmail ? `mailto:${contact}` : isUrl ? contact : `tel:${contact}`)
     : null;
+  const subline = [partner.specialty, partner.location].filter(Boolean).join(" · ");
   return (
-    <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 space-y-2">
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-accent">
-        <BadgeCheck className="h-3.5 w-3.5" /> Verified Pull Up Receipts Partner
+    <div className="space-y-1.5">
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 space-y-2.5">
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+          <Check className="h-3.5 w-3.5" /> Verified Pull Up Receipts Partner
+        </div>
+        <div>
+          <div className="font-semibold text-[15px]">{partner.name}</div>
+          {subline && <div className="text-xs text-muted-foreground mt-0.5">{subline}</div>}
+        </div>
+        {href && (
+          <a href={href} target={isUrl ? "_blank" : undefined} rel="noopener noreferrer" className="inline-block">
+            <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700">
+              {isEmail ? <Mail className="h-3.5 w-3.5 mr-1" /> : isUrl ? <ExternalLink className="h-3.5 w-3.5 mr-1" /> : <Phone className="h-3.5 w-3.5 mr-1" />}
+              Contact
+            </Button>
+          </a>
+        )}
       </div>
-      <div>
-        <div className="font-semibold text-sm">{partner.name}</div>
-        {partner.specialty && <div className="text-xs text-muted-foreground">{partner.specialty}</div>}
-        {partner.location && <div className="text-xs text-muted-foreground mt-0.5">{partner.location}</div>}
-      </div>
-      {href && (
-        <a href={href} target={isUrl ? "_blank" : undefined} rel="noopener noreferrer">
-          <Button size="sm" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
-            {isEmail ? <Mail className="h-3.5 w-3.5 mr-1" /> : isUrl ? <ExternalLink className="h-3.5 w-3.5 mr-1" /> : <Phone className="h-3.5 w-3.5 mr-1" />}
-            Contact
-          </Button>
-        </a>
-      )}
+      <p className="text-[11px] text-muted-foreground px-1">
+        No pressure either way — your file stays just as strong if you keep going solo.
+      </p>
     </div>
   );
 }

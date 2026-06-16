@@ -71,7 +71,7 @@ export const analyzeDocument = createServerFn({ method: "POST" })
             content: [
               {
                 type: "text",
-                text: `This image was uploaded to a "${caseRow.dispute_type}" case titled "${caseRow.title}". Describe what the image shows and how it might be relevant as evidence. 4 sentences.`,
+                text: `This image was uploaded to a "${caseRow.dispute_type}" case titled "${caseRow.title}". State in one sentence (max two) what the image factually shows and any specifics visible (people, objects, location, timestamps, damage). If space allows, a brief second sentence on why it matters as evidence.`,
               },
               ...(url ? [{ type: "image" as const, image: url }] : []),
             ],
@@ -88,7 +88,7 @@ Case: "${caseRow.title}" (${caseRow.dispute_type}).
 Available extracted content (use this as the ACTUAL document content; do not hedge identification based on the filename if the content makes the type clear):
 ${stringifyExtractedForPrompt(doc.extracted_data) || "(no extracted text — work from filename + case context, but follow the absolute rules)"}
 
-Produce the 4-sentence summary now.`,
+Produce the summary now. ONE sentence preferred, two maximum.`,
         });
         summary = text;
       }
