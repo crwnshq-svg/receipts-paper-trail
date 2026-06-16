@@ -246,7 +246,7 @@ function CaseDetail() {
           </TabsContent>
 
           <TabsContent value="ai" className="mt-4">
-            <AiTab caseId={caseId} isPaid={isPaid} questionsUsed={effectiveUsed} ask={search?.ask ?? null} />
+            <AiTab caseId={caseId} isPaid={isPaid} questionsUsed={effectiveUsed} ask={search?.ask ?? null} generate={search?.generate ?? null} />
           </TabsContent>
         </Tabs>
 

@@ -171,8 +171,8 @@ function extractPartialMessage(raw: string): string | null {
 
 // ============================== Top-level tab ==============================
 
-export function AiTab({ caseId, isPaid, questionsUsed, ask }: {
-  caseId: string | null; isPaid: boolean; questionsUsed: number; ask?: string | null;
+export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
+  caseId: string | null; isPaid: boolean; questionsUsed: number; ask?: string | null; generate?: string | null;
 }) {
   const [used, setUsed] = useState(questionsUsed);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -207,6 +207,23 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask }: {
   useEffect(() => {
     if (!isPaid && remaining === 0) setShowUpgrade(true);
   }, [isPaid, remaining]);
+
+  // React to the `?generate=<docType>` search param: when present, seed the
+  // document prefill bus so the DocumentGenerator pops it (on fresh mount via
+  // its useEffect, or live via PREFILL_EVENT when already mounted). Then clear
+  // the param from the URL so re-clicking the same generate action re-fires
+  // even if the docType is identical.
+  const navigateAi = useNavigate();
+  useEffect(() => {
+    if (!caseId || !generate) return;
+    setPrefill("document", { documentType: generate });
+    navigateAi({
+      to: "/cases/$caseId",
+      params: { caseId },
+      search: { tab: "ai" },
+      replace: true,
+    } as any);
+  }, [caseId, generate, navigateAi]);
 
   return (
     <div className="space-y-6">
