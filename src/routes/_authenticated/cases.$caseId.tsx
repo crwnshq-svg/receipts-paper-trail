@@ -263,6 +263,14 @@ function CaseDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <DeleteCaseDialog
+          open={showDelete}
+          onOpenChange={setShowDelete}
+          caseId={caseId}
+          caseLabel={partyName}
+          onDeleted={() => navigate({ to: "/dashboard" })}
+        />
       </div>
     </AppShell>
   );
