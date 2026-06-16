@@ -511,7 +511,13 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
         )}
 
         {messages.map((m: UIMessage) => (
-          <ChatMessage key={m.id} message={m} caseId={caseId} onTapSuggestion={doSend} />
+          <ChatMessage
+            key={m.id}
+            message={m}
+            caseId={caseId}
+            onTapSuggestion={doSend}
+            pendingUploadRef={pendingUploadRef}
+          />
         ))}
 
         {status === "submitted" && (
@@ -530,7 +536,8 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
         input={input}
         setInput={setInput}
         onSubmit={(e) => handleSend(e)}
-        onUploaded={(filename) => {
+        onUploaded={(filename, pending) => {
+          if (pending) pendingUploadRef.current = pending;
           void doSend(`[uploaded evidence: ${filename}]`);
         }}
         isLoading={isLoading}
