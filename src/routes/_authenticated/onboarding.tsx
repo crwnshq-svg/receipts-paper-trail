@@ -52,12 +52,19 @@ function OnboardingPage() {
 
   async function recordPrivacyAck() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) throw new Error("Not signed in");
     const ts = new Date().toISOString();
-    await supabase.from("profiles").update({ privacy_acknowledged_at: ts } as never).eq("id", user.id);
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ privacy_acknowledged_at: ts })
+      .eq("id", user.id)
+      .select("*")
+      .single();
+    if (error) throw error;
     queryClient.setQueryData(["profile"], (prev: any) =>
-      prev ? { ...prev, privacy_acknowledged_at: ts } : prev,
+      prev ? { ...prev, ...data } : data,
     );
+    return data;
   }
 
   // hydrate from existing profile so partial completions resume
@@ -71,6 +78,7 @@ function OnboardingPage() {
         navigate({ to: "/dashboard", replace: true });
         return;
       }
+      setPrivacyAck(Boolean(data.privacy_acknowledged_at));
       setA((prev) => ({
         ...prev,
         first_name: data.first_name ?? prev.first_name,
@@ -108,13 +116,21 @@ function OnboardingPage() {
     await supabase.from("profiles").update(payload as never).eq("id", user.id);
   }
 
-  async function completeOnboarding() {
+  async function completeOnboarding(options: { acknowledgePrivacy?: boolean } = {}) {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { error } = await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    if (!user) throw new Error("Not signed in");
+    const payload = options.acknowledgePrivacy
+      ? { onboarding_completed: true, privacy_acknowledged_at: new Date().toISOString() }
+      : { onboarding_completed: true };
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(payload)
+      .eq("id", user.id)
+      .select("*")
+      .single();
     if (error) throw error;
     queryClient.setQueryData(["profile"], (prev: any) =>
-      prev ? { ...prev, onboarding_completed: true } : prev,
+      prev ? { ...prev, ...data } : data,
     );
     await queryClient.invalidateQueries({ queryKey: ["profile"] });
   }
@@ -139,12 +155,13 @@ function OnboardingPage() {
   }
 
   async function skipAll() {
-    if (!privacyAck) return;
+    if (step === 1 && !privacyAck) return;
     setBusy(true);
     try {
-      await recordPrivacyAck();
-      await completeOnboarding();
+      await completeOnboarding({ acknowledgePrivacy: true });
       navigate({ to: "/dashboard", replace: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not skip onboarding");
     } finally { setBusy(false); }
   }
 
@@ -177,10 +194,10 @@ function OnboardingPage() {
         if (doc) analyze({ data: { documentId: doc.id } }).catch(() => {});
         toast.success("Your first file is started. Analyzing now.");
       }
-      await completeOnboarding();
+      await completeOnboarding({ acknowledgePrivacy: privacyAck });
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not upload");
+      toast.error(err instanceof Error ? err.message : file ? "Could not upload" : "Could not skip onboarding");
     } finally { setBusy(false); }
   }
 
@@ -203,7 +220,7 @@ function OnboardingPage() {
           </div>
           <button
             onClick={skipAll}
-            disabled={busy}
+            disabled={busy || (step === 1 && !privacyAck)}
             className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
           >
             Skip for now
@@ -230,7 +247,7 @@ function OnboardingPage() {
             goTo={goTo}
             busy={busy}
             onUploadClick={() => fileRef.current?.click()}
-            onSkipUpload={() => handleFinishUpload(null)}
+            onSkipUpload={skipAll}
             privacyAck={privacyAck}
             setPrivacyAck={setPrivacyAck}
             recordPrivacyAck={recordPrivacyAck}
@@ -267,7 +284,7 @@ function StepView({
   onSkipUpload: () => void;
   privacyAck: boolean;
   setPrivacyAck: React.Dispatch<React.SetStateAction<boolean>>;
-  recordPrivacyAck: () => Promise<void>;
+  recordPrivacyAck: () => Promise<unknown>;
 }) {
   // helpers
   const nextRentalAfterIs = (val: boolean | null) => (val === true ? 8 : 11);
