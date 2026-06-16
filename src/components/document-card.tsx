@@ -158,8 +158,8 @@ export function DocumentCard({
       <div className="flex items-start gap-3">
         <FileText className="h-5 w-5 text-accent shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1">
-          <button onClick={download} className="text-left w-full">
-            <div className="truncate font-medium text-sm">{displayName}</div>
+          <button onClick={preview} disabled={loadingPreview} className="text-left w-full" title={isImage ? "Preview image" : "Open file"}>
+            <div className="truncate font-medium text-sm hover:underline">{displayName}</div>
             <div className="text-[11px] text-muted-foreground">
               {(doc.file_size / 1024).toFixed(1)} KB · {new Date(doc.created_at).toLocaleDateString()}
               {doc.display_name && (
