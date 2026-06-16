@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, DISPUTE_LABELS, Disclaimer } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,19 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus, FolderOpen, FileText, Clock, ListChecks, Brain, CheckCircle2,
   PenSquare, Upload, MessageSquare, Lightbulb, ArrowRight, BookOpen, Sparkles,
+  MoreVertical, Pencil, Trash2, Check, X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { DeleteCaseDialog } from "@/components/delete-case-dialog";
 import { FREE_STORAGE_BYTES, FREE_AI_QUESTIONS } from "@/lib/constants";
 
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
