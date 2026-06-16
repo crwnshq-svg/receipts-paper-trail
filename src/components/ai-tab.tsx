@@ -1314,6 +1314,7 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
         </>
       )}
     </Card>
+    </div>
   );
 }
 
