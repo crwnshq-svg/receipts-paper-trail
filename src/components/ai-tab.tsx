@@ -664,7 +664,7 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
           onAnswer={(ans) => onTapSuggestion(ans)}
         />
       )}
-      {structured.actions && structured.actions.length > 0 && (
+      {structured.actions && structured.actions.length > 0 && caseId && (
         <ActionCards caseId={caseId} actions={structured.actions} />
       )}
       {structured.partners && structured.partners.length > 0 && (
@@ -677,7 +677,7 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
           {structured.resources.map((r, i) => <ResourceCard key={i} resource={r} />)}
         </div>
       )}
-      {structured.document_refs && structured.document_refs.length > 0 && (
+      {structured.document_refs && structured.document_refs.length > 0 && caseId && (
         <DocumentRefList caseId={caseId} ids={structured.document_refs} />
       )}
       {structured.suggestions && structured.suggestions.length > 0 && (
