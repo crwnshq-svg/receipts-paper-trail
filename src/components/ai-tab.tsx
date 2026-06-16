@@ -312,6 +312,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   const saveFn = useServerFn(saveConversation);
   const scrollRef = useRef<HTMLDivElement>(null);
   const askFired = useRef(false);
+  const pendingUploadRef = useRef<PendingUpload | null>(null);
 
   useEffect(() => {
     if (!caseId) return;
