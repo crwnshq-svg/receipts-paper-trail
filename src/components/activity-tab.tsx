@@ -505,16 +505,19 @@ function IncidentDialog({
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
+    if (!what.trim()) return;
     setSaving(true);
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
+      // Auto-derive title from the first ~70 chars of "what happened" if blank.
+      const autoTitle = title.trim() || what.trim().split(/[.\n]/)[0].slice(0, 70).trim() || "Event";
       const { data: inserted, error } = await supabase.from("incidents").insert({
         case_id: caseId,
         user_id: user.id,
-        title,
+        title: autoTitle,
         who_involved: who || null,
         what_happened: what,
         notes: extraNotes || null,
@@ -542,60 +545,79 @@ function IncidentDialog({
           <DialogTitle>Log an Event</DialogTitle>
         </DialogHeader>
         <form onSubmit={add} className="space-y-3">
-          <Field label="Title" aiSuggested={prefilled.title}>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              placeholder="What happened, in a few words"
-            />
-          </Field>
-          <Field label="When" aiSuggested={prefilled.occurredAt}>
-            <Input
-              type="datetime-local"
-              value={occurredAt}
-              onChange={(e) => setOccurredAt(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Who was involved" aiSuggested={prefilled.who}>
-            <Input
-              value={who}
-              onChange={(e) => setWho(e.target.value)}
-              placeholder="Names or roles"
-            />
-          </Field>
-          <Field label="What happened" aiSuggested={prefilled.what}>
+          {/* AI-style opening bubble — one question at a time */}
+          <div className="rounded-2xl bg-card border px-3.5 py-2.5 text-sm">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-accent mb-1">
+              RECEIPTS AI
+            </div>
+            What happened?
+            <div className="text-xs text-muted-foreground mt-1">
+              Logged for {new Date(occurredAt).toLocaleString()} — you can change the time below.
+            </div>
+          </div>
+
+          <Field label="" aiSuggested={prefilled.what}>
             <Textarea
               value={what}
               onChange={(e) => setWhat(e.target.value)}
               required
-              rows={4}
-            />
-          </Field>
-          <Field label="Location (optional)" aiSuggested={prefilled.location}>
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-          </Field>
-          <Field label="Notes (optional)" aiSuggested={prefilled.notes}>
-            <Textarea
-              value={extraNotes}
-              onChange={(e) => setExtraNotes(e.target.value)}
-              rows={2}
+              rows={5}
+              placeholder="Tell me in your own words. I'll handle the rest after you save."
+              autoFocus
             />
           </Field>
 
-          <div className="space-y-1.5">
-            <Label>Attach Evidence</Label>
-            <AttachDocs caseId={caseId} value={docIds} onChange={setDocIds} />
-          </div>
+          <details className="group rounded-md border bg-secondary/20 px-3 py-2">
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+              Add details (optional)
+            </summary>
+            <div className="space-y-3 pt-3">
+              <Field label="Title (auto-filled if blank)" aiSuggested={prefilled.title}>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Short label for this event"
+                />
+              </Field>
+              <Field label="When" aiSuggested={prefilled.occurredAt}>
+                <Input
+                  type="datetime-local"
+                  value={occurredAt}
+                  onChange={(e) => setOccurredAt(e.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="Who was involved" aiSuggested={prefilled.who}>
+                <Input
+                  value={who}
+                  onChange={(e) => setWho(e.target.value)}
+                  placeholder="Names or roles"
+                />
+              </Field>
+              <Field label="Location" aiSuggested={prefilled.location}>
+                <Input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </Field>
+              <Field label="Notes" aiSuggested={prefilled.notes}>
+                <Textarea
+                  value={extraNotes}
+                  onChange={(e) => setExtraNotes(e.target.value)}
+                  rows={2}
+                />
+              </Field>
+              <div className="space-y-1.5">
+                <Label>Attach Evidence</Label>
+                <AttachDocs caseId={caseId} value={docIds} onChange={setDocIds} />
+              </div>
+            </div>
+          </details>
 
           <DialogFooter>
             <Button
               type="submit"
-              disabled={saving}
+              disabled={saving || !what.trim()}
               className="bg-primary text-primary-foreground"
             >
               {saving ? "Saving…" : "Save event"}
