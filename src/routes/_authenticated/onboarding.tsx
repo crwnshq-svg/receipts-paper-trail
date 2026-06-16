@@ -111,7 +111,12 @@ function OnboardingPage() {
   async function completeOnboarding() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    if (error) throw error;
+    queryClient.setQueryData(["profile"], (prev: any) =>
+      prev ? { ...prev, onboarding_completed: true } : prev,
+    );
+    await queryClient.invalidateQueries({ queryKey: ["profile"] });
   }
 
   function goTo(next: number, patch?: Partial<Answers>) {
