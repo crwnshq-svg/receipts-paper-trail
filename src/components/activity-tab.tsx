@@ -222,7 +222,30 @@ export function ActivityTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <input
+          ref={evidenceFileRef}
+          type="file"
+          hidden
+          onChange={onPickEvidence}
+          accept={EVIDENCE_ACCEPT}
+        />
+        <Button
+          variant="outline"
+          onClick={onExport}
+          disabled={exporting}
+          className="border-muted-foreground/30"
+        >
+          <Download className="mr-1 h-4 w-4" /> {exporting ? "Exporting…" : "Export File (zip)"}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => evidenceFileRef.current?.click()}
+          disabled={uploadingEvidence}
+          className="border-muted-foreground/30"
+        >
+          <Upload className="mr-1 h-4 w-4" /> {uploadingEvidence ? "Uploading…" : "Add Evidence"}
+        </Button>
         <Button
           variant="outline"
           onClick={() => setNoteOpen(true)}
