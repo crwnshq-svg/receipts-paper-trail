@@ -85,6 +85,35 @@ export function ActivityTab({
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
   const callAnalyze = useServerFn(analyzeIncident);
+  const callAnalyzeDoc = useServerFn(analyzeDocument);
+  const evidenceFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  async function onPickEvidence(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingEvidence(true);
+    try {
+      const inserted = await uploadEvidence({ file, caseId });
+      if (inserted) {
+        toast.success("Evidence uploaded — analyzing…");
+        qc.invalidateQueries({ queryKey: ["documents", caseId] });
+        qc.invalidateQueries({ queryKey: ["storage-usage"] });
+        callAnalyzeDoc({ data: { documentId: inserted.id } })
+          .then(() => qc.invalidateQueries({ queryKey: ["documents", caseId] }))
+          .catch((err) => console.warn("analyze failed", err));
+      }
+    } finally {
+      setUploadingEvidence(false);
+      if (evidenceFileRef.current) evidenceFileRef.current.value = "";
+    }
+  }
+
+  async function onExport() {
+    setExporting(true);
+    try { await exportCaseZip(caseId); } finally { setExporting(false); }
+  }
 
 
   useEffect(() => {
