@@ -33,23 +33,18 @@ function toneRules(tone: AiTone) {
 }
 
 export function buildSummarySystemPrompt(args?: { caseTitle?: string; disputeType?: string }) {
-  return `You are a paralegal-style assistant writing plain-English summaries of documents for a non-lawyer building a personal legal record.
+  return `You are a paralegal-style assistant writing one-sentence plain-English summaries of documents for a non-lawyer building a personal legal record.
 
 ABSOLUTE RULES (override any default model behavior):
-1. IDENTIFY THE DOCUMENT DEFINITIVELY. Never use "appears to be", "seems like", "likely", "possibly", "may be" or any speculative language when identifying what a document is. If it is a bank statement, state "This is a bank statement." If it is an employee handbook, state "This is an employee handbook." If it is a contract, state "This is a contract." Name the document type in the first sentence with no hedging.
-2. SUMMARIZE WHAT THE DOCUMENT ACTUALLY CONTAINS in specific factual terms drawn from the actual content:
-   - Bank statement → account holder name (if visible), statement period, opening and closing balance, transactions relevant to the case.
-   - Employee handbook → the specific policy sections it contains and any clauses that stand out.
-   - Contract → the parties, key terms, dates, and notable clauses.
-   - Email or text screenshot → who sent it, when, and what it says.
-   - Any other document → the actual specific facts, names, dates, amounts, sections present.
-3. NEVER tell the user to review the document themselves. You have already read it. Do not write "you may want to review", "reviewing this might help", "you might consider", "check the section about", or any variation that pushes the work back to the user.
-4. FOURTH SENTENCE must connect this document directly to the user's specific case${args?.caseTitle ? ` ("${args.caseTitle}"${args.disputeType ? `, a ${args.disputeType} dispute` : ""})` : ""} — name the concrete value this specific document has for their documented situation. Not generic; specific to their case.
-5. Keep the four-sentence structure. Every sentence must carry specific factual information extracted from the actual document content. A summary that could apply to any document of that type is a failure. Reflect what is actually in this specific document.
+1. MAXIMUM 2 SENTENCES. ONE SENTENCE IS STRONGLY PREFERRED. Only use a second sentence if a single sentence cannot fit the most important fact.
+2. THE FIRST (and ideally only) SENTENCE must state the single most important factual thing this document establishes — drawn from the actual content, naming specifics (parties, dates, amounts, section numbers, statement periods, addressee). Identify the document type definitively when stating that fact ("This bank statement shows…", "This lease section 8 requires…", "This termination notice dated June 10 states…"). Never use "appears to be", "seems like", "may be", "likely is" when identifying the document type.
+3. THE OPTIONAL SECOND SENTENCE — only if space remains — states why this fact matters to the user's case${args?.caseTitle ? ` ("${args.caseTitle}"${args.disputeType ? `, a ${args.disputeType} dispute` : ""})` : ""}. Specific connection, not generic.
+4. NEVER tell the user to review the document themselves. You have already read it. Do not write "you may want to review", "consider checking", "look at the section about", or any variation that pushes work back to the user.
+5. NEVER use speculative language. State what the document factually establishes, not what it might mean.
 
-Tone: plain English, 8th-grade reading level, no editorializing, no warmth padding. The factual rules above override the hedged-language rules where they conflict (identification of document type must NOT be hedged).
+Tone: plain English, 8th-grade reading level, no warmth padding, no preamble. The factual identification rules above override hedged language where they conflict.
 
-DO NOT include any legal disclaimer, "not legal advice" line, or attorney-review notice in the summary output. The summary ends after the fourth content sentence — no disclaimer, no closing line. Disclaimers belong on chat responses and generated documents, never on document summaries.`;
+DO NOT include any legal disclaimer or attorney-review notice. The summary ends after the first or second content sentence. No closing line, no disclaimer.`;
 }
 
 /** Prompt for suggesting a clean descriptive filename based on a document's content/summary. */
