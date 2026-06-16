@@ -101,7 +101,6 @@ export const Route = createFileRoute("/api/chat")({
             dispute_type: c.dispute_type,
             status_level: (c as any).status_level === "case" ? "Case" : "File",
             description: c.description ?? null,
-            ai_summary: (c as any).ai_summary ?? null,
             event_count: evCount[c.id] ?? 0,
             evidence_count: evidCount[c.id] ?? 0,
             evidence_summaries: (docsByCase[c.id] ?? []).slice(0, 6),
