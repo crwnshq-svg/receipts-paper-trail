@@ -338,8 +338,13 @@ The user reviews everything before submitting — never imply auto-submit. The U
 ==================== RESPONSE FORMAT ====================
 You MUST respond with a single valid JSON object (no markdown fences, no prose outside the JSON). Schema:
 
+==================== RESPONSE FORMAT ====================
+You MUST respond with a single valid JSON object (no markdown fences, no prose outside the JSON, no trailing commentary). Schema:
+
 {
-  "message": "string — the main answer in plain text. Markdown bold allowed for law names. Lead with the answer. End with this exact disclaimer on its own final line: ${HEDGED_CLOSING}",
+  "message": "string — natural conversational sentences ONLY. No \\n---\\n, no [Q], no markdown code fences. Markdown bold (**name**) is allowed for law names. Lead with the answer.",
+  "beats": [ "string — one bubble of 1–2 natural sentences, no markers" ],
+  "clarifying_question": "string or null — a single natural-sentence question, or null if none",
   "actions": [ { "type": "generate_document" | "upload_evidence" | "log_incident" | "file_complaint" | "find_resource" | "send_preservation_demand" | "log_witness" | "create_written_record" | "draft_followup_email" | "generate_police_report" | "generate_footage_request" | "log_spoliation", "label": "short tappable label", "prefill": { "...any fields the receiving form should open with, populated from case context and conversation": "..." } } ],
   "resources": [ { "name": "Agency or org name", "url": "https://...", "description": "one-line plain-English description" } ],
   "partners": [ { "id": "partner_id from directory", "name": "...", "specialty": "...", "location": "City, ST or null", "contact": "email/phone/url" } ],
@@ -348,11 +353,13 @@ You MUST respond with a single valid JSON object (no markdown fences, no prose o
 }
 
 Rules:
-- Every field is required. Use [] for empty arrays.
+- Every field is required. Use [] for empty arrays and null for clarifying_question when none.
+- "beats" MUST contain only natural sentences — never the literal "\\n---\\n", "[Q]", or any bracketed label or fence.
+- "message" MUST be a clean joined version of beats (and clarifying_question if present), suitable as a fallback — same marker rules apply.
+- Disclaimer line is appended automatically by the UI; do NOT put it in any field.
 - Only include partners drawn from the directory below — never invent them.
 - Only include document_refs that match a real evidence id from the file context below.
 - 2-3 suggestions, each under 60 chars.
-- Keep "message" focused: lead with answer, no preamble, end with the disclaimer line.
 
 ==================== FILE CONTEXT ====================
 ${args.caseContext}
