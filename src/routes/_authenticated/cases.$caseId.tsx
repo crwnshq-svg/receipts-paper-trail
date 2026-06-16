@@ -317,7 +317,7 @@ function DocumentsTab({ caseId, docs, isPaid, autoUpload, onChange, onConsumed, 
     <div className="space-y-4">
       <div className="flex justify-end">
         <input ref={fileRef} type="file" hidden onChange={onUpload}
-          accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg" />
+          accept={EVIDENCE_ACCEPT} />
         <Button onClick={() => fileRef.current?.click()} disabled={uploading}
           className="bg-primary text-primary-foreground hover:bg-accent">
           <Upload className="mr-1 h-4 w-4" /> {uploading ? "Uploading…" : "Add Evidence"}
