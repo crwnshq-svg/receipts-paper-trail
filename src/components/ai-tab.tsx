@@ -868,6 +868,9 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
   }
 
   async function handle(a: StructuredAction) {
+    // Dev visibility: any action click prints what it received so a dead
+    // button leaves a real trace in the console instead of silently no-oping.
+    console.info("[ai-action] click", { type: a.type, label: a.label, prefill: a.prefill, currentCaseId: caseId });
     try {
       // --------- Pure navigation actions (work scoped or unscoped) ---------
       if (a.type === "open_file") {
@@ -909,43 +912,40 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         return;
       }
 
+      // --------- generate_document is allowed from both scoped and unscoped ---------
+      if (a.type === "generate_document") {
+        const target = pickCaseId(a);
+        const docType = matchDocType(a.label) ?? (typeof a.prefill?.documentType === "string" ? a.prefill.documentType : null);
+        if (!target) {
+          // No File context at all — AI failed to route. Send the user to
+          // their files list to pick one rather than silently no-oping.
+          toast.message("Pick a File to draft this for.");
+          navigate({ to: "/cases" } as any);
+          return;
+        }
+        // Always seed prefill BEFORE navigating so the DocumentGenerator that
+        // mounts on the target route can pop it. Set it even when fields are
+        // missing — at minimum we want the document type pre-selected.
+        setPrefill("document", {
+          ...(a.prefill ?? {}),
+          ...(docType && !a.prefill?.documentType ? { documentType: docType } : {}),
+          actionLabel: a.label,
+        });
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
+          search: { tab: "ai", generate: docType ?? "1" } } as any);
+        return;
+      }
+
       // --------- File-scoped actions: need a caseId ---------
       const target = pickCaseId(a);
       if (!target) {
         // Unscoped chat surfaced a file-scoped action without a caseId.
         // Send the user to their files list so they can pick one.
+        toast.message("Pick a File to continue.");
         navigate({ to: "/cases" } as any);
         return;
       }
 
-      if (a.type === "generate_document") {
-        const docType = matchDocType(a.label);
-        if (a.prefill) {
-          setPrefill("document", {
-            ...a.prefill,
-            ...(docType && !a.prefill.documentType ? { documentType: docType } : {}),
-            actionLabel: a.label,
-          });
-        } else if (docType) {
-          setPrefill("document", { documentType: docType, actionLabel: a.label });
-        }
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          let q = supabase.from("generated_documents")
-            .select("id").eq("case_id", target).eq("user_id", user.id)
-            .order("created_at", { ascending: false }).limit(1);
-          if (docType) q = q.eq("document_type", docType);
-          const { data } = await q.maybeSingle();
-          if (data?.id && !a.prefill) {
-            navigate({ to: "/cases/$caseId/documents/$docId",
-              params: { caseId: target, docId: data.id } } as any);
-            return;
-          }
-        }
-        navigate({ to: "/cases/$caseId", params: { caseId: target },
-          search: { tab: "ai", generate: docType ?? "1" } } as any);
-        return;
-      }
       if (a.type === "log_incident") {
         if (a.prefill) setPrefill("incident", a.prefill);
         navigate({ to: "/cases/$caseId", params: { caseId: target },
@@ -991,7 +991,10 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
+      console.warn("[ai-action] unhandled action type", a);
+      toast.error(`Unknown action: ${a.type}`);
     } catch (err: any) {
+      console.error("[ai-action] failed", { action: a, error: err });
       toast.error(err?.message ?? "Action failed");
     }
   }
