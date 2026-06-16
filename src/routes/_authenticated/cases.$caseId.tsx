@@ -36,6 +36,7 @@ const searchSchema = z.object({
   tab: z.enum(["incidents", "documents", "ai", "timeline"]).optional(),
   action: z.enum(["new", "upload"]).optional(),
   generate: z.string().optional(),
+  ask: z.string().optional(),
 }).optional();
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
@@ -245,7 +246,7 @@ function CaseDetail() {
           </TabsContent>
 
           <TabsContent value="ai" className="mt-4">
-            <AiTab caseId={caseId} isPaid={isPaid} questionsUsed={effectiveUsed} />
+            <AiTab caseId={caseId} isPaid={isPaid} questionsUsed={effectiveUsed} ask={search?.ask ?? null} />
           </TabsContent>
         </Tabs>
 
