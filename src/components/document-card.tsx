@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Trash2, Lightbulb, Pencil, Check, X, RefreshCw, Sparkles } from "lucide-react";
+import { FileText, Trash2, Lightbulb, Pencil, Check, X, RefreshCw, Sparkles, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,7 @@ import {
   dismissNameSuggestion,
 } from "@/lib/document-intelligence.functions";
 import { InsightModal, type InsightRow } from "./insight-modal";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export function DocumentCard({
   doc, isPaid, onRemove, onConsumed, onLimitHit,
