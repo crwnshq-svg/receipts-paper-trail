@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2 } from "lucide-react";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
@@ -74,7 +75,9 @@ export function ActivityTab({
   onChange: () => void;
 }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [incidentOpen, setIncidentOpen] = useState(false);
+  const [editIncident, setEditIncident] = useState<Incident | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
@@ -205,11 +208,15 @@ export function ActivityTab({
 
       <IncidentDialog
         caseId={caseId}
-        open={incidentOpen}
-        onOpenChange={setIncidentOpen}
+        open={incidentOpen || editIncident !== null}
+        editing={editIncident}
+        onOpenChange={(v) => {
+          if (!v) { setIncidentOpen(false); setEditIncident(null); }
+          else setIncidentOpen(true);
+        }}
         onSaved={(newId) => {
           onChange();
-          if (newId) void triggerAnalysis(newId);
+          if (newId && !editIncident) void triggerAnalysis(newId);
         }}
       />
       <NoteDialog
@@ -285,6 +292,27 @@ export function ActivityTab({
                         caseId={caseId}
                         ids={toIds(f.data.document_ids)}
                       />
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                        <button
+                          onClick={() =>
+                            navigate({
+                              to: "/cases/$caseId",
+                              params: { caseId },
+                              search: { tab: "ai", ask: `event:${f.data.id}` } as any,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 text-accent hover:underline"
+                        >
+                          <MessageCircle className="h-3 w-3" /> Ask about this
+                        </button>
+                        <button
+                          onClick={() => setEditIncident(f.data)}
+                          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                          aria-label="Edit event"
+                        >
+                          <Pencil className="h-3 w-3" /> Edit
+                        </button>
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
@@ -301,6 +329,7 @@ export function ActivityTab({
                     A single live clarifying question is rendered ABOVE the feed
                     (one live question per File at a time). */}
               </li>
+
 
             ) : (
               <li key={`n-${f.data.id}`}>
