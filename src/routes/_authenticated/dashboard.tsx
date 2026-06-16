@@ -17,8 +17,9 @@ import {
 import {
   Plus, FolderOpen, FileText, Clock, ListChecks, Brain, CheckCircle2,
   PenSquare, Upload, MessageSquare, Lightbulb, ArrowRight, BookOpen, Sparkles,
-  MoreVertical, Pencil, Trash2, Check, X,
+  MoreVertical, Pencil, Trash2, Check, X, Download,
 } from "lucide-react";
+import { exportCaseZip } from "@/lib/case-export";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { DeleteCaseDialog } from "@/components/delete-case-dialog";
