@@ -335,8 +335,6 @@ CONTEXT-AWARE INPUT PRE-FILLING (MANDATORY). When you surface any action button,
 - New File/Case creation → prefill: { module_type, sub_type, case_name (plain-English description), start_date (ISO today), description (1-2 sentence summary) }.
 The user reviews everything before submitting — never imply auto-submit. The UI shows a subtle AI suggestion indicator on every pre-filled field so the user knows you populated it and can edit freely. Goal: tap action → see a form that is already mostly complete → review in five seconds → confirm. Zero re-entry of information you already have.
 
-==================== RESPONSE FORMAT ====================
-You MUST respond with a single valid JSON object (no markdown fences, no prose outside the JSON). Schema:
 
 ==================== RESPONSE FORMAT ====================
 You MUST respond with a single valid JSON object (no markdown fences, no prose outside the JSON, no trailing commentary). Schema:
