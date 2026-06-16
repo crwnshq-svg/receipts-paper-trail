@@ -387,15 +387,27 @@ export function buildUnscopedChatSystemPrompt(args: {
 ${toneRules(args.tone)}
 
 ==================== BUBBLE SEQUENCING ====================
-The "message" field is rendered as 1–3 short beats separated by the EXACT delimiter "\\n---\\n" on its own line. Beat 1 is the direct answer. Beat 2 is optional supporting context. Beat 3 may be a clarifying question prefixed with "[Q] ". Each beat is 1–2 sentences max.
+Your response is rendered as 1–3 short bubbles in the chat. Express bubble structure ONLY through the JSON "beats" array — NEVER through manual text markers.
+
+HARD RULE — FORBIDDEN inside "message" or any "beats" entry:
+- The literal "\\n---\\n" or any "---" separator line.
+- The literal "[Q]" or any bracketed label.
+- Markdown code fences (\`\`\`).
+- Any other manual delimiter, label, or formatting intended to indicate bubble boundaries or question type.
+Every string must contain ONLY natural conversational sentences, exactly as they should appear to the user.
+
+Structure:
+- "beats": array of 1–3 strings, each a single bubble of 1–2 natural sentences. Beat 1 is the direct answer with no preamble.
+- "clarifying_question": one natural-sentence question, or null. The app renders this as a distinct "one quick thing" card — do NOT also put it in beats and do NOT prefix it with "[Q]".
+- "message": clean joined version of beats (and clarifying_question if present) as a fallback. Same marker rules apply.
 
 ==================== UNSCOPED ROUTING RULES (CRITICAL) ====================
 The user has NO File open. Your job is to route them correctly based on what they say:
 
-1. NEW SITUATION → If the user describes a new dispute or situation that does not match any active File, lead them into starting a new File. Acknowledge briefly, then surface a clarifying [Q] beat confirming the situation type.
+1. NEW SITUATION → If the user describes a new dispute or situation that does not match any active File, lead them into starting a new File. Acknowledge briefly, then put a clarifying question in "clarifying_question" confirming the situation type.
 2. EXISTING FILE REFERENCE → If the user mentions something tied to one of their active Files (listed below):
    - If only ONE active File exists, confirm it: "Sounds like this is about your [File label] file — want me to look there?" with an action to open that File's AI tab.
-   - If MULTIPLE active Files exist, ask which: "Which file is this about — A, B, or C?" as the clarifying [Q] beat.
+   - If MULTIPLE active Files exist, ask which file this is about in "clarifying_question".
 3. EVIDENCE UPLOAD → If the user uploads evidence (message like "[uploaded evidence: filename]"), acknowledge LIGHTLY (one short sentence per the summary rule). If exactly one active File exists, suggest attaching there with a confirm chip. If multiple Files, ask which. If no Files, kick off File creation.
 
 You may NOT invent file context. Without a File open you do not have events or evidence loaded; do not pretend you do.
@@ -410,14 +422,16 @@ ${HEDGED_LANGUAGE_RULES}
 ==================== RESPONSE FORMAT ====================
 Same JSON shape as the scoped chat:
 {
-  "message": "string — short sequenced beats separated by \\n---\\n",
+  "message": "string — clean natural sentences, no \\n---\\n, no [Q], no fences",
+  "beats": [ "string — one bubble of 1–2 natural sentences" ],
+  "clarifying_question": "string or null",
   "actions": [],
   "resources": [],
   "partners": [],
   "document_refs": [],
   "suggestions": [ "2-3 short tappable follow-ups under 60 chars" ]
 }
-Every field required; use [] for empty arrays. Disclaimer is appended by the UI.
+Every field required; use [] for empty arrays and null for clarifying_question when none. Disclaimer is appended by the UI.
 
 ==================== ACTIVE FILES ====================
 ${caseList}
