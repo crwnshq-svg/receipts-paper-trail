@@ -96,8 +96,8 @@ function CaseDetail() {
   const [showDelete, setShowDelete] = useState(false);
   const effectiveUsed = aiUsed ?? (profile?.ai_questions_used ?? 0);
 
-  async function updateCaseField(patch: Record<string, any>) {
-    const { error } = await supabase.from("cases").update(patch).eq("id", caseId);
+  async function updateCaseField(patch: Partial<Record<string, any>>) {
+    const { error } = await supabase.from("cases").update(patch as any).eq("id", caseId);
     if (error) { toast.error(error.message); throw error; }
     qc.invalidateQueries({ queryKey: ["case", caseId] });
     qc.invalidateQueries({ queryKey: ["cases"] });
@@ -132,8 +132,31 @@ function CaseDetail() {
             <ArrowLeft className="h-3.5 w-3.5" /> Back to files
           </Link>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 className="font-serif text-3xl font-semibold">{partyName}</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="font-serif text-3xl font-semibold">
+                <EditableText
+                  value={partyName}
+                  ariaLabel="file name"
+                  onSave={async (next) => {
+                    // partyName comes from opposing_party first, falling back to title
+                    if (caseRow.opposing_party && caseRow.opposing_party.trim().length > 0) {
+                      await updateCaseField({ opposing_party: next });
+                    } else {
+                      await updateCaseField({ title: next });
+                    }
+                  }}
+                />
+              </h1>
+              {caseRow.opposing_party && caseRow.opposing_party.trim().length > 0 && (
+                <div className="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <span>Title:</span>
+                  <EditableText
+                    value={caseRow.title}
+                    ariaLabel="file title"
+                    onSave={(next) => updateCaseField({ title: next })}
+                  />
+                </div>
+              )}
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {(() => {
                   const lvl = (caseRow as any).status_level === "case" ? "case" : "record";
@@ -142,11 +165,29 @@ function CaseDetail() {
                     : "bg-amber-500/15 text-amber-400 border border-amber-500/30";
                   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{lvl === "case" ? "Case" : "File"}</span>;
                 })()}
-                <span className="rounded-full bg-secondary px-2 py-0.5">{DISPUTE_LABELS[caseRow.dispute_type]}</span>
+                <Select
+                  value={caseRow.dispute_type}
+                  onValueChange={(v) => updateCaseField({ dispute_type: v })}
+                >
+                  <SelectTrigger className="h-6 w-auto gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs border-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(DISPUTE_LABELS).map(([v, l]) => (
+                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <span>· Started {new Date(caseRow.created_at).toLocaleDateString()}</span>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={deleteCase} className="text-destructive hover:text-destructive">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDelete(true)}
+              className="text-destructive hover:text-destructive"
+              aria-label="Delete file"
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
