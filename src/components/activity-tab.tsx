@@ -20,9 +20,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell, Sparkles, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
+import { ClarifyingQuestion } from "@/components/clarifying-question";
 import { popPrefill } from "@/lib/prefill";
 import { analyzeIncident } from "@/lib/document-intelligence.functions";
 
