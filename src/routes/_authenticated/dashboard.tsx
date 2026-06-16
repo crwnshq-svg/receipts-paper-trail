@@ -54,7 +54,7 @@ const RESOURCE_BY_MODULE: Record<string, string> = {
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { data: profile } = useQuery({
+  const { data: profile, isFetched: profileFetched } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -65,10 +65,10 @@ function Dashboard() {
   });
 
   useEffect(() => {
-    if (profile && profile.onboarding_completed === false) {
+    if (profileFetched && profile && profile.onboarding_completed === false) {
       navigate({ to: "/onboarding", replace: true });
     }
-  }, [profile, navigate]);
+  }, [profile, profileFetched, navigate]);
 
 
   const { data: cases } = useQuery({

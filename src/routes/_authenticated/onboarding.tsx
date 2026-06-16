@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const EMPTY: Answers = {
 
 function OnboardingPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const analyze = useServerFn(analyzeDocument);
   const [step, setStep] = useState(1);
   const [a, setA] = useState<Answers>(EMPTY);
@@ -51,7 +53,11 @@ function OnboardingPage() {
   async function recordPrivacyAck() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("profiles").update({ privacy_acknowledged_at: new Date().toISOString() } as never).eq("id", user.id);
+    const ts = new Date().toISOString();
+    await supabase.from("profiles").update({ privacy_acknowledged_at: ts } as never).eq("id", user.id);
+    queryClient.setQueryData(["profile"], (prev: any) =>
+      prev ? { ...prev, privacy_acknowledged_at: ts } : prev,
+    );
   }
 
   // hydrate from existing profile so partial completions resume
@@ -105,7 +111,12 @@ function OnboardingPage() {
   async function completeOnboarding() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    if (error) throw error;
+    queryClient.setQueryData(["profile"], (prev: any) =>
+      prev ? { ...prev, onboarding_completed: true } : prev,
+    );
+    await queryClient.invalidateQueries({ queryKey: ["profile"] });
   }
 
   function goTo(next: number, patch?: Partial<Answers>) {
