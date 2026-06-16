@@ -676,8 +676,9 @@ function ChatComposer({
 
 // ============================== Structured message renderer ==============================
 
-function ChatMessage({ message, caseId, onTapSuggestion }: {
+function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
   message: UIMessage; caseId: string | null; onTapSuggestion: (text: string) => void;
+  pendingUploadRef: React.MutableRefObject<PendingUpload | null>;
 }) {
   const text = message.parts.map((p: any) => p.type === "text" ? p.text : "").join("");
   const isUser = message.role === "user";
