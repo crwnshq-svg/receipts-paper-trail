@@ -816,8 +816,13 @@ function renderInline(text: string) {
   return esc.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 }
 
-function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredAction[] }) {
+function ActionCards({ caseId, actions, pendingUploadRef }: {
+  caseId: string | null;
+  actions: StructuredAction[];
+  pendingUploadRef: React.MutableRefObject<PendingUpload | null>;
+}) {
   const navigate = useNavigate();
+  const analyze = useServerFn(analyzeDocument);
 
   function matchDocType(label: string): string | null {
     const lower = label.toLowerCase();
@@ -825,11 +830,96 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
     return found ?? null;
   }
 
+  function pickCaseId(a: StructuredAction): string | null {
+    const pref = a.prefill?.caseId ?? a.prefill?.case_id ?? a.prefill?.fileId ?? a.prefill?.file_id;
+    return (typeof pref === "string" && pref) ? pref : caseId;
+  }
+
+  async function attachPendingToFile(targetCaseId: string) {
+    const pending = pendingUploadRef.current;
+    if (!pending) {
+      toast.error("No pending upload to attach.");
+      return;
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not signed in");
+    const newPath = `${user.id}/${targetCaseId}/${Date.now()}-${pending.fileName}`;
+    const { error: moveErr } = await supabase.storage
+      .from("case-documents")
+      .move(pending.storagePath, newPath);
+    if (moveErr) throw moveErr;
+    const { data: inserted, error: dbErr } = await supabase
+      .from("documents")
+      .insert({
+        case_id: targetCaseId, user_id: user.id,
+        file_name: pending.fileName, storage_path: newPath,
+        file_size: pending.fileSize, mime_type: pending.mimeType,
+      })
+      .select()
+      .single();
+    if (dbErr) throw dbErr;
+    pendingUploadRef.current = null;
+    toast.success("Evidence attached to your File");
+    if (inserted) {
+      analyze({ data: { documentId: inserted.id } }).catch((e) => console.warn("analyze failed", e));
+    }
+    navigate({ to: "/cases/$caseId", params: { caseId: targetCaseId },
+      search: { tab: "documents" } } as any);
+  }
+
   async function handle(a: StructuredAction) {
     try {
+      // --------- Pure navigation actions (work scoped or unscoped) ---------
+      if (a.type === "open_file") {
+        const target = pickCaseId(a);
+        if (!target) { toast.error("No File specified."); return; }
+        const tab = typeof a.prefill?.tab === "string" ? a.prefill.tab : undefined;
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
+          search: tab ? { tab } : {} } as any);
+        return;
+      }
+      if (a.type === "open_evidence_vault") {
+        const target = pickCaseId(a);
+        if (target) {
+          navigate({ to: "/cases/$caseId", params: { caseId: target },
+            search: { tab: "documents" } } as any);
+        } else {
+          navigate({ to: "/cases" } as any);
+        }
+        return;
+      }
+      if (a.type === "open_resources") {
+        navigate({ to: "/resources" } as any);
+        return;
+      }
+      if (a.type === "open_alert") {
+        const id = a.prefill?.notificationId ?? a.prefill?.alertId ?? a.prefill?.id;
+        if (typeof id === "string" && id) {
+          navigate({ to: "/notifications/$notificationId",
+            params: { notificationId: id } } as any);
+        } else {
+          navigate({ to: "/notifications" } as any);
+        }
+        return;
+      }
+      if (a.type === "attach_evidence_to_file") {
+        const target = pickCaseId(a);
+        if (!target) { toast.error("Pick a File to attach to."); return; }
+        await attachPendingToFile(target);
+        return;
+      }
+
+      // --------- File-scoped actions: need a caseId ---------
+      const target = pickCaseId(a);
+      if (!target) {
+        // Unscoped chat surfaced a file-scoped action without a caseId.
+        // Send the user to their files list so they can pick one.
+        navigate({ to: "/cases" } as any);
+        return;
+      }
+
       if (a.type === "generate_document") {
         const docType = matchDocType(a.label);
-        // Stash prefill for Document Generator to consume on mount.
         if (a.prefill) {
           setPrefill("document", {
             ...a.prefill,
@@ -842,30 +932,29 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           let q = supabase.from("generated_documents")
-            .select("id").eq("case_id", caseId).eq("user_id", user.id)
+            .select("id").eq("case_id", target).eq("user_id", user.id)
             .order("created_at", { ascending: false }).limit(1);
           if (docType) q = q.eq("document_type", docType);
           const { data } = await q.maybeSingle();
           if (data?.id && !a.prefill) {
-            // Only jump to an existing doc when there's no fresh prefill to apply.
             navigate({ to: "/cases/$caseId/documents/$docId",
-              params: { caseId, docId: data.id } } as any);
+              params: { caseId: target, docId: data.id } } as any);
             return;
           }
         }
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "ai", generate: docType ?? "1" } } as any);
         return;
       }
       if (a.type === "log_incident") {
         if (a.prefill) setPrefill("incident", a.prefill);
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
       if (a.type === "upload_evidence") {
         if (a.prefill) setPrefill("document", a.prefill);
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "documents", action: "upload" } } as any);
         return;
       }
@@ -874,9 +963,6 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
         return;
       }
 
-      // New specialized action types — all open Document Workshop with a
-      // document_type pre-selected, except log_witness which opens the
-      // incident form pre-filled with a witness category.
       const specializedDocType: Record<string, string> = {
         send_preservation_demand: "Preservation Demand Letter",
         create_written_record: "Contemporaneous Written Record",
@@ -892,7 +978,7 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
           documentType: docType,
           actionLabel: a.label,
         });
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "ai", generate: docType } } as any);
         return;
       }
@@ -901,7 +987,7 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
           title: "Witness account",
           ...(a.prefill ?? {}),
         });
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
