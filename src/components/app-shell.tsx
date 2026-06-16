@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell } from "lucide-react";
+import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell, Sparkles, MessageSquarePlus } from "lucide-react";
+import { CheckInPopup } from "@/components/checkin-popup";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { touchLastActive } from "@/lib/activity.functions";
@@ -94,6 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
     { to: "/cases", label: "Files", icon: FolderOpen, badge: 0 },
+    { to: "/ai", label: "AI", icon: Sparkles, badge: 0 },
     { to: "/notifications", label: "Alerts", icon: Bell, badge: unreadCount },
     { to: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
     { to: "/account", label: "Account", icon: UserCircle, badge: 0 },
