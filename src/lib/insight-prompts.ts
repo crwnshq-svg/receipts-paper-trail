@@ -379,13 +379,33 @@ export function buildUnscopedChatSystemPrompt(args: {
   firstName?: string | null;
   userState?: string | null;
   profile?: OnboardingProfile | null;
-  activeCases: { id: string; label: string; dispute_type: string }[];
+  activeCases: {
+    id: string;
+    label: string;
+    dispute_type: string;
+    status_level?: string;
+    description?: string | null;
+    event_count?: number;
+    evidence_count?: number;
+    evidence_summaries?: { name: string; summary: string }[];
+  }[];
 }) {
   const profileBlock = buildUserProfileBlock(args.profile);
   const caseList = args.activeCases.length === 0
     ? "(The user has no active Files yet.)"
     : args.activeCases
-        .map((c, i) => `${i + 1}. ${c.label} (${c.dispute_type}) — id:${c.id}`)
+        .map((c, i) => {
+          const header = `${i + 1}. ${c.label} (${c.dispute_type})${c.status_level ? ` [${c.status_level}]` : ""} — id:${c.id}`;
+          const stats = `   events: ${c.event_count ?? 0} · evidence: ${c.evidence_count ?? 0}`;
+          const desc = c.description ? `   description: ${c.description}` : null;
+          const ev = (c.evidence_summaries ?? []).length
+            ? `   evidence highlights:\n` +
+              (c.evidence_summaries ?? [])
+                .map((e) => `     - ${e.name}: ${e.summary}`)
+                .join("\n")
+            : null;
+          return [header, stats, desc, ev].filter(Boolean).join("\n");
+        })
         .join("\n");
 
   return `You are RECEIPTS AI, an advocate built into Pull Up Receipts, a personal legal documentation app. You are speaking with ${args.firstName ?? "the user"} from the UNSCOPED entry point — they have NOT opened a specific File yet. You are on their side.${profileBlock}
