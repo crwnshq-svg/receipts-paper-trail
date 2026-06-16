@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ReceiptText } from "lucide-react";
+import { ReceiptText, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 const search = z.object({
@@ -42,6 +42,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
   useEffect(() => { if (mode) setTab(mode); }, [mode]);
 
@@ -54,7 +55,7 @@ function AuthPage() {
     setLoading(true);
     try {
       if (tab === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: window.location.origin + "/dashboard",
@@ -66,8 +67,15 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Account created. You're in.");
-        navigate({ to: "/dashboard" });
+        // If Supabase returned a session, email confirmation is disabled — go straight in.
+        if (data.session) {
+          toast.success("Account created. You're in.");
+          navigate({ to: "/dashboard" });
+        } else {
+          // Sign the user out of any partial session and show the verification screen.
+          await supabase.auth.signOut();
+          setPendingVerificationEmail(email);
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -106,6 +114,33 @@ function AuthPage() {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
+          {pendingVerificationEmail ? (
+            <div className="text-center space-y-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/15">
+                <Mail className="h-6 w-6 text-accent" />
+              </div>
+              <h1 className="text-2xl font-bold">Check your email</h1>
+              <p className="text-sm text-muted-foreground">
+                We sent a verification link to{" "}
+                <span className="font-medium text-foreground">{pendingVerificationEmail}</span>.
+                Click the link in that email to verify your address, then sign in to continue.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                You won't be able to log in until your email is verified.
+              </p>
+              <Button
+                className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => {
+                  setPendingVerificationEmail(null);
+                  setPassword("");
+                  setTab("signin");
+                }}
+              >
+                Go to sign in
+              </Button>
+            </div>
+          ) : (
+            <>
           <h1 className="text-2xl font-bold text-center">Welcome to Pull Up Receipts</h1>
           <p className="mt-1 text-center text-sm text-muted-foreground">Your file. Your rights.</p>
 
@@ -150,6 +185,8 @@ function AuthPage() {
               </form>
             </TabsContent>
           </Tabs>
+            </>
+          )}
         </div>
       </main>
     </div>

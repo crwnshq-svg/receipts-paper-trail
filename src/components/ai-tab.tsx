@@ -57,12 +57,24 @@ type StructuredActionType =
   | "draft_followup_email"
   | "generate_police_report"
   | "generate_footage_request"
-  | "log_spoliation";
+  | "log_spoliation"
+  | "open_file"
+  | "open_evidence_vault"
+  | "open_resources"
+  | "open_alert"
+  | "attach_evidence_to_file";
 
 type StructuredAction = {
   type: StructuredActionType;
   label: string;
   prefill?: Record<string, any>;
+};
+
+export type PendingUpload = {
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
 };
 type StructuredResource = { name: string; url: string; description?: string };
 type StructuredPartner = {
@@ -300,6 +312,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   const saveFn = useServerFn(saveConversation);
   const scrollRef = useRef<HTMLDivElement>(null);
   const askFired = useRef(false);
+  const pendingUploadRef = useRef<PendingUpload | null>(null);
 
   useEffect(() => {
     if (!caseId) return;
@@ -498,7 +511,13 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
         )}
 
         {messages.map((m: UIMessage) => (
-          <ChatMessage key={m.id} message={m} caseId={caseId} onTapSuggestion={doSend} />
+          <ChatMessage
+            key={m.id}
+            message={m}
+            caseId={caseId}
+            onTapSuggestion={doSend}
+            pendingUploadRef={pendingUploadRef}
+          />
         ))}
 
         {status === "submitted" && (
@@ -517,7 +536,8 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
         input={input}
         setInput={setInput}
         onSubmit={(e) => handleSend(e)}
-        onUploaded={(filename) => {
+        onUploaded={(filename, pending) => {
+          if (pending) pendingUploadRef.current = pending;
           void doSend(`[uploaded evidence: ${filename}]`);
         }}
         isLoading={isLoading}
@@ -532,7 +552,7 @@ function ChatComposer({
   caseId: string | null; disabled: boolean; placeholder: string;
   input: string; setInput: (s: string) => void;
   onSubmit: (e: React.FormEvent) => void;
-  onUploaded: (filename: string) => void;
+  onUploaded: (filename: string, pending?: PendingUpload) => void;
   isLoading: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -578,9 +598,14 @@ function ChatComposer({
         const { error: upErr } = await supabase.storage
           .from("case-documents")
           .upload(path, file, { contentType: file.type });
-        if (upErr) console.warn("pending upload failed", upErr);
+        if (upErr) throw upErr;
         toast.success("Got it — I'll ask where to file this.");
-        onUploaded(file.name);
+        onUploaded(file.name, {
+          storagePath: path,
+          fileName: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+        });
       }
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
@@ -651,8 +676,9 @@ function ChatComposer({
 
 // ============================== Structured message renderer ==============================
 
-function ChatMessage({ message, caseId, onTapSuggestion }: {
+function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
   message: UIMessage; caseId: string | null; onTapSuggestion: (text: string) => void;
+  pendingUploadRef: React.MutableRefObject<PendingUpload | null>;
 }) {
   const text = message.parts.map((p: any) => p.type === "text" ? p.text : "").join("");
   const isUser = message.role === "user";
@@ -728,8 +754,8 @@ function ChatMessage({ message, caseId, onTapSuggestion }: {
           onAnswer={(ans) => onTapSuggestion(ans)}
         />
       )}
-      {structured.actions && structured.actions.length > 0 && caseId && (
-        <ActionCards caseId={caseId} actions={structured.actions} />
+      {structured.actions && structured.actions.length > 0 && (
+        <ActionCards caseId={caseId} actions={structured.actions} pendingUploadRef={pendingUploadRef} />
       )}
       {structured.partners && structured.partners.length > 0 && (
         <div className="space-y-2">
@@ -790,8 +816,13 @@ function renderInline(text: string) {
   return esc.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 }
 
-function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredAction[] }) {
+function ActionCards({ caseId, actions, pendingUploadRef }: {
+  caseId: string | null;
+  actions: StructuredAction[];
+  pendingUploadRef: React.MutableRefObject<PendingUpload | null>;
+}) {
   const navigate = useNavigate();
+  const analyze = useServerFn(analyzeDocument);
 
   function matchDocType(label: string): string | null {
     const lower = label.toLowerCase();
@@ -799,11 +830,96 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
     return found ?? null;
   }
 
+  function pickCaseId(a: StructuredAction): string | null {
+    const pref = a.prefill?.caseId ?? a.prefill?.case_id ?? a.prefill?.fileId ?? a.prefill?.file_id;
+    return (typeof pref === "string" && pref) ? pref : caseId;
+  }
+
+  async function attachPendingToFile(targetCaseId: string) {
+    const pending = pendingUploadRef.current;
+    if (!pending) {
+      toast.error("No pending upload to attach.");
+      return;
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not signed in");
+    const newPath = `${user.id}/${targetCaseId}/${Date.now()}-${pending.fileName}`;
+    const { error: moveErr } = await supabase.storage
+      .from("case-documents")
+      .move(pending.storagePath, newPath);
+    if (moveErr) throw moveErr;
+    const { data: inserted, error: dbErr } = await supabase
+      .from("documents")
+      .insert({
+        case_id: targetCaseId, user_id: user.id,
+        file_name: pending.fileName, storage_path: newPath,
+        file_size: pending.fileSize, mime_type: pending.mimeType,
+      })
+      .select()
+      .single();
+    if (dbErr) throw dbErr;
+    pendingUploadRef.current = null;
+    toast.success("Evidence attached to your File");
+    if (inserted) {
+      analyze({ data: { documentId: inserted.id } }).catch((e) => console.warn("analyze failed", e));
+    }
+    navigate({ to: "/cases/$caseId", params: { caseId: targetCaseId },
+      search: { tab: "documents" } } as any);
+  }
+
   async function handle(a: StructuredAction) {
     try {
+      // --------- Pure navigation actions (work scoped or unscoped) ---------
+      if (a.type === "open_file") {
+        const target = pickCaseId(a);
+        if (!target) { toast.error("No File specified."); return; }
+        const tab = typeof a.prefill?.tab === "string" ? a.prefill.tab : undefined;
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
+          search: tab ? { tab } : {} } as any);
+        return;
+      }
+      if (a.type === "open_evidence_vault") {
+        const target = pickCaseId(a);
+        if (target) {
+          navigate({ to: "/cases/$caseId", params: { caseId: target },
+            search: { tab: "documents" } } as any);
+        } else {
+          navigate({ to: "/cases" } as any);
+        }
+        return;
+      }
+      if (a.type === "open_resources") {
+        navigate({ to: "/resources" } as any);
+        return;
+      }
+      if (a.type === "open_alert") {
+        const id = a.prefill?.notificationId ?? a.prefill?.alertId ?? a.prefill?.id;
+        if (typeof id === "string" && id) {
+          navigate({ to: "/notifications/$notificationId",
+            params: { notificationId: id } } as any);
+        } else {
+          navigate({ to: "/notifications" } as any);
+        }
+        return;
+      }
+      if (a.type === "attach_evidence_to_file") {
+        const target = pickCaseId(a);
+        if (!target) { toast.error("Pick a File to attach to."); return; }
+        await attachPendingToFile(target);
+        return;
+      }
+
+      // --------- File-scoped actions: need a caseId ---------
+      const target = pickCaseId(a);
+      if (!target) {
+        // Unscoped chat surfaced a file-scoped action without a caseId.
+        // Send the user to their files list so they can pick one.
+        navigate({ to: "/cases" } as any);
+        return;
+      }
+
       if (a.type === "generate_document") {
         const docType = matchDocType(a.label);
-        // Stash prefill for Document Generator to consume on mount.
         if (a.prefill) {
           setPrefill("document", {
             ...a.prefill,
@@ -816,30 +932,29 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           let q = supabase.from("generated_documents")
-            .select("id").eq("case_id", caseId).eq("user_id", user.id)
+            .select("id").eq("case_id", target).eq("user_id", user.id)
             .order("created_at", { ascending: false }).limit(1);
           if (docType) q = q.eq("document_type", docType);
           const { data } = await q.maybeSingle();
           if (data?.id && !a.prefill) {
-            // Only jump to an existing doc when there's no fresh prefill to apply.
             navigate({ to: "/cases/$caseId/documents/$docId",
-              params: { caseId, docId: data.id } } as any);
+              params: { caseId: target, docId: data.id } } as any);
             return;
           }
         }
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "ai", generate: docType ?? "1" } } as any);
         return;
       }
       if (a.type === "log_incident") {
         if (a.prefill) setPrefill("incident", a.prefill);
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
       if (a.type === "upload_evidence") {
         if (a.prefill) setPrefill("document", a.prefill);
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "documents", action: "upload" } } as any);
         return;
       }
@@ -848,9 +963,6 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
         return;
       }
 
-      // New specialized action types — all open Document Workshop with a
-      // document_type pre-selected, except log_witness which opens the
-      // incident form pre-filled with a witness category.
       const specializedDocType: Record<string, string> = {
         send_preservation_demand: "Preservation Demand Letter",
         create_written_record: "Contemporaneous Written Record",
@@ -866,7 +978,7 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
           documentType: docType,
           actionLabel: a.label,
         });
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "ai", generate: docType } } as any);
         return;
       }
@@ -875,7 +987,7 @@ function ActionCards({ caseId, actions }: { caseId: string; actions: StructuredA
           title: "Witness account",
           ...(a.prefill ?? {}),
         });
-        navigate({ to: "/cases/$caseId", params: { caseId },
+        navigate({ to: "/cases/$caseId", params: { caseId: target },
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
