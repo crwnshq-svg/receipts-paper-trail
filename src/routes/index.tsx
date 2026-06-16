@@ -142,7 +142,7 @@ function Landing() {
               {
                 icon: FolderLock,
                 title: "Store Everything",
-                body: "Your Evidence Vault. Contracts, photos, videos, emails. Store everything, because everything matters.\u00a0",
+                body: "Your Encrypted Evidence Vault. Contracts, photos, videos, emails. Store everything, because everything matters.\u00a0",
               },
               {
                 icon: Pencil,
@@ -217,8 +217,7 @@ function Landing() {
               />
             </div>
             <p className="mx-auto mt-6 max-w-xl text-center text-xs text-muted-foreground">
-              $49 Case Package add-on available to paid subscribers — a
-              court-ready PDF of your full file.
+              {"\n"}
             </p>
           </div>
         </section>
