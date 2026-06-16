@@ -1103,8 +1103,11 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
   const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
   const generateFn = useServerFn(generateDocument);
 
-  // Apply AI-supplied prefill once on mount: jump straight to the right step.
-  useEffect(() => {
+  // Apply AI-supplied prefill: jump straight to the right step. Runs on mount
+  // AND whenever the prefill bus signals a new document prefill (so tapping a
+  // "Generate Document" action while this component is already mounted on the
+  // AI tab still picks up the new prefill instead of silently no-oping).
+  function applyDocumentPrefill() {
     const pre = popPrefill<Record<string, any>>("document");
     if (!pre) return;
     const marks: Record<string, boolean> = {};
@@ -1140,9 +1143,27 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
       marks.documents = true;
     }
     setPrefilled(marks);
-    if (nextStep !== "type") setStep(nextStep);
+    setResult(null);
+    setStep(nextStep);
+    // Scroll the generator into view so the user can see the pre-filled form.
+    requestAnimationFrame(() => {
+      generatorRootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  const generatorRootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    applyDocumentPrefill();
+    function onPrefill(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.scope === "document") applyDocumentPrefill();
+    }
+    window.addEventListener(PREFILL_EVENT, onPrefill);
+    return () => window.removeEventListener(PREFILL_EVENT, onPrefill);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
 
   function pickType(t: string) {
