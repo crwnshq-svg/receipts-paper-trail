@@ -57,11 +57,41 @@ export const Route = createFileRoute("/api/chat")({
           // Unscoped chat — no file context. List user's active files for routing.
           const { data: activeCases } = await supabase
             .from("cases")
-            .select("id,title,opposing_party,dispute_type,updated_at")
+            .select("id,title,opposing_party,dispute_type,description,updated_at,ai_summary,status_level")
             .eq("user_id", userId)
             .eq("status", "active")
             .order("updated_at", { ascending: false })
             .limit(20);
+          const caseIds = (activeCases ?? []).map((c) => c.id);
+          // Aggregate counts so the unscoped companion can answer direct
+          // questions like "how many events / has evidence been uploaded".
+          const [incCounts, docCounts, docSummaries] = await Promise.all([
+            caseIds.length === 0
+              ? Promise.resolve({ data: [] as { case_id: string }[] })
+              : supabase.from("incidents").select("case_id").in("case_id", caseIds),
+            caseIds.length === 0
+              ? Promise.resolve({ data: [] as { case_id: string }[] })
+              : supabase.from("documents").select("case_id").in("case_id", caseIds),
+            caseIds.length === 0
+              ? Promise.resolve({ data: [] as { case_id: string; ai_summary: string | null; file_name: string }[] })
+              : supabase
+                  .from("documents")
+                  .select("case_id,ai_summary,file_name,display_name")
+                  .in("case_id", caseIds)
+                  .not("ai_summary", "is", null),
+          ]);
+          const evCount: Record<string, number> = {};
+          for (const r of (incCounts.data ?? []) as any[]) evCount[r.case_id] = (evCount[r.case_id] ?? 0) + 1;
+          const evidCount: Record<string, number> = {};
+          for (const r of (docCounts.data ?? []) as any[]) evidCount[r.case_id] = (evidCount[r.case_id] ?? 0) + 1;
+          const docsByCase: Record<string, { name: string; summary: string }[]> = {};
+          for (const r of (docSummaries.data ?? []) as any[]) {
+            if (!r.ai_summary) continue;
+            (docsByCase[r.case_id] ??= []).push({
+              name: r.display_name || r.file_name,
+              summary: String(r.ai_summary).slice(0, 400),
+            });
+          }
           const cases = (activeCases ?? []).map((c) => ({
             id: c.id,
             label:
@@ -69,6 +99,12 @@ export const Route = createFileRoute("/api/chat")({
                 ? c.opposing_party
                 : c.title,
             dispute_type: c.dispute_type,
+            status_level: (c as any).status_level === "case" ? "Case" : "File",
+            description: c.description ?? null,
+            ai_summary: (c as any).ai_summary ?? null,
+            event_count: evCount[c.id] ?? 0,
+            evidence_count: evidCount[c.id] ?? 0,
+            evidence_summaries: (docsByCase[c.id] ?? []).slice(0, 6),
           }));
           system = buildUnscopedChatSystemPrompt({
             tone,
