@@ -437,7 +437,7 @@ Same JSON shape as the scoped chat:
   "message": "string — clean natural sentences, no \\n---\\n, no [Q], no fences",
   "beats": [ "string — one bubble of 1–2 natural sentences" ],
   "clarifying_question": "string or null",
-  "actions": [],
+  "actions": [ { "type": "open_file" | "attach_evidence_to_file" | "open_evidence_vault" | "open_resources" | "open_alert" | "log_incident" | "upload_evidence", "label": "short tappable label", "prefill": { "caseId": "<id from ACTIVE FILES below when applicable>" } } ],
   "resources": [],
   "partners": [],
   "document_refs": [],
