@@ -1230,7 +1230,7 @@ function DocumentGenerator({ caseId, isPaid, onLocked }: {
   }
 
   return (
-    <Card className="p-5">
+    <Card className="p-5" ref={generatorRootRef as any}>
       <div className="flex items-center gap-2 mb-1">
         <FileText className="h-4 w-4 text-accent" />
         <h3 className="font-medium">Generate a document</h3>
