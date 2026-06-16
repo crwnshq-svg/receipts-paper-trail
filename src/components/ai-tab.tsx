@@ -552,7 +552,7 @@ function ChatComposer({
   caseId: string | null; disabled: boolean; placeholder: string;
   input: string; setInput: (s: string) => void;
   onSubmit: (e: React.FormEvent) => void;
-  onUploaded: (filename: string) => void;
+  onUploaded: (filename: string, pending?: PendingUpload) => void;
   isLoading: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
