@@ -41,6 +41,7 @@ const EMPTY: Answers = {
 
 function OnboardingPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const analyze = useServerFn(analyzeDocument);
   const [step, setStep] = useState(1);
   const [a, setA] = useState<Answers>(EMPTY);
@@ -52,7 +53,11 @@ function OnboardingPage() {
   async function recordPrivacyAck() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("profiles").update({ privacy_acknowledged_at: new Date().toISOString() } as never).eq("id", user.id);
+    const ts = new Date().toISOString();
+    await supabase.from("profiles").update({ privacy_acknowledged_at: ts } as never).eq("id", user.id);
+    queryClient.setQueryData(["profile"], (prev: any) =>
+      prev ? { ...prev, privacy_acknowledged_at: ts } : prev,
+    );
   }
 
   // hydrate from existing profile so partial completions resume
