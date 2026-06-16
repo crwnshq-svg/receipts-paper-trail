@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell } from "lucide-react";
+import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell, Sparkles, MessageSquarePlus } from "lucide-react";
+import { CheckInPopup } from "@/components/checkin-popup";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { touchLastActive } from "@/lib/activity.functions";
@@ -94,6 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
     { to: "/cases", label: "Files", icon: FolderOpen, badge: 0 },
+    { to: "/ai", label: "AI", icon: Sparkles, badge: 0 },
     { to: "/notifications", label: "Alerts", icon: Bell, badge: unreadCount },
     { to: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
     { to: "/account", label: "Account", icon: UserCircle, badge: 0 },
@@ -133,7 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card md:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {nav.map((n) => {
             const active = pathname.startsWith(n.to);
             return (
@@ -155,6 +157,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
+      {/* Persistent floating AI button — hidden on /ai itself */}
+      {!pathname.startsWith("/ai") && (
+        <Link
+          to="/ai"
+          aria-label="Open RECEIPTS AI"
+          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg hover:bg-accent/90 transition-transform hover:scale-105"
+        >
+          <MessageSquarePlus className="h-6 w-6" />
+        </Link>
+      )}
+
+      <CheckInPopup />
       <PushPermissionPrompt />
     </div>
   );

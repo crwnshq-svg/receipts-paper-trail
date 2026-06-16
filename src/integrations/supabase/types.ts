@@ -384,6 +384,7 @@ export type Database = {
           created_at: string
           date_of_incident: string | null
           document_ids: Json
+          edited_at: string | null
           flag_message: string | null
           flag_type: string | null
           formatted_entry: string | null
@@ -406,6 +407,7 @@ export type Database = {
           created_at?: string
           date_of_incident?: string | null
           document_ids?: Json
+          edited_at?: string | null
           flag_message?: string | null
           flag_type?: string | null
           formatted_entry?: string | null
@@ -428,6 +430,7 @@ export type Database = {
           created_at?: string
           date_of_incident?: string | null
           document_ids?: Json
+          edited_at?: string | null
           flag_message?: string | null
           flag_type?: string | null
           formatted_entry?: string | null

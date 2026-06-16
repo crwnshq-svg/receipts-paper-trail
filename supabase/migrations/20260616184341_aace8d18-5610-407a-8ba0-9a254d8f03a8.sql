@@ -1,0 +1,1 @@
+ALTER TABLE public.incidents ADD COLUMN IF NOT EXISTS edited_at timestamptz NULL;

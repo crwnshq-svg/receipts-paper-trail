@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2 } from "lucide-react";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
@@ -74,7 +75,9 @@ export function ActivityTab({
   onChange: () => void;
 }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [incidentOpen, setIncidentOpen] = useState(false);
+  const [editIncident, setEditIncident] = useState<Incident | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
@@ -205,11 +208,15 @@ export function ActivityTab({
 
       <IncidentDialog
         caseId={caseId}
-        open={incidentOpen}
-        onOpenChange={setIncidentOpen}
+        open={incidentOpen || editIncident !== null}
+        editing={editIncident}
+        onOpenChange={(v) => {
+          if (!v) { setIncidentOpen(false); setEditIncident(null); }
+          else setIncidentOpen(true);
+        }}
         onSaved={(newId) => {
           onChange();
-          if (newId) void triggerAnalysis(newId);
+          if (newId && !editIncident) void triggerAnalysis(newId);
         }}
       />
       <NoteDialog
@@ -285,6 +292,27 @@ export function ActivityTab({
                         caseId={caseId}
                         ids={toIds(f.data.document_ids)}
                       />
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                        <button
+                          onClick={() =>
+                            navigate({
+                              to: "/cases/$caseId",
+                              params: { caseId },
+                              search: { tab: "ai", ask: `event:${f.data.id}` } as any,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 text-accent hover:underline"
+                        >
+                          <MessageCircle className="h-3 w-3" /> Ask about this
+                        </button>
+                        <button
+                          onClick={() => setEditIncident(f.data)}
+                          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                          aria-label="Edit event"
+                        >
+                          <Pencil className="h-3 w-3" /> Edit
+                        </button>
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
@@ -301,6 +329,7 @@ export function ActivityTab({
                     A single live clarifying question is rendered ABOVE the feed
                     (one live question per File at a time). */}
               </li>
+
 
             ) : (
               <li key={`n-${f.data.id}`}>
@@ -438,11 +467,13 @@ function Field({
 function IncidentDialog({
   caseId,
   open,
+  editing,
   onOpenChange,
   onSaved,
 }: {
   caseId: string;
   open: boolean;
+  editing?: Incident | null;
   onOpenChange: (v: boolean) => void;
   onSaved: (newIncidentId?: string) => void;
 }) {
@@ -459,9 +490,25 @@ function IncidentDialog({
   const [saving, setSaving] = useState(false);
   const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
 
-  // When the dialog opens, pop any AI-supplied prefill and apply it.
+  const isEdit = !!editing;
+
+  // When opening for edit, prefill from the editing record.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !editing) return;
+    setTitle(editing.title ?? "");
+    setWho(editing.who_involved ?? "");
+    setWhat(editing.what_happened ?? "");
+    setExtraNotes(editing.notes ?? "");
+    setLocation(editing.location ?? "");
+    const d = new Date(editing.occurred_at);
+    setOccurredAt(isNaN(+d) ? new Date().toISOString().slice(0, 16) : d.toISOString().slice(0, 16));
+    setDocIds(toIds(editing.document_ids));
+    setPrefilled({});
+  }, [open, editing?.id]);
+
+  // When the dialog opens for a NEW event, pop any AI-supplied prefill.
+  useEffect(() => {
+    if (!open || editing) return;
     const pre = popPrefill<Record<string, any>>("incident");
     if (!pre) return;
     const marks: Record<string, boolean> = {};
@@ -478,7 +525,6 @@ function IncidentDialog({
       setDocIds(pre.suggested_document_ids.filter((x) => typeof x === "string"));
       marks.docIds = true;
     }
-    // Witness-logging prefill: fold structured witness fields into the form.
     const witnessParts = [pre.witness_name, pre.witness_contact, pre.witness_location]
       .filter((x) => typeof x === "string" && x.trim().length > 0);
     if (witnessParts.length > 0 && !marks.who) {
@@ -490,7 +536,7 @@ function IncidentDialog({
       marks.what = true;
     }
     setPrefilled(marks);
-  }, [open]);
+  }, [open, editing]);
 
   function reset() {
     setTitle("");
@@ -512,24 +558,39 @@ function IncidentDialog({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
-      // Auto-derive title from the first ~70 chars of "what happened" if blank.
       const autoTitle = title.trim() || what.trim().split(/[.\n]/)[0].slice(0, 70).trim() || "Event";
-      const { data: inserted, error } = await supabase.from("incidents").insert({
-        case_id: caseId,
-        user_id: user.id,
-        title: autoTitle,
+      const payload = {
         who_involved: who || null,
         what_happened: what,
         notes: extraNotes || null,
         location: location || null,
         occurred_at: new Date(occurredAt).toISOString(),
+        title: autoTitle,
         document_ids: docIds as never,
-      }).select("id").single();
-      if (error) throw error;
-      toast.success("Event logged");
-      onOpenChange(false);
-      reset();
-      onSaved(inserted?.id);
+      };
+      if (isEdit && editing) {
+        // Preserve created_at; stamp edited_at.
+        const { error } = await supabase
+          .from("incidents")
+          .update({ ...payload, edited_at: new Date().toISOString() } as any)
+          .eq("id", editing.id);
+        if (error) throw error;
+        toast.success("Event updated");
+        onOpenChange(false);
+        reset();
+        onSaved(editing.id);
+      } else {
+        const { data: inserted, error } = await supabase.from("incidents").insert({
+          case_id: caseId,
+          user_id: user.id,
+          ...payload,
+        }).select("id").single();
+        if (error) throw error;
+        toast.success("Event logged");
+        onOpenChange(false);
+        reset();
+        onSaved(inserted?.id);
+      }
 
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
@@ -542,7 +603,7 @@ function IncidentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log an Event</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Event" : "Log an Event"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={add} className="space-y-3">
           {/* AI-style opening bubble — one question at a time */}
