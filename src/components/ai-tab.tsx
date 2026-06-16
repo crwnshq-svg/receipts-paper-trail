@@ -57,12 +57,24 @@ type StructuredActionType =
   | "draft_followup_email"
   | "generate_police_report"
   | "generate_footage_request"
-  | "log_spoliation";
+  | "log_spoliation"
+  | "open_file"
+  | "open_evidence_vault"
+  | "open_resources"
+  | "open_alert"
+  | "attach_evidence_to_file";
 
 type StructuredAction = {
   type: StructuredActionType;
   label: string;
   prefill?: Record<string, any>;
+};
+
+export type PendingUpload = {
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
 };
 type StructuredResource = { name: string; url: string; description?: string };
 type StructuredPartner = {
