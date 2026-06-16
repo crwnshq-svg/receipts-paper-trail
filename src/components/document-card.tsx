@@ -241,12 +241,46 @@ export function DocumentCard({
               )}
             </button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => onRemove(doc)}
-            className="text-muted-foreground hover:text-destructive h-7 w-7 p-0">
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            <Button variant="ghost" size="sm" onClick={preview} disabled={loadingPreview}
+              title={isImage ? "Preview image" : "Open file"}
+              className="text-muted-foreground hover:text-foreground h-7 w-7 p-0">
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={download}
+              title="Download file"
+              className="text-muted-foreground hover:text-foreground h-7 w-7 p-0">
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onRemove(doc)}
+              title="Delete file"
+              className="text-muted-foreground hover:text-destructive h-7 w-7 p-0">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
+
+      <Dialog open={!!previewUrl} onOpenChange={(o) => { if (!o) setPreviewUrl(null); }}>
+        <DialogContent className="max-w-4xl p-2 bg-background">
+          <DialogTitle className="sr-only">{displayName}</DialogTitle>
+          {previewUrl && (
+            <div className="flex flex-col gap-2">
+              <img
+                src={previewUrl}
+                alt={displayName}
+                className="max-h-[80vh] w-auto mx-auto rounded-md object-contain"
+              />
+              <div className="flex items-center justify-between gap-2 px-2 pb-1">
+                <div className="text-xs text-muted-foreground truncate">{displayName}</div>
+                <Button size="sm" variant="outline" onClick={download}>
+                  <Download className="h-3.5 w-3.5 mr-1" /> Download
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <InsightModal
         insight={openInsight}
