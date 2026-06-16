@@ -2,16 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { createClient } from "@supabase/supabase-js";
 import { createLovableAiGatewayProvider, CHAT_MODEL } from "@/lib/ai-gateway.server";
-import { buildChatSystemPrompt, type AiTone, type PartnerLite } from "@/lib/insight-prompts";
+import {
+  buildChatSystemPrompt,
+  buildUnscopedChatSystemPrompt,
+  type AiTone,
+  type PartnerLite,
+} from "@/lib/insight-prompts";
 
-type Body = { caseId?: string; messages?: UIMessage[] };
+type Body = { caseId?: string | null; messages?: UIMessage[] };
 
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const { caseId, messages } = (await request.json()) as Body;
-        if (!caseId || !Array.isArray(messages)) {
+        if (!Array.isArray(messages)) {
           return new Response("Bad request", { status: 400 });
         }
 
@@ -35,42 +40,75 @@ export const Route = createFileRoute("/api/chat")({
         const userId = claims?.claims?.sub;
         if (!userId) return new Response("Unauthorized", { status: 401 });
 
-        const [caseRes, incRes, docRes, profRes] = await Promise.all([
-          supabase.from("cases").select("*").eq("id", caseId).eq("user_id", userId).maybeSingle(),
-          supabase.from("incidents").select("title,occurred_at,what_happened,who_involved,location,notes")
-            .eq("case_id", caseId).order("occurred_at", { ascending: true }),
-          supabase.from("documents")
-            .select("id,file_name,display_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
-            .eq("case_id", caseId),
-
-          supabase.from("profiles").select("first_name,ai_tone,state,city,is_renting,lease_type,rental_duration,has_landlord_issues,is_employed,work_type,has_workplace_issues").eq("id", userId).maybeSingle(),
-        ]);
-        if (!caseRes.data) return new Response("Case not found", { status: 404 });
-
+        const profRes = await supabase
+          .from("profiles")
+          .select("first_name,ai_tone,state,city,is_renting,lease_type,rental_duration,has_landlord_issues,is_employed,work_type,has_workplace_issues")
+          .eq("id", userId)
+          .maybeSingle();
         const tone: AiTone = (profRes.data?.ai_tone as AiTone) ?? "straightforward";
         const userState = profRes.data?.state ?? null;
-        const caseRow = caseRes.data;
-
-        // partners filtered by case module type and (optionally) user state
-        let partnerQuery = supabase.from("partner_listings")
-          .select("id,name,specialty,state,city,contact_email,contact_phone,contact_url")
-          .eq("module_type", caseRow.dispute_type)
-          .eq("is_active", true);
-        if (userState) partnerQuery = partnerQuery.or(`state.is.null,state.eq.${userState}`);
-        const { data: partnerRows } = await partnerQuery.limit(8);
-        const partners: PartnerLite[] = partnerRows ?? [];
-
-        const caseContext = buildCaseContext(caseRow, incRes.data ?? [], docRes.data ?? []);
-        const system = buildChatSystemPrompt({
-          tone,
-          caseContext,
-          partners,
-          userState,
-          firstName: profRes.data?.first_name ?? null,
-          profile: profRes.data ?? null,
-        });
+        const firstName = profRes.data?.first_name ?? null;
 
         const gateway = createLovableAiGatewayProvider(apiKey);
+
+        let system: string;
+
+        if (!caseId) {
+          // Unscoped chat — no file context. List user's active files for routing.
+          const { data: activeCases } = await supabase
+            .from("cases")
+            .select("id,title,opposing_party,dispute_type,updated_at")
+            .eq("user_id", userId)
+            .eq("status", "active")
+            .order("updated_at", { ascending: false })
+            .limit(20);
+          const cases = (activeCases ?? []).map((c) => ({
+            id: c.id,
+            label:
+              c.opposing_party && c.opposing_party.trim().length > 0
+                ? c.opposing_party
+                : c.title,
+            dispute_type: c.dispute_type,
+          }));
+          system = buildUnscopedChatSystemPrompt({
+            tone,
+            firstName,
+            userState,
+            profile: profRes.data ?? null,
+            activeCases: cases,
+          });
+        } else {
+          const [caseRes, incRes, docRes] = await Promise.all([
+            supabase.from("cases").select("*").eq("id", caseId).eq("user_id", userId).maybeSingle(),
+            supabase.from("incidents").select("title,occurred_at,what_happened,who_involved,location,notes")
+              .eq("case_id", caseId).order("occurred_at", { ascending: true }),
+            supabase.from("documents")
+              .select("id,file_name,display_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
+              .eq("case_id", caseId),
+          ]);
+          if (!caseRes.data) return new Response("Case not found", { status: 404 });
+
+          const caseRow = caseRes.data;
+
+          let partnerQuery = supabase.from("partner_listings")
+            .select("id,name,specialty,state,city,contact_email,contact_phone,contact_url")
+            .eq("module_type", caseRow.dispute_type)
+            .eq("is_active", true);
+          if (userState) partnerQuery = partnerQuery.or(`state.is.null,state.eq.${userState}`);
+          const { data: partnerRows } = await partnerQuery.limit(8);
+          const partners: PartnerLite[] = partnerRows ?? [];
+
+          const caseContext = buildCaseContext(caseRow, incRes.data ?? [], docRes.data ?? []);
+          system = buildChatSystemPrompt({
+            tone,
+            caseContext,
+            partners,
+            userState,
+            firstName,
+            profile: profRes.data ?? null,
+          });
+        }
+
         const result = streamText({
           model: gateway(CHAT_MODEL),
           system,
@@ -137,7 +175,6 @@ function buildCaseContext(caseRow: any, incidents: any[], documents: any[]) {
 function stringifyExtracted(extracted: any): string {
   if (!extracted) return "";
   if (typeof extracted === "string") return extracted;
-  // Common shapes: { text: "..." }, { content: "..." }, { pages: [{text}] }, { ocr: "..." }
   if (typeof extracted.text === "string") return extracted.text;
   if (typeof extracted.content === "string") return extracted.content;
   if (typeof extracted.ocr === "string") return extracted.ocr;
@@ -146,4 +183,3 @@ function stringifyExtracted(extracted: any): string {
   }
   try { return JSON.stringify(extracted); } catch { return ""; }
 }
-
