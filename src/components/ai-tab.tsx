@@ -541,29 +541,46 @@ function ChatComposer({
   const [dragOver, setDragOver] = useState(false);
 
   async function handleFile(file: File) {
-    if (!caseId) {
-      toast.error("Open a File first to attach evidence.");
-      return;
-    }
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
-      const path = `${user.id}/${caseId}/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage.from("case-documents").upload(path, file, {
-        contentType: file.type,
-      });
-      if (upErr) throw upErr;
-      const { data: inserted, error: dbErr } = await supabase.from("documents").insert({
-        case_id: caseId, user_id: user.id,
-        file_name: file.name, storage_path: path,
-        file_size: file.size, mime_type: file.type,
-      }).select().single();
-      if (dbErr) throw dbErr;
-      toast.success("Evidence added");
-      onUploaded(file.name);
-      if (inserted) {
-        analyze({ data: { documentId: inserted.id } }).catch((err) => console.warn("analyze failed", err));
+
+      if (caseId) {
+        // File-scoped: upload + create document row in this case.
+        const path = `${user.id}/${caseId}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage
+          .from("case-documents")
+          .upload(path, file, { contentType: file.type });
+        if (upErr) throw upErr;
+        const { data: inserted, error: dbErr } = await supabase
+          .from("documents")
+          .insert({
+            case_id: caseId, user_id: user.id,
+            file_name: file.name, storage_path: path,
+            file_size: file.size, mime_type: file.type,
+          })
+          .select()
+          .single();
+        if (dbErr) throw dbErr;
+        toast.success("Evidence added");
+        onUploaded(file.name);
+        if (inserted) {
+          analyze({ data: { documentId: inserted.id } })
+            .catch((err) => console.warn("analyze failed", err));
+        }
+      } else {
+        // Unscoped /ai companion: no File context yet. Best-effort stash the
+        // bytes under the user's pending folder and hand the filename to the
+        // AI so its routing rules ask which File to attach to (or kick off
+        // File creation). NEVER block the upload.
+        const path = `${user.id}/pending/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage
+          .from("case-documents")
+          .upload(path, file, { contentType: file.type });
+        if (upErr) console.warn("pending upload failed", upErr);
+        toast.success("Got it — I'll ask where to file this.");
+        onUploaded(file.name);
       }
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
@@ -585,7 +602,7 @@ function ChatComposer({
         if (f && !disabled && !uploading) void handleFile(f);
       }}
       className={cn(
-        "border-t p-3 flex gap-2 transition-colors",
+        "border-t p-3 transition-colors",
         dragOver && "bg-accent/10 ring-2 ring-accent/40 ring-inset",
       )}
     >
@@ -599,30 +616,35 @@ function ChatComposer({
         }}
         accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg"
       />
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        disabled={uploading || disabled || !caseId}
-        onClick={() => fileRef.current?.click()}
-        title={caseId ? "Attach evidence" : "Open a File first to attach evidence"}
-      >
-        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-      </Button>
-      <Input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder={dragOver ? "Drop to attach evidence…" : placeholder}
-        disabled={disabled}
-        autoFocus
-      />
-      <Button
-        type="submit"
-        disabled={isLoading || !input.trim() || disabled}
-        className="bg-primary text-primary-foreground hover:bg-accent"
-      >
-        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={uploading || disabled}
+          onClick={() => fileRef.current?.click()}
+          title="Attach evidence"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+        </Button>
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={dragOver ? "Drop to attach evidence…" : placeholder}
+          disabled={disabled}
+          autoFocus
+        />
+        <Button
+          type="submit"
+          disabled={isLoading || !input.trim() || disabled}
+          className="bg-primary text-primary-foreground hover:bg-accent"
+        >
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </Button>
+      </div>
+      <p className="mt-1.5 pl-1 text-[11px] text-muted-foreground">
+        Tap the paperclip or drop a file here to attach evidence.
+      </p>
     </form>
   );
 }
