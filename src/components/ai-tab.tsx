@@ -205,7 +205,7 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask }: {
 // ============================== Chat ==============================
 
 function ChatPanel(props: {
-  caseId: string; isPaid: boolean; remaining: number;
+  caseId: string | null; isPaid: boolean; remaining: number; ask: string | null;
   onConsumed: (used: number) => void; onLimitHit: () => void;
 }) {
   const loadFn = useServerFn(loadConversation);
@@ -214,10 +214,17 @@ function ChatPanel(props: {
   const [startedAt, setStartedAt] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!props.caseId) {
+      // Unscoped chat — fresh session every time, no DB persistence.
+      setInitial([]);
+      setStartedAt(null);
+      setLoaded(true);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
-        const res = await loadFn({ data: { caseId: props.caseId } });
+        const res = await loadFn({ data: { caseId: props.caseId! } });
         if (cancelled) return;
         setInitial((res.messages ?? []) as UIMessage[]);
         setStartedAt(res.started_at);
@@ -250,8 +257,8 @@ function ChatPanel(props: {
   return <ChatPanelInner {...props} initialMessages={initial} startedAt={startedAt} />;
 }
 
-function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, initialMessages, startedAt }: {
-  caseId: string; isPaid: boolean; remaining: number;
+function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit, initialMessages, startedAt }: {
+  caseId: string | null; isPaid: boolean; remaining: number; ask: string | null;
   onConsumed: (used: number) => void; onLimitHit: () => void;
   initialMessages: UIMessage[]; startedAt: string | null;
 }) {
@@ -259,8 +266,10 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
   const consume = useServerFn(consumeAiQuestion);
   const saveFn = useServerFn(saveConversation);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const askFired = useRef(false);
 
   useEffect(() => {
+    if (!caseId) return;
     const key = `receipts:insight-followup:${caseId}`;
     const raw = sessionStorage.getItem(key);
     if (raw) {
@@ -276,6 +285,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
     }
   }, [caseId]);
 
+  const sessionKey = caseId ?? "unscoped";
   const transport = useRef(new DefaultChatTransport({
     api: "/api/chat",
     fetch: async (url, init) => {
@@ -293,11 +303,12 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
   })).current;
 
   const { messages, sendMessage, status } = useChat({
-    id: caseId,
+    id: sessionKey,
     messages: initialMessages,
     transport,
     onError: (err) => toast.error(err.message || "Chat failed"),
     onFinish: ({ messages: latest }) => {
+      if (!caseId) return; // no persistence for unscoped chat
       saveFn({ data: { caseId, messages: latest as any[] } }).catch((err) =>
         console.warn("Failed to save chat history", err),
       );
@@ -331,6 +342,59 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
     await sendMessage({ text: trimmed });
   }
 
+  // Auto-fire the first AI response when ?ask=event:<id> / alert:<id> / urgent:<caseId> is present.
+  useEffect(() => {
+    if (askFired.current) return;
+    if (!ask) return;
+    if (messages.length > 0) return; // don't auto-send into an existing convo
+    askFired.current = true;
+    (async () => {
+      const [kind, id] = ask.split(":");
+      let prompt = "";
+      try {
+        if (kind === "event" && id) {
+          const { data } = await supabase
+            .from("incidents")
+            .select("title,what_happened,occurred_at,who_involved,location,notes")
+            .eq("id", id)
+            .maybeSingle();
+          if (data) {
+            prompt =
+              `[CONTEXT] Asking about a logged event:\n` +
+              `Title: ${data.title}\n` +
+              `When: ${new Date(data.occurred_at).toLocaleString()}\n` +
+              (data.who_involved ? `Who: ${data.who_involved}\n` : "") +
+              (data.location ? `Where: ${data.location}\n` : "") +
+              `What happened: ${data.what_happened}\n` +
+              (data.notes ? `Notes: ${data.notes}\n` : "") +
+              `\nReact to this event specifically — what stands out, what to watch for, and one concrete next step.`;
+          }
+        } else if (kind === "alert" && id) {
+          const { data } = await supabase
+            .from("notifications")
+            .select("title,body,type")
+            .eq("id", id)
+            .maybeSingle();
+          if (data) {
+            prompt =
+              `[CONTEXT] Discussing this alert:\n` +
+              `Title: ${data.title}\n` +
+              `Detail: ${data.body}\n\n` +
+              `React to the alert's importance for this file and ask one relevant follow-up question if appropriate.`;
+          }
+        } else if (kind === "urgent" && id) {
+          prompt =
+            `[CONTEXT] The check-in surfaced an urgent issue on this file. Brief me on the most important active concern and one concrete next step I should take right now.`;
+        }
+      } catch (err) {
+        console.warn("ask context load failed", err);
+      }
+      if (!prompt) return;
+      await doSend(prompt);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ask]);
+
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     await doSend(input);
@@ -346,6 +410,22 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
     return `Conversation started ${new Date(startedAt).toLocaleDateString()}`;
   }, [startedAt]);
 
+  const unscopedSuggestions = [
+    "I have a new situation I want to start a file for.",
+    "Help me think through something on one of my files.",
+    "What should I be documenting right now?",
+  ];
+  const scopedSuggestions = [
+    "What are my strongest pieces of evidence?",
+    "What laws apply to my situation?",
+    "Who can help me with this?",
+    "What should I document next?",
+  ];
+  const empty = messages.length === 0;
+  const emptyTitle = caseId
+    ? "Ask anything about your file. I have your full file in context — every event and every piece of evidence."
+    : "What's going on? Describe a new situation, mention an existing File, or drop in evidence.";
+
   return (
     <Card className="overflow-hidden">
       <div className="border-b p-4 flex items-center justify-between gap-3">
@@ -353,7 +433,9 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
           <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
           <div>
             <div className="font-medium text-sm">RECEIPTS AI</div>
-            <div className="text-xs text-muted-foreground">File-specific guidance from your evidence</div>
+            <div className="text-xs text-muted-foreground">
+              {caseId ? "File-specific guidance from your evidence" : "Unscoped — start anywhere"}
+            </div>
           </div>
         </div>
         <div className="text-xs text-muted-foreground">
@@ -368,16 +450,11 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
       )}
 
       <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
-        {messages.length === 0 && (
+        {empty && !ask && (
           <div className="text-center text-sm text-muted-foreground py-10">
-            Ask anything about your file. I have your full file in context — every event and every piece of evidence.
+            {emptyTitle}
             <div className="mt-3 grid gap-2 max-w-md mx-auto text-left">
-              {[
-                "What are my strongest pieces of evidence?",
-                "What laws apply to my situation?",
-                "Who can help me with this?",
-                "What should I document next?",
-              ].map((s) => (
+              {(caseId ? scopedSuggestions : unscopedSuggestions).map((s) => (
                 <button key={s} onClick={() => doSend(s)}
                   className="rounded-md border bg-background p-2 text-xs hover:border-accent text-left">
                   {s}
@@ -401,7 +478,9 @@ function ChatPanelInner({ caseId, isPaid, remaining, onConsumed, onLimitHit, ini
       <ChatComposer
         caseId={caseId}
         disabled={isLoading || (!isPaid && remaining === 0)}
-        placeholder={isPaid || remaining > 0 ? "Ask about your file…" : "Free questions used — upgrade to continue"}
+        placeholder={isPaid || remaining > 0
+          ? (caseId ? "Ask about your file…" : "Tell me what's going on…")
+          : "Free questions used — upgrade to continue"}
         input={input}
         setInput={setInput}
         onSubmit={(e) => handleSend(e)}
