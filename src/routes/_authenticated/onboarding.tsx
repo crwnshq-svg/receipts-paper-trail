@@ -52,12 +52,19 @@ function OnboardingPage() {
 
   async function recordPrivacyAck() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) throw new Error("Not signed in");
     const ts = new Date().toISOString();
-    await supabase.from("profiles").update({ privacy_acknowledged_at: ts } as never).eq("id", user.id);
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ privacy_acknowledged_at: ts })
+      .eq("id", user.id)
+      .select("*")
+      .single();
+    if (error) throw error;
     queryClient.setQueryData(["profile"], (prev: any) =>
-      prev ? { ...prev, privacy_acknowledged_at: ts } : prev,
+      prev ? { ...prev, ...data } : data,
     );
+    return data;
   }
 
   // hydrate from existing profile so partial completions resume
@@ -71,6 +78,7 @@ function OnboardingPage() {
         navigate({ to: "/dashboard", replace: true });
         return;
       }
+      setPrivacyAck(Boolean(data.privacy_acknowledged_at));
       setA((prev) => ({
         ...prev,
         first_name: data.first_name ?? prev.first_name,
@@ -108,13 +116,21 @@ function OnboardingPage() {
     await supabase.from("profiles").update(payload as never).eq("id", user.id);
   }
 
-  async function completeOnboarding() {
+  async function completeOnboarding(options: { acknowledgePrivacy?: boolean } = {}) {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { error } = await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    if (!user) throw new Error("Not signed in");
+    const payload = options.acknowledgePrivacy
+      ? { onboarding_completed: true, privacy_acknowledged_at: new Date().toISOString() }
+      : { onboarding_completed: true };
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(payload)
+      .eq("id", user.id)
+      .select("*")
+      .single();
     if (error) throw error;
     queryClient.setQueryData(["profile"], (prev: any) =>
-      prev ? { ...prev, onboarding_completed: true } : prev,
+      prev ? { ...prev, ...data } : data,
     );
     await queryClient.invalidateQueries({ queryKey: ["profile"] });
   }
