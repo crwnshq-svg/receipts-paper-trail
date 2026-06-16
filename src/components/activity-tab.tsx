@@ -467,11 +467,13 @@ function Field({
 function IncidentDialog({
   caseId,
   open,
+  editing,
   onOpenChange,
   onSaved,
 }: {
   caseId: string;
   open: boolean;
+  editing?: Incident | null;
   onOpenChange: (v: boolean) => void;
   onSaved: (newIncidentId?: string) => void;
 }) {
@@ -488,9 +490,25 @@ function IncidentDialog({
   const [saving, setSaving] = useState(false);
   const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
 
-  // When the dialog opens, pop any AI-supplied prefill and apply it.
+  const isEdit = !!editing;
+
+  // When opening for edit, prefill from the editing record.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !editing) return;
+    setTitle(editing.title ?? "");
+    setWho(editing.who_involved ?? "");
+    setWhat(editing.what_happened ?? "");
+    setExtraNotes(editing.notes ?? "");
+    setLocation(editing.location ?? "");
+    const d = new Date(editing.occurred_at);
+    setOccurredAt(isNaN(+d) ? new Date().toISOString().slice(0, 16) : d.toISOString().slice(0, 16));
+    setDocIds(toIds(editing.document_ids));
+    setPrefilled({});
+  }, [open, editing?.id]);
+
+  // When the dialog opens for a NEW event, pop any AI-supplied prefill.
+  useEffect(() => {
+    if (!open || editing) return;
     const pre = popPrefill<Record<string, any>>("incident");
     if (!pre) return;
     const marks: Record<string, boolean> = {};
@@ -507,7 +525,6 @@ function IncidentDialog({
       setDocIds(pre.suggested_document_ids.filter((x) => typeof x === "string"));
       marks.docIds = true;
     }
-    // Witness-logging prefill: fold structured witness fields into the form.
     const witnessParts = [pre.witness_name, pre.witness_contact, pre.witness_location]
       .filter((x) => typeof x === "string" && x.trim().length > 0);
     if (witnessParts.length > 0 && !marks.who) {
@@ -519,7 +536,7 @@ function IncidentDialog({
       marks.what = true;
     }
     setPrefilled(marks);
-  }, [open]);
+  }, [open, editing]);
 
   function reset() {
     setTitle("");
@@ -541,24 +558,39 @@ function IncidentDialog({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
-      // Auto-derive title from the first ~70 chars of "what happened" if blank.
       const autoTitle = title.trim() || what.trim().split(/[.\n]/)[0].slice(0, 70).trim() || "Event";
-      const { data: inserted, error } = await supabase.from("incidents").insert({
-        case_id: caseId,
-        user_id: user.id,
-        title: autoTitle,
+      const payload = {
         who_involved: who || null,
         what_happened: what,
         notes: extraNotes || null,
         location: location || null,
         occurred_at: new Date(occurredAt).toISOString(),
+        title: autoTitle,
         document_ids: docIds as never,
-      }).select("id").single();
-      if (error) throw error;
-      toast.success("Event logged");
-      onOpenChange(false);
-      reset();
-      onSaved(inserted?.id);
+      };
+      if (isEdit && editing) {
+        // Preserve created_at; stamp edited_at.
+        const { error } = await supabase
+          .from("incidents")
+          .update({ ...payload, edited_at: new Date().toISOString() } as any)
+          .eq("id", editing.id);
+        if (error) throw error;
+        toast.success("Event updated");
+        onOpenChange(false);
+        reset();
+        onSaved(editing.id);
+      } else {
+        const { data: inserted, error } = await supabase.from("incidents").insert({
+          case_id: caseId,
+          user_id: user.id,
+          ...payload,
+        }).select("id").single();
+        if (error) throw error;
+        toast.success("Event logged");
+        onOpenChange(false);
+        reset();
+        onSaved(inserted?.id);
+      }
 
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
@@ -571,7 +603,7 @@ function IncidentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log an Event</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Event" : "Log an Event"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={add} className="space-y-3">
           {/* AI-style opening bubble — one question at a time */}
