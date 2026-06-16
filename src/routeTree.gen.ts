@@ -18,9 +18,12 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedResourcesRouteImport } from './routes/_authenticated/resources'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
+import { Route as AuthenticatedEventsRouteImport } from './routes/_authenticated/events'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
+import { Route as AuthenticatedNotificationsNotificationIdRouteImport } from './routes/_authenticated/notifications.$notificationId'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases_.new'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
 import { Route as AuthenticatedCasesCaseIdDocumentsDocIdRouteImport } from './routes/_authenticated/cases.$caseId.documents.$docId'
@@ -70,9 +73,19 @@ const AuthenticatedNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedEventsRoute = AuthenticatedEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiRoute = AuthenticatedAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
@@ -85,6 +98,12 @@ const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
   path: '/cases/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedNotificationsNotificationIdRoute =
+  AuthenticatedNotificationsNotificationIdRouteImport.update({
+    id: '/$notificationId',
+    path: '/$notificationId',
+    getParentRoute: () => AuthenticatedNotificationsRoute,
+  } as any)
 const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
   id: '/cases_/new',
   path: '/cases/new',
@@ -109,13 +128,16 @@ export interface FileRoutesByFullPath {
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/account': typeof AuthenticatedAccountRoute
+  '/ai': typeof AuthenticatedAiRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/notifications': typeof AuthenticatedNotificationsRoute
+  '/events': typeof AuthenticatedEventsRoute
+  '/notifications': typeof AuthenticatedNotificationsRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/notifications/$notificationId': typeof AuthenticatedNotificationsNotificationIdRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
   '/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
@@ -125,13 +147,16 @@ export interface FileRoutesByTo {
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/account': typeof AuthenticatedAccountRoute
+  '/ai': typeof AuthenticatedAiRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/notifications': typeof AuthenticatedNotificationsRoute
+  '/events': typeof AuthenticatedEventsRoute
+  '/notifications': typeof AuthenticatedNotificationsRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/notifications/$notificationId': typeof AuthenticatedNotificationsNotificationIdRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
   '/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
@@ -143,13 +168,16 @@ export interface FileRoutesById {
   '/get-started': typeof GetStartedRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
+  '/_authenticated/ai': typeof AuthenticatedAiRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
+  '/_authenticated/events': typeof AuthenticatedEventsRoute
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/resources': typeof AuthenticatedResourcesRoute
   '/api/chat': typeof ApiChatRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/_authenticated/cases_/new': typeof AuthenticatedCasesNewRoute
+  '/_authenticated/notifications/$notificationId': typeof AuthenticatedNotificationsNotificationIdRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
   '/_authenticated/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
@@ -161,13 +189,16 @@ export interface FileRouteTypes {
     | '/get-started'
     | '/sitemap.xml'
     | '/account'
+    | '/ai'
     | '/dashboard'
+    | '/events'
     | '/notifications'
     | '/onboarding'
     | '/resources'
     | '/api/chat'
     | '/cases/$caseId'
     | '/cases/new'
+    | '/notifications/$notificationId'
     | '/cases/'
     | '/cases/$caseId/documents/$docId'
   fileRoutesByTo: FileRoutesByTo
@@ -177,13 +208,16 @@ export interface FileRouteTypes {
     | '/get-started'
     | '/sitemap.xml'
     | '/account'
+    | '/ai'
     | '/dashboard'
+    | '/events'
     | '/notifications'
     | '/onboarding'
     | '/resources'
     | '/api/chat'
     | '/cases/$caseId'
     | '/cases/new'
+    | '/notifications/$notificationId'
     | '/cases'
     | '/cases/$caseId/documents/$docId'
   id:
@@ -194,13 +228,16 @@ export interface FileRouteTypes {
     | '/get-started'
     | '/sitemap.xml'
     | '/_authenticated/account'
+    | '/_authenticated/ai'
     | '/_authenticated/dashboard'
+    | '/_authenticated/events'
     | '/_authenticated/notifications'
     | '/_authenticated/onboarding'
     | '/_authenticated/resources'
     | '/api/chat'
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases_/new'
+    | '/_authenticated/notifications/$notificationId'
     | '/_authenticated/cases/'
     | '/_authenticated/cases/$caseId/documents/$docId'
   fileRoutesById: FileRoutesById
@@ -279,11 +316,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/events': {
+      id: '/_authenticated/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof AuthenticatedEventsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ai': {
+      id: '/_authenticated/ai'
+      path: '/ai'
+      fullPath: '/ai'
+      preLoaderRoute: typeof AuthenticatedAiRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/account': {
@@ -299,6 +350,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cases/'
       preLoaderRoute: typeof AuthenticatedCasesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/notifications/$notificationId': {
+      id: '/_authenticated/notifications/$notificationId'
+      path: '/$notificationId'
+      fullPath: '/notifications/$notificationId'
+      preLoaderRoute: typeof AuthenticatedNotificationsNotificationIdRouteImport
+      parentRoute: typeof AuthenticatedNotificationsRoute
     }
     '/_authenticated/cases_/new': {
       id: '/_authenticated/cases_/new'
@@ -324,6 +382,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedNotificationsRouteChildren {
+  AuthenticatedNotificationsNotificationIdRoute: typeof AuthenticatedNotificationsNotificationIdRoute
+}
+
+const AuthenticatedNotificationsRouteChildren: AuthenticatedNotificationsRouteChildren =
+  {
+    AuthenticatedNotificationsNotificationIdRoute:
+      AuthenticatedNotificationsNotificationIdRoute,
+  }
+
+const AuthenticatedNotificationsRouteWithChildren =
+  AuthenticatedNotificationsRoute._addFileChildren(
+    AuthenticatedNotificationsRouteChildren,
+  )
+
 interface AuthenticatedCasesCaseIdRouteChildren {
   AuthenticatedCasesCaseIdDocumentsDocIdRoute: typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
@@ -341,8 +414,10 @@ const AuthenticatedCasesCaseIdRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
+  AuthenticatedAiRoute: typeof AuthenticatedAiRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
+  AuthenticatedEventsRoute: typeof AuthenticatedEventsRoute
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRouteWithChildren
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRoute
   AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRouteWithChildren
@@ -352,8 +427,10 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
+  AuthenticatedAiRoute: AuthenticatedAiRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
+  AuthenticatedEventsRoute: AuthenticatedEventsRoute,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRouteWithChildren,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedResourcesRoute: AuthenticatedResourcesRoute,
   AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRouteWithChildren,

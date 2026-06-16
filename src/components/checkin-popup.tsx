@@ -43,10 +43,10 @@ export function CheckInPopup() {
       const caseIds = active.map((c) => c.id);
       const { data: flags } = await supabase
         .from("passive_ai_flags")
-        .select("case_id,flag_title,severity,is_dismissed")
+        .select("case_id,flag_message,is_dismissed,created_at")
         .in("case_id", caseIds)
         .eq("is_dismissed", false)
-        .eq("severity", "high")
+        .order("created_at", { ascending: false })
         .limit(1);
       if (flags && flags.length > 0) {
         const f = flags[0];
@@ -55,7 +55,8 @@ export function CheckInPopup() {
           c.opposing_party && c.opposing_party.trim().length > 0
             ? c.opposing_party
             : c.title;
-        return { kind: "urgent", caseId: c.id, caseLabel: label, issue: f.flag_title };
+        const issue = (f.flag_message ?? "").split(/[.\n]/)[0].slice(0, 120) || "a flagged issue";
+        return { kind: "urgent", caseId: c.id, caseLabel: label, issue };
       }
 
       const top = active[0];
