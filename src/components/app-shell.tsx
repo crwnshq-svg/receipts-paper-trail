@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card md:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {nav.map((n) => {
             const active = pathname.startsWith(n.to);
             return (
@@ -157,6 +157,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
+      {/* Persistent floating AI button — hidden on /ai itself */}
+      {!pathname.startsWith("/ai") && (
+        <Link
+          to="/ai"
+          aria-label="Open RECEIPTS AI"
+          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg hover:bg-accent/90 transition-transform hover:scale-105"
+        >
+          <MessageSquarePlus className="h-6 w-6" />
+        </Link>
+      )}
+
+      <CheckInPopup />
       <PushPermissionPrompt />
     </div>
   );
