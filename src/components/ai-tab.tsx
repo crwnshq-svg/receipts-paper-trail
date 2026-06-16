@@ -23,7 +23,7 @@ import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { loadConversation, saveConversation } from "@/lib/conversation.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
-import { setPrefill, popPrefill } from "@/lib/prefill";
+import { setPrefill, popPrefill, PREFILL_EVENT } from "@/lib/prefill";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
 
 const DISCLAIMER_LINE =
