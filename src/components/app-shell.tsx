@@ -82,11 +82,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
     { to: "/cases", label: "Files", icon: FolderOpen, badge: 0 },
-    { to: "/ai", label: "AI", icon: Sparkles, badge: 0 },
-    { to: "/notifications", label: "Alerts", icon: Bell, badge: unreadCount },
     { to: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
     { to: "/account", label: "Account", icon: UserCircle, badge: 0 },
   ] as const;
+
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
