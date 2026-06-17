@@ -238,27 +238,28 @@ function Dashboard() {
               ? `opens already knowing this is ${single.title}`
               : "knows about all your files — ask anything";
             const inner = (
-              <Card className="cursor-pointer border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 transition-shadow hover:shadow-md">
+              <Card className="cursor-pointer rounded-xl border-l-4 border-l-emerald-500 border-y border-r border-emerald-500/20 bg-emerald-500/10 p-4 shadow-sm transition-colors hover:bg-emerald-500/15">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-primary/15 p-2.5">
-                    <MessageSquarePlus className="h-5 w-5 text-primary" />
+                  <div className="rounded-md bg-emerald-500/15 p-2 text-emerald-400">
+                    <MessageSquarePlus className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">Talk to your companion</div>
                     <div className="text-xs text-muted-foreground">{subtext}</div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-primary" />
+                  <ArrowRight className="h-4 w-4 text-emerald-400" />
                 </div>
               </Card>
             );
             return single ? (
-              <Link to="/cases/$caseId" params={{ caseId: single.id }} search={{ tab: "ai" }}>
+              <Link to="/cases/$caseId" params={{ caseId: single.id }} search={{ tab: "ai" }} className="block">
                 {inner}
               </Link>
             ) : (
-              <Link to="/ai">{inner}</Link>
+              <Link to="/ai" className="block">{inner}</Link>
             );
           })()}
+
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
