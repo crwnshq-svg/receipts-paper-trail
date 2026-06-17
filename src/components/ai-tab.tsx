@@ -430,7 +430,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
     },
   })).current;
 
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, setMessages, status } = useChat({
     id: sessionKey,
     messages: initialMessages,
     transport,
@@ -452,6 +452,57 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   async function doSend(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
+
+    // Intercept: collecting a missing profile field. Save the answer directly
+    // to the case row without spending an AI question.
+    if (pendingCollectRef.current && caseId) {
+      const field = pendingCollectRef.current.field;
+      const parsed = parseCollectedValue(field, trimmed);
+      if ("error" in parsed) {
+        toast.error(parsed.error);
+        return;
+      }
+      pendingCollectRef.current = null;
+      setInput("");
+      const userMsg: any = {
+        id: `collect-u-${Date.now()}`,
+        role: "user",
+        parts: [{ type: "text", text: trimmed }],
+      };
+      const ackMsg: any = {
+        id: `collect-a-${Date.now() + 1}`,
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            text: `Saved — I noted your ${COLLECT_LABELS[field] ?? field} as "${parsed.display}". You can update it any time from the file profile.`,
+          },
+        ],
+      };
+      const nextMessages = [...messages, userMsg, ackMsg];
+      setMessages(nextMessages as any);
+      try {
+        const { error } = await supabase
+          .from("cases")
+          .update({ [field]: parsed.value } as any)
+          .eq("id", caseId);
+        if (error) throw error;
+        qcCollect.invalidateQueries({ queryKey: ["case", caseId] });
+        qcCollect.invalidateQueries({ queryKey: ["cases"] });
+        saveFn({ data: { caseId, messages: nextMessages as any[] } }).catch(() => {});
+        // Clear the collect param from the URL so a refresh doesn't re-seed.
+        navigateCollect({
+          to: "/cases/$caseId",
+          params: { caseId },
+          search: { tab: "ai" } as any,
+          replace: true,
+        } as any);
+      } catch (e: any) {
+        toast.error(e?.message ?? "Could not save");
+      }
+      return;
+    }
+
     // Fire the question-counter decrement in parallel — don't block streaming on it.
     if (!isPaid) {
       consume()
@@ -469,6 +520,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
     setInput("");
     await sendMessage({ text: trimmed });
   }
+
 
   // Auto-fire the first AI response when ?ask=event:<id> / alert:<id> / urgent:<caseId> is present.
   useEffect(() => {
