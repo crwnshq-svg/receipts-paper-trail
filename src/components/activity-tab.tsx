@@ -349,7 +349,7 @@ export function ActivityTab({
                       <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         <StickyNote className="h-3 w-3" /> Note
                         <span className="font-normal">
-                          · {new Date(f.data.created_at).toLocaleString()}
+                          · {safeDate(f.data.created_at)}
                         </span>
                         {f.data.reminder_at && (
                           <span
