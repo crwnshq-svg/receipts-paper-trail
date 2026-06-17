@@ -43,7 +43,7 @@ import {
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
 const searchSchema = z.object({
-  tab: z.enum(["incidents", "documents", "timeline"]).optional(),
+  tab: z.enum(["incidents", "documents", "ai", "timeline"]).optional(),
   action: z.enum(["new", "upload"]).optional(),
   generate: z.string().optional(),
   ask: z.string().optional(),
