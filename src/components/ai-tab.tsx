@@ -565,6 +565,18 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
         } else if (kind === "urgent" && id) {
           prompt =
             `[CONTEXT] The check-in surfaced an urgent issue on this file. Brief me on the most important active concern and one concrete next step I should take right now.`;
+        } else if (kind === "collect" && id && caseId) {
+          const question = COLLECT_QUESTIONS[id];
+          if (question) {
+            pendingCollectRef.current = { field: id };
+            const seedMsg: any = {
+              id: `collect-q-${Date.now()}`,
+              role: "assistant",
+              parts: [{ type: "text", text: question }],
+            };
+            setMessages([seedMsg] as any);
+          }
+          return;
         }
       } catch (err) {
         console.warn("ask context load failed", err);
@@ -574,6 +586,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ask]);
+
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
