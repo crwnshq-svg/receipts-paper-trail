@@ -182,6 +182,7 @@ export type Database = {
           monthly_rent: number | null
           opposing_party: string | null
           position: string | null
+          profile_complete_celebrated: boolean
           property_management_company: string | null
           salary: number | null
           security_deposit: number | null
@@ -217,6 +218,7 @@ export type Database = {
           monthly_rent?: number | null
           opposing_party?: string | null
           position?: string | null
+          profile_complete_celebrated?: boolean
           property_management_company?: string | null
           salary?: number | null
           security_deposit?: number | null
@@ -252,6 +254,7 @@ export type Database = {
           monthly_rent?: number | null
           opposing_party?: string | null
           position?: string | null
+          profile_complete_celebrated?: boolean
           property_management_company?: string | null
           salary?: number | null
           security_deposit?: number | null

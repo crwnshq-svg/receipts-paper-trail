@@ -1,0 +1,1 @@
+ALTER TABLE public.cases ADD COLUMN IF NOT EXISTS profile_complete_celebrated boolean NOT NULL DEFAULT false;
