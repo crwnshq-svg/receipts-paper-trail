@@ -214,6 +214,13 @@ function CaseDetail() {
           )}
         </div>
 
+        <CaseOverviewHeader
+          caseRow={caseRow as any}
+          isPaid={isPaid}
+          onConsumed={setAiUsed}
+          onLimitHit={() => setShowUpgrade(true)}
+        />
+
         <Tabs value={initialTab} onValueChange={(v) => switchTab(v as any)}>
           <TabsList>
             <TabsTrigger value="incidents">Activity ({incidents?.length ?? 0})</TabsTrigger>
