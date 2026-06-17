@@ -121,7 +121,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card md:hidden">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-4">
           {nav.map((n) => {
             const active = pathname.startsWith(n.to);
             return (
