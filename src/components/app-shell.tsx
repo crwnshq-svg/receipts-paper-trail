@@ -24,21 +24,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   }
 
-  // Unread notification count (live)
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["notifications-unread"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return 0;
-      const { count } = await supabase
-        .from("notifications").select("id", { count: "exact", head: true })
-        .eq("user_id", user.id).eq("is_read", false);
-      return count ?? 0;
-    },
-    refetchInterval: 30_000,
-  });
-
   // Touch last_active_at once per session + register SW for push
+
   useEffect(() => {
     if (touched.current) return;
     touched.current = true;
