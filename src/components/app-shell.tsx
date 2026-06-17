@@ -143,16 +143,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      {/* Persistent floating AI button — hidden on /ai itself */}
-      {!pathname.startsWith("/ai") && (
-        <Link
-          to="/ai"
-          aria-label="Open RECEIPTS AI"
-          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg hover:bg-accent/90 transition-transform hover:scale-105"
-        >
-          <MessageSquarePlus className="h-6 w-6" />
-        </Link>
-      )}
+
+
 
       <CheckInPopup />
       <PushPermissionPrompt />
