@@ -21,14 +21,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle, Upload, Download } from "lucide-react";
+import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
 import { popPrefill } from "@/lib/prefill";
-import { analyzeIncident, analyzeDocument } from "@/lib/document-intelligence.functions";
-import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
-import { exportCaseZip } from "@/lib/case-export";
+import { analyzeIncident } from "@/lib/document-intelligence.functions";
 
 
 type Incident = {
