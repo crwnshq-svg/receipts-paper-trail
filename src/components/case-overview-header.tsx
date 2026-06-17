@@ -279,7 +279,7 @@ export function CaseOverviewHeader({
     if (missingField) {
       return {
         label: `Add your ${missingField.label} to this file's profile`,
-        onClick: () => goActivity(),
+        onClick: () => goAi(`collect:${missingField.key}`),
       };
     }
     return {
