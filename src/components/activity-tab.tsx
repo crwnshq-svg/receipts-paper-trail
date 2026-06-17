@@ -270,7 +270,7 @@ export function ActivityTab({
                       <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
                         <AlertCircle className="h-3 w-3" /> Event
                         <span className="font-normal text-muted-foreground">
-                          · {new Date(f.data.occurred_at).toLocaleString()}
+                          · {safeDate(f.data.occurred_at, f.data.created_at)}
                         </span>
                         {analyzingIds.has(f.data.id) && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal normal-case text-muted-foreground">
