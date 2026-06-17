@@ -63,6 +63,17 @@ function toQuestions(value: unknown): string[] {
     : [];
 }
 
+function safeDate(...candidates: Array<string | null | undefined>): string {
+  for (const c of candidates) {
+    if (!c) continue;
+    const d = new Date(c);
+    if (!Number.isNaN(+d)) return d.toLocaleString();
+  }
+  return "Date unknown";
+}
+
+
+
 
 export function ActivityTab({
   caseId,
