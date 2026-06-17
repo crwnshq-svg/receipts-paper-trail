@@ -248,7 +248,7 @@ function CaseDetail() {
             <TabsTrigger value="incidents">Activity ({incidents?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="documents">Evidence Vault ({docs?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
-            <TabsTrigger value="ai">RECEIPTS AI</TabsTrigger>
+            
           </TabsList>
 
           <TabsContent value="incidents" className="mt-4">
