@@ -57,6 +57,7 @@ type CaseRow = {
   supervisor_name: string | null;
   work_location: string | null;
   has_written_contract: boolean | null;
+  profile_complete_celebrated?: boolean | null;
 };
 
 export function CaseOverviewHeader({
