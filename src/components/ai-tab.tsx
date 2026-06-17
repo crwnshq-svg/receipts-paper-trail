@@ -575,7 +575,7 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
               role: "assistant",
               parts: [{ type: "text", text: question }],
             };
-            setMessages([seedMsg] as any);
+            setMessages([...messages, seedMsg] as any);
           }
           return;
         }
