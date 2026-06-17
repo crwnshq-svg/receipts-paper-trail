@@ -1,10 +1,10 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell, Sparkles, MessageSquarePlus } from "lucide-react";
+import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell, MessageSquarePlus } from "lucide-react";
 import { CheckInPopup } from "@/components/checkin-popup";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -24,21 +24,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   }
 
-  // Unread notification count (live)
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["notifications-unread"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return 0;
-      const { count } = await supabase
-        .from("notifications").select("id", { count: "exact", head: true })
-        .eq("user_id", user.id).eq("is_read", false);
-      return count ?? 0;
-    },
-    refetchInterval: 30_000,
-  });
-
   // Touch last_active_at once per session + register SW for push
+
   useEffect(() => {
     if (touched.current) return;
     touched.current = true;
@@ -95,11 +82,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
     { to: "/cases", label: "Files", icon: FolderOpen, badge: 0 },
-    { to: "/ai", label: "AI", icon: Sparkles, badge: 0 },
-    { to: "/notifications", label: "Alerts", icon: Bell, badge: unreadCount },
     { to: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
     { to: "/account", label: "Account", icon: UserCircle, badge: 0 },
   ] as const;
+
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
@@ -135,7 +121,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card md:hidden">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-4">
           {nav.map((n) => {
             const active = pathname.startsWith(n.to);
             return (
