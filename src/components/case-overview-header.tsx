@@ -90,7 +90,7 @@ export function CaseOverviewHeader({
     queryFn: async () => {
       const { data } = await supabase
         .from("documents")
-        .select("id, file_name, detected_type, ai_summary")
+        .select("id, file_name, detected_type, ai_summary, extracted_data")
         .eq("case_id", caseId);
       return data ?? [];
     },
@@ -113,7 +113,54 @@ export function CaseOverviewHeader({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const [activeInsight, setActiveInsight] = useState<InsightRow | null>(null);
+
+  async function transitionToOngoing() {
+    setTransitioning(true);
+    try {
+      // Look for a verified date on a relevant uploaded document
+      const relevant = (docs ?? []).find((d) => {
+        const t = (d.detected_type || "").toLowerCase();
+        const n = (d.file_name || "").toLowerCase();
+        if (isRenting) return t.includes("lease") || n.includes("lease");
+        if (isEmployment)
+          return (
+            t.includes("offer") ||
+            t.includes("contract") ||
+            t.includes("employment") ||
+            n.includes("offer") ||
+            n.includes("contract")
+          );
+        return false;
+      });
+      const ex = (relevant?.extracted_data ?? null) as Record<string, unknown> | null;
+      const candidate =
+        (ex?.signed_date as string | undefined) ??
+        (ex?.effective_date as string | undefined) ??
+        (ex?.start_date as string | undefined) ??
+        (ex?.lease_start_date as string | undefined) ??
+        (ex?.date as string | undefined) ??
+        null;
+      let transitionedAt = new Date().toISOString();
+      if (candidate) {
+        const parsed = new Date(candidate);
+        if (!Number.isNaN(+parsed)) transitionedAt = parsed.toISOString();
+      }
+      const { error } = await supabase
+        .from("cases")
+        .update({ lifecycle_stage: "ongoing", lifecycle_transitioned_at: transitionedAt } as any)
+        .eq("id", caseId);
+      if (error) throw error;
+      toast.success("Marked as ongoing");
+      qc.invalidateQueries({ queryKey: ["case", caseId] });
+      qc.invalidateQueries({ queryKey: ["cases"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not update");
+    } finally {
+      setTransitioning(false);
+    }
+  }
 
   // ----- Lifecycle pill -----
   const stage = (caseRow.lifecycle_stage || "").toLowerCase();
@@ -269,7 +316,7 @@ export function CaseOverviewHeader({
     <div className="space-y-4">
       {/* Lifecycle pill */}
       {(isOngoing || isPre) && (
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <Badge
             className={
               isOngoing
@@ -284,8 +331,26 @@ export function CaseOverviewHeader({
               {isOngoing ? "ongoing since" : "noted since"} {sinceLabel}
             </span>
           )}
+          {isPre && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 border-emerald-500/40 px-2 text-[11px] text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-400"
+              onClick={transitionToOngoing}
+              disabled={transitioning}
+            >
+              {transitioning
+                ? "Updating…"
+                : isRenting
+                  ? "I signed the lease"
+                  : isEmployment
+                    ? "I accepted the offer"
+                    : "This is now active"}
+            </Button>
+          )}
         </div>
       )}
+
 
       {/* Next step line */}
       <button
