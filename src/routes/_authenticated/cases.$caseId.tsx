@@ -30,6 +30,7 @@ import { TimelineTab } from "@/components/timeline-tab";
 import { FREE_STORAGE_BYTES } from "@/lib/constants";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
+import { CaseOverviewHeader } from "@/components/case-overview-header";
 
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
@@ -212,6 +213,13 @@ function CaseDetail() {
             </Card>
           )}
         </div>
+
+        <CaseOverviewHeader
+          caseRow={caseRow as any}
+          isPaid={isPaid}
+          onConsumed={setAiUsed}
+          onLimitHit={() => setShowUpgrade(true)}
+        />
 
         <Tabs value={initialTab} onValueChange={(v) => switchTab(v as any)}>
           <TabsList>
