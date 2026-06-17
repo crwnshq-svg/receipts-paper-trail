@@ -90,7 +90,7 @@ export function CaseOverviewHeader({
     queryFn: async () => {
       const { data } = await supabase
         .from("documents")
-        .select("id, file_name, detected_type, ai_summary")
+        .select("id, file_name, detected_type, ai_summary, extracted_data")
         .eq("case_id", caseId);
       return data ?? [];
     },
