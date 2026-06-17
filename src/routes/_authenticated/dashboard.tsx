@@ -17,7 +17,7 @@ import {
 import {
   Plus, FolderOpen, FileText, Clock, ListChecks, Brain, CheckCircle2,
   PenSquare, Upload, MessageSquare, Lightbulb, ArrowRight, BookOpen, Sparkles,
-  MoreVertical, Pencil, Trash2, Check, X, Download,
+  MoreVertical, Pencil, Trash2, Check, X, Download, MessageSquarePlus,
 } from "lucide-react";
 import { exportCaseZip } from "@/lib/case-export";
 import { Input } from "@/components/ui/input";
@@ -229,6 +229,36 @@ function Dashboard() {
             </Link>
           </div>
 
+          {/* Companion entry banner */}
+          {(() => {
+            const activeFiles = caseList.filter((c) => c.status === "active");
+            if (activeFiles.length === 0) return null;
+            const single = activeFiles.length === 1 ? activeFiles[0] : null;
+            const subtext = single
+              ? `opens already knowing this is ${single.title}`
+              : "knows about all your files — ask anything";
+            const inner = (
+              <Card className="cursor-pointer border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 transition-shadow hover:shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-primary/15 p-2.5">
+                    <MessageSquarePlus className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold">Talk to your companion</div>
+                    <div className="text-xs text-muted-foreground">{subtext}</div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-primary" />
+                </div>
+              </Card>
+            );
+            return single ? (
+              <Link to="/cases/$caseId" params={{ caseId: single.id }} search={{ tab: "ai" }}>
+                {inner}
+              </Link>
+            ) : (
+              <Link to="/ai">{inner}</Link>
+            );
+          })()}
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

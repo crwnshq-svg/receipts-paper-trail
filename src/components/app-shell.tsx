@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell, MessageSquarePlus } from "lucide-react";
+import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell } from "lucide-react";
 import { CheckInPopup } from "@/components/checkin-popup";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -143,16 +143,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      {/* Persistent floating AI button — hidden on /ai itself */}
-      {!pathname.startsWith("/ai") && (
-        <Link
-          to="/ai"
-          aria-label="Open RECEIPTS AI"
-          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg hover:bg-accent/90 transition-transform hover:scale-105"
-        >
-          <MessageSquarePlus className="h-6 w-6" />
-        </Link>
-      )}
+
+
 
       <CheckInPopup />
       <PushPermissionPrompt />
