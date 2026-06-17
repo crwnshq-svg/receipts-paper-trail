@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell, MessageSquarePlus } from "lucide-react";
+import { ReceiptText, FolderOpen, LayoutDashboard, LogOut, BookOpen, UserCircle, Bell } from "lucide-react";
 import { CheckInPopup } from "@/components/checkin-popup";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
