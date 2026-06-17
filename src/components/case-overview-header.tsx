@@ -21,6 +21,8 @@ import {
   FolderOpen,
   ArrowRight,
   Lightbulb,
+  Award,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
