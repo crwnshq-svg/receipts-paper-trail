@@ -526,7 +526,8 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   useEffect(() => {
     if (askFired.current) return;
     if (!ask) return;
-    if (messages.length > 0) return; // don't auto-send into an existing convo
+    const isCollect = ask.startsWith("collect:");
+    if (!isCollect && messages.length > 0) return; // don't auto-send into an existing convo
     askFired.current = true;
     (async () => {
       const [kind, id] = ask.split(":");
