@@ -318,27 +318,6 @@ function Dashboard() {
             )}
           </div>
 
-          {/* Recent activity */}
-          <div>
-            <h2 className="font-serif text-xl font-semibold">Recent activity</h2>
-            <Card className="mt-3 rounded-xl p-5 shadow-sm">
-              {activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Your activity will appear here as you build your file.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {activity.map((a) => (
-                    <li key={a.id} className="flex items-start gap-3">
-                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${ACTIVITY_DOT[a.type]}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm truncate">{a.text}</div>
-                        <div className="text-[11px] text-muted-foreground">{relTime(a.at)}</div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-          </div>
 
           {/* Featured resource */}
           <Card className="rounded-xl border-l-4 border-l-accent p-5 shadow-sm">
