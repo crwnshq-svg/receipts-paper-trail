@@ -269,7 +269,7 @@ export function CaseOverviewHeader({
     <div className="space-y-4">
       {/* Lifecycle pill */}
       {(isOngoing || isPre) && (
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <Badge
             className={
               isOngoing
@@ -284,8 +284,26 @@ export function CaseOverviewHeader({
               {isOngoing ? "ongoing since" : "noted since"} {sinceLabel}
             </span>
           )}
+          {isPre && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 border-emerald-500/40 px-2 text-[11px] text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-400"
+              onClick={transitionToOngoing}
+              disabled={transitioning}
+            >
+              {transitioning
+                ? "Updating…"
+                : isRenting
+                  ? "I signed the lease"
+                  : isEmployment
+                    ? "I accepted the offer"
+                    : "This is now active"}
+            </Button>
+          )}
         </div>
       )}
+
 
       {/* Next step line */}
       <button
