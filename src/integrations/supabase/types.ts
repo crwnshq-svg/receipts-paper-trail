@@ -132,6 +132,35 @@ export type Database = {
           },
         ]
       }
+      case_settings: {
+        Row: {
+          case_id: string
+          created_at: string
+          show_salary: boolean
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          show_salary?: boolean
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          show_salary?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_settings_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           case_name: string | null
@@ -139,18 +168,34 @@ export type Database = {
           custom_sub_type: string | null
           description: string | null
           dispute_type: Database["public"]["Enums"]["dispute_type"]
+          employment_type: string | null
           foundation_doc_pending: boolean
+          has_written_contract: boolean | null
           id: string
+          intro_notes: string | null
+          landlord_name: string | null
+          lease_end_date: string | null
+          lease_status: string | null
+          lifecycle_stage: string
+          lifecycle_transitioned_at: string | null
           module: Database["public"]["Enums"]["case_module"] | null
+          monthly_rent: number | null
           opposing_party: string | null
+          position: string | null
+          property_management_company: string | null
+          salary: number | null
+          security_deposit: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["case_status"]
           status_level: Database["public"]["Enums"]["case_status_level"]
           strength_score: number
           sub_type: string | null
+          supervisor_name: string | null
           title: string
+          unit_number: string | null
           updated_at: string
           user_id: string
+          work_location: string | null
         }
         Insert: {
           case_name?: string | null
@@ -158,18 +203,34 @@ export type Database = {
           custom_sub_type?: string | null
           description?: string | null
           dispute_type: Database["public"]["Enums"]["dispute_type"]
+          employment_type?: string | null
           foundation_doc_pending?: boolean
+          has_written_contract?: boolean | null
           id?: string
+          intro_notes?: string | null
+          landlord_name?: string | null
+          lease_end_date?: string | null
+          lease_status?: string | null
+          lifecycle_stage?: string
+          lifecycle_transitioned_at?: string | null
           module?: Database["public"]["Enums"]["case_module"] | null
+          monthly_rent?: number | null
           opposing_party?: string | null
+          position?: string | null
+          property_management_company?: string | null
+          salary?: number | null
+          security_deposit?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["case_status"]
           status_level?: Database["public"]["Enums"]["case_status_level"]
           strength_score?: number
           sub_type?: string | null
+          supervisor_name?: string | null
           title: string
+          unit_number?: string | null
           updated_at?: string
           user_id: string
+          work_location?: string | null
         }
         Update: {
           case_name?: string | null
@@ -177,18 +238,34 @@ export type Database = {
           custom_sub_type?: string | null
           description?: string | null
           dispute_type?: Database["public"]["Enums"]["dispute_type"]
+          employment_type?: string | null
           foundation_doc_pending?: boolean
+          has_written_contract?: boolean | null
           id?: string
+          intro_notes?: string | null
+          landlord_name?: string | null
+          lease_end_date?: string | null
+          lease_status?: string | null
+          lifecycle_stage?: string
+          lifecycle_transitioned_at?: string | null
           module?: Database["public"]["Enums"]["case_module"] | null
+          monthly_rent?: number | null
           opposing_party?: string | null
+          position?: string | null
+          property_management_company?: string | null
+          salary?: number | null
+          security_deposit?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["case_status"]
           status_level?: Database["public"]["Enums"]["case_status_level"]
           strength_score?: number
           sub_type?: string | null
+          supervisor_name?: string | null
           title?: string
+          unit_number?: string | null
           updated_at?: string
           user_id?: string
+          work_location?: string | null
         }
         Relationships: []
       }
