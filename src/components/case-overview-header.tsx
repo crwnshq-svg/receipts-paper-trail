@@ -555,6 +555,33 @@ export function CaseOverviewHeader({
           setActiveInsight(null);
         }}
       />
+
+      <Dialog open={showCelebrate} onOpenChange={setShowCelebrate}>
+        <DialogContent className="sm:max-w-md text-center">
+          <DialogHeader>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
+              <Award className="h-8 w-8 text-emerald-400" />
+            </div>
+            <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              achievement unlocked
+            </div>
+            <DialogTitle className="mt-1 text-center text-2xl">Profile complete</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            You filled in everything we know to ask about {caseRow.title} — your companion now has the full picture.
+          </p>
+          <p className="text-xs text-muted-foreground/70 italic">reward coming soon</p>
+          <DialogFooter className="sm:justify-center">
+            <Button
+              onClick={() => setShowCelebrate(false)}
+              className="bg-emerald-500 text-white hover:bg-emerald-500/90"
+            >
+              Nice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
