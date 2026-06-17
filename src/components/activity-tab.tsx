@@ -193,44 +193,17 @@ export function ActivityTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-end gap-2">
-        <input
-          ref={evidenceFileRef}
-          type="file"
-          hidden
-          onChange={onPickEvidence}
-          accept={EVIDENCE_ACCEPT}
-        />
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
-          variant="outline"
-          onClick={onExport}
-          disabled={exporting}
-          className="border-muted-foreground/30"
-        >
-          <Download className="mr-1 h-4 w-4" /> {exporting ? "Exporting…" : "Export File (zip)"}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => evidenceFileRef.current?.click()}
-          disabled={uploadingEvidence}
-          className="border-muted-foreground/30"
-        >
-          <Upload className="mr-1 h-4 w-4" /> {uploadingEvidence ? "Uploading…" : "Add Evidence"}
-        </Button>
-        <Button
-          variant="outline"
+          variant="ghost"
+          size="sm"
           onClick={() => setNoteOpen(true)}
-          className="border-muted-foreground/30"
+          className="text-muted-foreground hover:text-foreground"
         >
-          <StickyNote className="mr-1 h-4 w-4" /> Add Note
-        </Button>
-        <Button
-          onClick={() => setIncidentOpen(true)}
-          className="bg-primary text-primary-foreground hover:bg-accent"
-        >
-          <Plus className="mr-1 h-4 w-4" /> Log an Event
+          <StickyNote className="mr-1 h-3.5 w-3.5" /> Add a note
         </Button>
       </div>
+
 
       <IncidentDialog
         caseId={caseId}
