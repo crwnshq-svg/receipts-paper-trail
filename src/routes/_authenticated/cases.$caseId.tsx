@@ -192,15 +192,29 @@ function CaseDetail() {
                 <span>· Started {new Date(caseRow.created_at).toLocaleDateString()}</span>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDelete(true)}
-              className="text-destructive hover:text-destructive"
-              aria-label="Delete file"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" aria-label="File actions">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try { await exportCaseZip(caseId); } catch (e) { /* exportCaseZip toasts on error */ }
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" /> Export File (zip)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDelete(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete file
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {caseRow.description && (
             <p className="mt-3 max-w-3xl text-sm text-muted-foreground">{caseRow.description}</p>
