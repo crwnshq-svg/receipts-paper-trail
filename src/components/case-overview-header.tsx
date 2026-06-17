@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -21,6 +21,8 @@ import {
   FolderOpen,
   ArrowRight,
   Lightbulb,
+  Award,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
@@ -55,6 +57,7 @@ type CaseRow = {
   supervisor_name: string | null;
   work_location: string | null;
   has_written_contract: boolean | null;
+  profile_complete_celebrated?: boolean | null;
 };
 
 export function CaseOverviewHeader({
@@ -115,6 +118,54 @@ export function CaseOverviewHeader({
   const [uploading, setUploading] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [activeInsight, setActiveInsight] = useState<InsightRow | null>(null);
+  const [showCelebrate, setShowCelebrate] = useState(false);
+
+  // Module-specific required-fields completeness check.
+  const isRentingCase = caseRow.module === "landlord_tenant";
+  const isEmploymentCase = caseRow.module === "employer_employee";
+  const profileComplete = useMemo(() => {
+    if (isRentingCase) {
+      return Boolean(
+        caseRow.landlord_name &&
+          caseRow.property_management_company &&
+          caseRow.monthly_rent != null &&
+          caseRow.lease_end_date &&
+          caseRow.lease_status,
+      );
+    }
+    if (isEmploymentCase) {
+      return Boolean(
+        caseRow.employment_type &&
+          caseRow.supervisor_name &&
+          caseRow.work_location &&
+          caseRow.has_written_contract !== null,
+      );
+    }
+    return false;
+  }, [caseRow, isRentingCase, isEmploymentCase]);
+
+  // First-time celebration: fires once when all required fields are filled.
+  useEffect(() => {
+    if (!profileComplete) return;
+    if (caseRow.profile_complete_celebrated) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase
+        .from("cases")
+        .update({ profile_complete_celebrated: true } as any)
+        .eq("id", caseId)
+        .eq("profile_complete_celebrated", false);
+      if (cancelled) return;
+      if (!error) {
+        setShowCelebrate(true);
+        qc.invalidateQueries({ queryKey: ["case", caseId] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileComplete, caseRow.profile_complete_celebrated, caseId, qc]);
+
 
   async function transitionToOngoing() {
     setTransitioning(true);
@@ -279,7 +330,7 @@ export function CaseOverviewHeader({
     if (missingField) {
       return {
         label: `Add your ${missingField.label} to this file's profile`,
-        onClick: () => goActivity(),
+        onClick: () => goAi(`collect:${missingField.key}`),
       };
     }
     return {
@@ -504,6 +555,33 @@ export function CaseOverviewHeader({
           setActiveInsight(null);
         }}
       />
+
+      <Dialog open={showCelebrate} onOpenChange={setShowCelebrate}>
+        <DialogContent className="sm:max-w-md text-center">
+          <DialogHeader>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
+              <Award className="h-8 w-8 text-emerald-400" />
+            </div>
+            <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              achievement unlocked
+            </div>
+            <DialogTitle className="mt-1 text-center text-2xl">Profile complete</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            You filled in everything we know to ask about {caseRow.title} — your companion now has the full picture.
+          </p>
+          <p className="text-xs text-muted-foreground/70 italic">reward coming soon</p>
+          <DialogFooter className="sm:justify-center">
+            <Button
+              onClick={() => setShowCelebrate(false)}
+              className="bg-emerald-500 text-white hover:bg-emerald-500/90"
+            >
+              Nice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
