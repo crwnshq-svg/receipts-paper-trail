@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Upload, Trash2, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, ShieldAlert, MoreVertical, Download } from "lucide-react";
 import { toast } from "sonner";
 import { EditableText } from "@/components/editable-text";
 import { DeleteCaseDialog } from "@/components/delete-case-dialog";
@@ -30,7 +30,15 @@ import { TimelineTab } from "@/components/timeline-tab";
 import { FREE_STORAGE_BYTES } from "@/lib/constants";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
+import { exportCaseZip } from "@/lib/case-export";
 import { CaseOverviewHeader } from "@/components/case-overview-header";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
@@ -184,15 +192,29 @@ function CaseDetail() {
                 <span>· Started {new Date(caseRow.created_at).toLocaleDateString()}</span>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDelete(true)}
-              className="text-destructive hover:text-destructive"
-              aria-label="Delete file"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" aria-label="File actions">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try { await exportCaseZip(caseId); } catch (e) { /* exportCaseZip toasts on error */ }
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" /> Export File (zip)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDelete(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete file
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {caseRow.description && (
             <p className="mt-3 max-w-3xl text-sm text-muted-foreground">{caseRow.description}</p>

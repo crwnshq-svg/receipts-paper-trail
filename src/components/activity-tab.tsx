@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
@@ -21,14 +21,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle, Upload, Download } from "lucide-react";
+import { Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
 import { popPrefill } from "@/lib/prefill";
-import { analyzeIncident, analyzeDocument } from "@/lib/document-intelligence.functions";
-import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
-import { exportCaseZip } from "@/lib/case-export";
+import { analyzeIncident } from "@/lib/document-intelligence.functions";
 
 
 type Incident = {
@@ -65,6 +63,17 @@ function toQuestions(value: unknown): string[] {
     : [];
 }
 
+function safeDate(...candidates: Array<string | null | undefined>): string {
+  for (const c of candidates) {
+    if (!c) continue;
+    const d = new Date(c);
+    if (!Number.isNaN(+d)) return d.toLocaleString();
+  }
+  return "Date unknown";
+}
+
+
+
 
 export function ActivityTab({
   caseId,
@@ -85,35 +94,8 @@ export function ActivityTab({
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
   const callAnalyze = useServerFn(analyzeIncident);
-  const callAnalyzeDoc = useServerFn(analyzeDocument);
-  const evidenceFileRef = useRef<HTMLInputElement>(null);
-  const [uploadingEvidence, setUploadingEvidence] = useState(false);
-  const [exporting, setExporting] = useState(false);
 
-  async function onPickEvidence(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingEvidence(true);
-    try {
-      const inserted = await uploadEvidence({ file, caseId });
-      if (inserted) {
-        toast.success("Evidence uploaded — analyzing…");
-        qc.invalidateQueries({ queryKey: ["documents", caseId] });
-        qc.invalidateQueries({ queryKey: ["storage-usage"] });
-        callAnalyzeDoc({ data: { documentId: inserted.id } })
-          .then(() => qc.invalidateQueries({ queryKey: ["documents", caseId] }))
-          .catch((err) => console.warn("analyze failed", err));
-      }
-    } finally {
-      setUploadingEvidence(false);
-      if (evidenceFileRef.current) evidenceFileRef.current.value = "";
-    }
-  }
 
-  async function onExport() {
-    setExporting(true);
-    try { await exportCaseZip(caseId); } finally { setExporting(false); }
-  }
 
 
   useEffect(() => {
@@ -222,44 +204,17 @@ export function ActivityTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-end gap-2">
-        <input
-          ref={evidenceFileRef}
-          type="file"
-          hidden
-          onChange={onPickEvidence}
-          accept={EVIDENCE_ACCEPT}
-        />
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
-          variant="outline"
-          onClick={onExport}
-          disabled={exporting}
-          className="border-muted-foreground/30"
-        >
-          <Download className="mr-1 h-4 w-4" /> {exporting ? "Exporting…" : "Export File (zip)"}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => evidenceFileRef.current?.click()}
-          disabled={uploadingEvidence}
-          className="border-muted-foreground/30"
-        >
-          <Upload className="mr-1 h-4 w-4" /> {uploadingEvidence ? "Uploading…" : "Add Evidence"}
-        </Button>
-        <Button
-          variant="outline"
+          variant="ghost"
+          size="sm"
           onClick={() => setNoteOpen(true)}
-          className="border-muted-foreground/30"
+          className="text-muted-foreground hover:text-foreground"
         >
-          <StickyNote className="mr-1 h-4 w-4" /> Add Note
-        </Button>
-        <Button
-          onClick={() => setIncidentOpen(true)}
-          className="bg-primary text-primary-foreground hover:bg-accent"
-        >
-          <Plus className="mr-1 h-4 w-4" /> Log an Event
+          <StickyNote className="mr-1 h-3.5 w-3.5" /> Add a note
         </Button>
       </div>
+
 
       <IncidentDialog
         caseId={caseId}
@@ -315,7 +270,7 @@ export function ActivityTab({
                       <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
                         <AlertCircle className="h-3 w-3" /> Event
                         <span className="font-normal text-muted-foreground">
-                          · {new Date(f.data.occurred_at).toLocaleString()}
+                          · {safeDate(f.data.occurred_at, f.data.created_at)}
                         </span>
                         {analyzingIds.has(f.data.id) && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal normal-case text-muted-foreground">
@@ -394,7 +349,7 @@ export function ActivityTab({
                       <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         <StickyNote className="h-3 w-3" /> Note
                         <span className="font-normal">
-                          · {new Date(f.data.created_at).toLocaleString()}
+                          · {safeDate(f.data.created_at)}
                         </span>
                         {f.data.reminder_at && (
                           <span
