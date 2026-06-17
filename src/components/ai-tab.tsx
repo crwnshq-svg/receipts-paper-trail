@@ -319,6 +319,68 @@ function ChatPanel(props: {
   return <ChatPanelInner {...props} initialMessages={initial} startedAt={startedAt} />;
 }
 
+const COLLECT_QUESTIONS: Record<string, string> = {
+  landlord_name: "What's your landlord's name?",
+  property_management_company: "Who's the property management company? (If none, say 'none'.)",
+  monthly_rent: "What's your monthly rent? (just the number is fine)",
+  lease_end_date: "When does your lease end? (a date, e.g. 2026-05-01 or 'May 1 2026')",
+  lease_status: "What's your lease status — month-to-month, fixed-term, or expired?",
+  employment_type: "Is this full-time, part-time, contract, or at-will?",
+  supervisor_name: "Who's your direct supervisor?",
+  work_location: "Where do you work — office, remote, hybrid, or on-site?",
+  has_written_contract: "Do you have a written employment contract? (yes or no)",
+};
+
+const COLLECT_LABELS: Record<string, string> = {
+  landlord_name: "landlord",
+  property_management_company: "property management company",
+  monthly_rent: "monthly rent",
+  lease_end_date: "lease end date",
+  lease_status: "lease status",
+  employment_type: "employment type",
+  supervisor_name: "supervisor",
+  work_location: "work location",
+  has_written_contract: "written contract status",
+};
+
+function parseCollectedValue(
+  field: string,
+  raw: string,
+): { value: any; display: string } | { error: string } {
+  const t = raw.trim();
+  if (!t) return { error: "Please type an answer." };
+  switch (field) {
+    case "monthly_rent": {
+      const n = parseFloat(t.replace(/[^\d.]/g, ""));
+      if (!Number.isFinite(n) || n <= 0) return { error: "Couldn't read that as a number." };
+      return { value: n, display: `$${n.toLocaleString()}` };
+    }
+    case "lease_end_date": {
+      const d = new Date(t);
+      if (Number.isNaN(+d)) return { error: "Couldn't read that as a date." };
+      const iso = d.toISOString().slice(0, 10);
+      return { value: iso, display: iso };
+    }
+    case "has_written_contract": {
+      const low = t.toLowerCase();
+      if (/^(y|yes|yeah|yep|true|i do|i have)/.test(low)) return { value: true, display: "yes" };
+      if (/^(n|no|nope|none|false|i don'?t|i do not)/.test(low)) return { value: false, display: "no" };
+      return { error: "Please answer yes or no." };
+    }
+    case "property_management_company": {
+      if (/^(none|n\/?a|no)$/i.test(t)) return { value: null, display: "none" };
+      return { value: t, display: t };
+    }
+    case "lease_status":
+    case "employment_type":
+    case "work_location": {
+      return { value: t.toLowerCase(), display: t.toLowerCase() };
+    }
+    default:
+      return { value: t, display: t };
+  }
+}
+
 function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit, initialMessages, startedAt }: {
   caseId: string | null; isPaid: boolean; remaining: number; ask: string | null;
   onConsumed: (used: number) => void; onLimitHit: () => void;
@@ -330,6 +392,9 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   const scrollRef = useRef<HTMLDivElement>(null);
   const askFired = useRef(false);
   const pendingUploadRef = useRef<PendingUpload | null>(null);
+  const pendingCollectRef = useRef<{ field: string } | null>(null);
+  const navigateCollect = useNavigate();
+  const qcCollect = useQueryClient();
 
   useEffect(() => {
     if (!caseId) return;
