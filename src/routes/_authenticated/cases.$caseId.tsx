@@ -30,7 +30,15 @@ import { TimelineTab } from "@/components/timeline-tab";
 import { FREE_STORAGE_BYTES } from "@/lib/constants";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
+import { exportCaseZip } from "@/lib/case-export";
 import { CaseOverviewHeader } from "@/components/case-overview-header";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 const FREE_LIMIT_BYTES = FREE_STORAGE_BYTES;
 
