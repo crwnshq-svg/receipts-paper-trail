@@ -229,14 +229,6 @@ function Dashboard() {
             </Link>
           </div>
 
-          {/* Quick actions */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <QuickAction icon={PenSquare} label="Log an Event" target={qa("incidents")} disabled={!hasCases} />
-            <QuickAction icon={Upload} label="Upload Evidence" target={qa("documents")} disabled={!hasCases} />
-            <QuickAction icon={MessageSquare} label="Ask RECEIPTS AI" target={qa("ai")} disabled={!hasCases} />
-          </div>
-
-          <Separator />
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
