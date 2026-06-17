@@ -118,6 +118,54 @@ export function CaseOverviewHeader({
   const [uploading, setUploading] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [activeInsight, setActiveInsight] = useState<InsightRow | null>(null);
+  const [showCelebrate, setShowCelebrate] = useState(false);
+
+  // Module-specific required-fields completeness check.
+  const isRentingCase = caseRow.module === "landlord_tenant";
+  const isEmploymentCase = caseRow.module === "employer_employee";
+  const profileComplete = useMemo(() => {
+    if (isRentingCase) {
+      return Boolean(
+        caseRow.landlord_name &&
+          caseRow.property_management_company &&
+          caseRow.monthly_rent != null &&
+          caseRow.lease_end_date &&
+          caseRow.lease_status,
+      );
+    }
+    if (isEmploymentCase) {
+      return Boolean(
+        caseRow.employment_type &&
+          caseRow.supervisor_name &&
+          caseRow.work_location &&
+          caseRow.has_written_contract !== null,
+      );
+    }
+    return false;
+  }, [caseRow, isRentingCase, isEmploymentCase]);
+
+  // First-time celebration: fires once when all required fields are filled.
+  useEffect(() => {
+    if (!profileComplete) return;
+    if (caseRow.profile_complete_celebrated) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase
+        .from("cases")
+        .update({ profile_complete_celebrated: true } as any)
+        .eq("id", caseId)
+        .eq("profile_complete_celebrated", false);
+      if (cancelled) return;
+      if (!error) {
+        setShowCelebrate(true);
+        qc.invalidateQueries({ queryKey: ["case", caseId] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileComplete, caseRow.profile_complete_celebrated, caseId, qc]);
+
 
   async function transitionToOngoing() {
     setTransitioning(true);
