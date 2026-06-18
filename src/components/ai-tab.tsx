@@ -856,20 +856,29 @@ function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
   if (!structured) {
     // Either still streaming, or strict JSON parse failed. In both cases pull
     // out the partial/recoverable "message" field so the user NEVER sees raw
-    // JSON, code fences, or an empty bubble. Only if there's no JSON shape at
-    // all do we render the raw text directly (plain-text fallback).
+    // JSON, code fences, or an empty bubble. Render the partial inside the
+    // SAME bubble styling StaggeredBeats uses, so the response never visibly
+    // snaps from raw-text to bubble once the JSON closes.
     const trimmed = text.trim();
     const looksJson = trimmed.startsWith("{") || trimmed.startsWith("```");
     const partial = looksJson ? extractPartialMessage(text) : null;
     const display = looksJson ? (partial ?? "") : text;
     return (
       <div className="max-w-[95%] text-sm space-y-2">
-        <div className="whitespace-pre-wrap">
-          {display || <span className="text-muted-foreground italic">Composing…</span>}
-        </div>
+        {display ? (
+          <div
+            className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: renderInline(display) }}
+          />
+        ) : (
+          <div className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed text-muted-foreground italic">
+            Composing…
+          </div>
+        )}
       </div>
     );
   }
+
 
   // Prefer the structured beats[] array when the model provides it. Fall back
   // to splitting message text on legacy "\n---\n" markers for backward
