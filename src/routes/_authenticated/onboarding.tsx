@@ -265,6 +265,11 @@ function OnboardingPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
+      const { count: priorCases } = await supabase
+        .from("cases")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      const isFirstEver = (priorCases ?? 0) === 0;
       const createdIds: string[] = [];
       if (tracks.includes("renting")) {
         const id = await createRentingCase(user.id);
@@ -273,6 +278,9 @@ function OnboardingPage() {
       if (tracks.includes("employment")) {
         const id = await createEmploymentCase(user.id);
         if (id) createdIds.push(id);
+      }
+      if (isFirstEver && createdIds.length > 0) {
+        showAchievement("first-file", "First file started. Welcome to your paper trail.");
       }
       const { data: profile, error } = await supabase.from("profiles").update({
         onboarding_completed: true,
