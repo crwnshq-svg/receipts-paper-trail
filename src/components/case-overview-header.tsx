@@ -25,6 +25,7 @@ import {
 
 } from "lucide-react";
 import { toast } from "sonner";
+import { showAchievement } from "@/lib/achievements";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { InsightModal, type InsightRow } from "@/components/insight-modal";
