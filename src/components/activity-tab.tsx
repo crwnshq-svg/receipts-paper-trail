@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+import { showAchievement } from "@/lib/achievements";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
 import { popPrefill } from "@/lib/prefill";
