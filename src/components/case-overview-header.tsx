@@ -205,6 +205,7 @@ export function CaseOverviewHeader({
         .eq("id", caseId);
       if (error) throw error;
       toast.success("Marked as ongoing");
+      showAchievement("lifecycle-ongoing", `${caseRow.title} is now tracking ongoing.`);
       qc.invalidateQueries({ queryKey: ["case", caseId] });
       qc.invalidateQueries({ queryKey: ["cases"] });
     } catch (e: any) {
