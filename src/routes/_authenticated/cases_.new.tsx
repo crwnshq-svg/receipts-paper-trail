@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
+import { showAchievement } from "@/lib/achievements";
 import { inferCaseDraft } from "@/lib/cases.functions";
 
 export const Route = createFileRoute("/_authenticated/cases_/new")({
