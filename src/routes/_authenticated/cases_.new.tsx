@@ -70,6 +70,10 @@ function NewCase() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
       const title = party ?? "Untitled file";
+      const { count: priorCases } = await supabase
+        .from("cases")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
       const { data, error } = await supabase.from("cases").insert({
         user_id: user.id,
         title,
@@ -79,6 +83,9 @@ function NewCase() {
       }).select().single();
       if (error) throw error;
       toast.success("File started");
+      if ((priorCases ?? 0) === 0) {
+        showAchievement("first-file", "First file started. Welcome to your paper trail.");
+      }
       navigate({ to: "/cases/$caseId", params: { caseId: data.id } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not start file");
