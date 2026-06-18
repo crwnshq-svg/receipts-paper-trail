@@ -396,22 +396,9 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   const navigateCollect = useNavigate();
   const qcCollect = useQueryClient();
 
-  useEffect(() => {
-    if (!caseId) return;
-    const key = `receipts:insight-followup:${caseId}`;
-    const raw = sessionStorage.getItem(key);
-    if (raw) {
-      try {
-        const ctx = JSON.parse(raw);
-        setInput(
-          `I want to follow up on the insight: "${ctx.insight_title}".\n\n` +
-          `Context: ${ctx.brief_description}\n\n` +
-          `Question: `,
-        );
-      } catch {}
-      sessionStorage.removeItem(key);
-    }
-  }, [caseId]);
+  // (Insight follow-up is now handled via ?ask=insight:<id> in the auto-fire
+  // effect below so it sends immediately instead of pre-filling the input.)
+
 
   const sessionKey = caseId ?? "unscoped";
   const transport = useRef(new DefaultChatTransport({
