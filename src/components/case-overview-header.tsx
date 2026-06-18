@@ -25,6 +25,7 @@ import {
 
 } from "lucide-react";
 import { toast } from "sonner";
+import { showAchievement } from "@/lib/achievements";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { InsightModal, type InsightRow } from "@/components/insight-modal";
@@ -204,6 +205,7 @@ export function CaseOverviewHeader({
         .eq("id", caseId);
       if (error) throw error;
       toast.success("Marked as ongoing");
+      showAchievement("lifecycle-ongoing", `${caseRow.title} is now tracking ongoing.`);
       qc.invalidateQueries({ queryKey: ["case", caseId] });
       qc.invalidateQueries({ queryKey: ["cases"] });
     } catch (e: any) {

@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReceiptText, ArrowLeft, ShieldCheck, Lightbulb, Sparkles, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { showAchievement } from "@/lib/achievements";
 import { inferOnboardingFields } from "@/lib/onboarding.functions";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
@@ -264,6 +265,11 @@ function OnboardingPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
+      const { count: priorCases } = await supabase
+        .from("cases")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      const isFirstEver = (priorCases ?? 0) === 0;
       const createdIds: string[] = [];
       if (tracks.includes("renting")) {
         const id = await createRentingCase(user.id);
@@ -272,6 +278,9 @@ function OnboardingPage() {
       if (tracks.includes("employment")) {
         const id = await createEmploymentCase(user.id);
         if (id) createdIds.push(id);
+      }
+      if (isFirstEver && createdIds.length > 0) {
+        showAchievement("first-file", "First file started. Welcome to your paper trail.");
       }
       const { data: profile, error } = await supabase.from("profiles").update({
         onboarding_completed: true,

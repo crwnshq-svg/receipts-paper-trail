@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+import { showAchievement } from "@/lib/achievements";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
 import { popPrefill } from "@/lib/prefill";
@@ -590,6 +591,10 @@ function IncidentDialog({
         reset();
         onSaved(editing.id);
       } else {
+        const { count: priorCount } = await supabase
+          .from("incidents")
+          .select("id", { count: "exact", head: true })
+          .eq("case_id", caseId);
         const { data: inserted, error } = await supabase.from("incidents").insert({
           case_id: caseId,
           user_id: user.id,
@@ -597,6 +602,9 @@ function IncidentDialog({
         }).select("id").single();
         if (error) throw error;
         toast.success("Event logged");
+        if ((priorCount ?? 0) === 0) {
+          showAchievement("first-event", "First event logged. That's the start of your timeline.");
+        }
         onOpenChange(false);
         reset();
         onSaved(inserted?.id);
