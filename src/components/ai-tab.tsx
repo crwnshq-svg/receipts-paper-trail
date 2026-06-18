@@ -1020,7 +1020,20 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
     // button leaves a real trace in the console instead of silently no-oping.
     console.info("[ai-action] click", { type: a.type, label: a.label, prefill: a.prefill, currentCaseId: caseId });
     try {
-      // --------- Pure navigation actions (work scoped or unscoped) ---------
+      // Label-based override: any action whose label talks about the
+      // Activity Timeline must route to the case's timeline tab, regardless
+      // of the structured action type the model picked. Previously the model
+      // sometimes emitted `open_resources` for these, sending users to the
+      // Resources page by mistake.
+      if (/\btimeline\b/i.test(a.label)) {
+        const target = pickCaseId(a) ?? caseId;
+        if (target) {
+          navigate({ to: "/cases/$caseId", params: { caseId: target },
+            search: { tab: "timeline" } } as any);
+          return;
+        }
+      }
+
       if (a.type === "open_file") {
         const target = pickCaseId(a);
         if (!target) { toast.error("No File specified."); return; }
