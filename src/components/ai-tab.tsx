@@ -550,6 +550,21 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
               `Detail: ${data.body}\n\n` +
               `React to the alert's importance for this file and ask one relevant follow-up question if appropriate.`;
           }
+        } else if (kind === "insight" && id) {
+          const { data } = await supabase
+            .from("document_insights")
+            .select("insight_title,brief_description,full_guidance")
+            .eq("id", id)
+            .maybeSingle();
+          if (data) {
+            prompt =
+              `[CONTEXT] The user tapped "Tell me more" on this insight:\n` +
+              `Title: ${data.insight_title}\n` +
+              `Brief: ${data.brief_description}\n` +
+              (data.full_guidance ? `Guidance: ${data.full_guidance}\n` : "") +
+              `\nReact to this specific insight — what it means for this file, why it matters, and one concrete next step. Don't restate the insight verbatim.`;
+          }
+
         } else if (kind === "urgent" && id) {
           prompt =
             `[CONTEXT] The check-in surfaced an urgent issue on this file. Brief me on the most important active concern and one concrete next step I should take right now.`;
