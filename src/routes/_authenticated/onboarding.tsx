@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReceiptText, ArrowLeft, ShieldCheck, Lightbulb, Sparkles, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { showAchievement } from "@/lib/achievements";
 import { inferOnboardingFields } from "@/lib/onboarding.functions";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
