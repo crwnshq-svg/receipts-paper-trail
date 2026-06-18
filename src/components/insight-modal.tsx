@@ -57,21 +57,13 @@ export function InsightModal({
           throw err;
         }
       }
-      // Stash context for the AI tab to pick up
-      sessionStorage.setItem(
-        `receipts:insight-followup:${insight.case_id}`,
-        JSON.stringify({
-          insight_title: insight.insight_title,
-          brief_description: insight.brief_description,
-          full_guidance: insight.full_guidance,
-        }),
-      );
       onOpenChange(false);
       navigate({
         to: "/cases/$caseId",
         params: { caseId: insight.case_id },
-        search: { tab: "ai" },
+        search: { tab: "ai", ask: `insight:${insight.id}` },
       } as any);
+
     } catch (err: any) {
       toast.error(err?.message ?? "Could not open chat");
     } finally {

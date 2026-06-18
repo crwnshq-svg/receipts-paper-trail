@@ -1,7 +1,6 @@
 import { toast } from "sonner";
 import { Pencil, FileUp, ArrowRightCircle, FolderPlus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 type AchievementKind = "first-event" | "lease-uploaded" | "offer-uploaded" | "lifecycle-ongoing" | "first-file";
 
@@ -13,20 +12,20 @@ const STYLES: Record<AchievementKind, { icon: LucideIcon; tone: string }> = {
   "first-file":         { icon: FolderPlus,       tone: "bg-violet-500 text-white" },
 };
 
+// Plain `toast(...)` instead of `toast.custom(...)` so the Sonner Toaster's
+// own positioning/visibility logic is used. Custom toasts in Sonner v2 were
+// rendering unstyled and inconsistently across routes, which is why these
+// drops appeared not to fire at all even when their triggers ran.
 export function showAchievement(kind: AchievementKind, text: string) {
   const { icon: Icon, tone } = STYLES[kind];
-  toast.custom(
-    (id) => (
-      <div
-        onClick={() => toast.dismiss(id)}
-        className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-card px-3 py-2 pr-4 shadow-lg animate-fade-in"
-      >
-        <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", tone)}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="text-sm leading-tight">{text}</div>
-      </div>
+  toast(text, {
+    duration: 4000,
+    position: "top-center",
+    icon: (
+      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${tone}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </span>
     ),
-    { duration: 4000, position: "top-center" },
-  );
+    className: "!rounded-full !py-2 !pr-4",
+  });
 }

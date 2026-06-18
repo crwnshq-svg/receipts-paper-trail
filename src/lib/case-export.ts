@@ -54,13 +54,18 @@ export async function exportCaseZip(caseId: string): Promise<void> {
 
     // Chronological timeline (mixed entry types)
     type T = { at: string; label: string; description: string };
+    // Exported timeline intentionally excludes AI-generated documents
+    // (demand letters, complaints, etc.) — only actual logged events,
+    // notes, and uploaded evidence appear here. The in-app timeline still
+    // shows generated documents.
     const timeline: T[] = [
       { at: caseRow.created_at, label: "File created", description: caseRow.title },
       ...incidents.map((i: any) => ({ at: i.occurred_at, label: "Event logged", description: i.title })),
       ...notes.map((n: any) => ({ at: n.created_at, label: "Note", description: (n.content ?? "").slice(0, 200) })),
       ...docs.map((d: any) => ({ at: d.created_at, label: "Evidence uploaded", description: d.display_name ?? d.file_name })),
-      ...generated.map((g: any) => ({ at: g.created_at, label: "Document generated", description: `${g.document_type} → ${g.recipient_type}` })),
     ].sort((a, b) => +new Date(a.at) - +new Date(b.at));
+    // Mark `generated` as intentionally unused for timeline purposes.
+    void generated;
 
     lines.push("======================================================");
     lines.push("CHRONOLOGICAL TIMELINE");

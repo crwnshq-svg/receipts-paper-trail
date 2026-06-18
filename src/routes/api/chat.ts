@@ -118,7 +118,7 @@ export const Route = createFileRoute("/api/chat")({
             supabase.from("incidents").select("title,occurred_at,what_happened,who_involved,location,notes")
               .eq("case_id", caseId).order("occurred_at", { ascending: true }),
             supabase.from("documents")
-              .select("id,file_name,display_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
+              .select("id,storage_path,file_name,display_name,mime_type,detected_type,created_at,ai_summary,extracted_data,user_note,description")
               .eq("case_id", caseId),
           ]);
           if (!caseRes.data) return new Response("Case not found", { status: 404 });
@@ -133,7 +133,8 @@ export const Route = createFileRoute("/api/chat")({
           const { data: partnerRows } = await partnerQuery.limit(8);
           const partners: PartnerLite[] = partnerRows ?? [];
 
-          const caseContext = buildCaseContext(caseRow, incRes.data ?? [], docRes.data ?? []);
+          const docs = docRes.data ?? [];
+          const caseContext = buildCaseContext(caseRow, incRes.data ?? [], docs);
           system = buildChatSystemPrompt({
             tone,
             caseContext,
@@ -142,6 +143,55 @@ export const Route = createFileRoute("/api/chat")({
             firstName,
             profile: profRes.data ?? null,
           });
+
+          // Vision evidence: every image attached to this case is passed as
+          // an image part on a synthetic user/assistant pair prepended to the
+          // conversation. Without this the model only ever sees text summaries
+          // for images and inconsistently claims it cannot "see" the file.
+          const IMAGE_MIMES = new Set([
+            "image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif",
+          ]);
+          const imageDocs = docs.filter((d: any) => IMAGE_MIMES.has((d.mime_type ?? "").toLowerCase())).slice(0, 12);
+          const imageParts: any[] = [];
+          for (const d of imageDocs) {
+            try {
+              const { data: signed } = await supabase.storage
+                .from("case-documents")
+                .createSignedUrl(d.storage_path, 600);
+              if (signed?.signedUrl) {
+                imageParts.push({ type: "text", text: `[Evidence id=${d.id} · ${d.display_name || d.file_name}]` });
+                imageParts.push({ type: "image", image: signed.signedUrl });
+              }
+            } catch (err) {
+              console.warn("chat: signed url failed for", d.id, err);
+            }
+          }
+
+          const coreMessages = await convertToModelMessages(messages);
+          const finalMessages = imageParts.length > 0
+            ? [
+                {
+                  role: "user" as const,
+                  content: [
+                    { type: "text" as const, text: `Visual evidence already attached to this file. You can see each of these images directly; reference them by name when relevant.` },
+                    ...imageParts,
+                  ],
+                },
+                {
+                  role: "assistant" as const,
+                  content: `Got it — I've reviewed every image attached to this file and can reference them directly.`,
+                },
+                ...coreMessages,
+              ]
+            : coreMessages;
+
+          const result = streamText({
+            model: gateway(CHAT_MODEL),
+            system,
+            messages: finalMessages as any,
+          });
+
+          return result.toUIMessageStreamResponse({ originalMessages: messages });
         }
 
         const result = streamText({
@@ -151,6 +201,7 @@ export const Route = createFileRoute("/api/chat")({
         });
 
         return result.toUIMessageStreamResponse({ originalMessages: messages });
+
       },
     },
   },

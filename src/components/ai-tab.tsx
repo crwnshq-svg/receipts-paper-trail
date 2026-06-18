@@ -396,22 +396,9 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   const navigateCollect = useNavigate();
   const qcCollect = useQueryClient();
 
-  useEffect(() => {
-    if (!caseId) return;
-    const key = `receipts:insight-followup:${caseId}`;
-    const raw = sessionStorage.getItem(key);
-    if (raw) {
-      try {
-        const ctx = JSON.parse(raw);
-        setInput(
-          `I want to follow up on the insight: "${ctx.insight_title}".\n\n` +
-          `Context: ${ctx.brief_description}\n\n` +
-          `Question: `,
-        );
-      } catch {}
-      sessionStorage.removeItem(key);
-    }
-  }, [caseId]);
+  // (Insight follow-up is now handled via ?ask=insight:<id> in the auto-fire
+  // effect below so it sends immediately instead of pre-filling the input.)
+
 
   const sessionKey = caseId ?? "unscoped";
   const transport = useRef(new DefaultChatTransport({
@@ -563,6 +550,21 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
               `Detail: ${data.body}\n\n` +
               `React to the alert's importance for this file and ask one relevant follow-up question if appropriate.`;
           }
+        } else if (kind === "insight" && id) {
+          const { data } = await supabase
+            .from("document_insights")
+            .select("insight_title,brief_description,full_guidance")
+            .eq("id", id)
+            .maybeSingle();
+          if (data) {
+            prompt =
+              `[CONTEXT] The user tapped "Tell me more" on this insight:\n` +
+              `Title: ${data.insight_title}\n` +
+              `Brief: ${data.brief_description}\n` +
+              (data.full_guidance ? `Guidance: ${data.full_guidance}\n` : "") +
+              `\nReact to this specific insight — what it means for this file, why it matters, and one concrete next step. Don't restate the insight verbatim.`;
+          }
+
         } else if (kind === "urgent" && id) {
           prompt =
             `[CONTEXT] The check-in surfaced an urgent issue on this file. Brief me on the most important active concern and one concrete next step I should take right now.`;
@@ -856,20 +858,29 @@ function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
   if (!structured) {
     // Either still streaming, or strict JSON parse failed. In both cases pull
     // out the partial/recoverable "message" field so the user NEVER sees raw
-    // JSON, code fences, or an empty bubble. Only if there's no JSON shape at
-    // all do we render the raw text directly (plain-text fallback).
+    // JSON, code fences, or an empty bubble. Render the partial inside the
+    // SAME bubble styling StaggeredBeats uses, so the response never visibly
+    // snaps from raw-text to bubble once the JSON closes.
     const trimmed = text.trim();
     const looksJson = trimmed.startsWith("{") || trimmed.startsWith("```");
     const partial = looksJson ? extractPartialMessage(text) : null;
     const display = looksJson ? (partial ?? "") : text;
     return (
       <div className="max-w-[95%] text-sm space-y-2">
-        <div className="whitespace-pre-wrap">
-          {display || <span className="text-muted-foreground italic">Composing…</span>}
-        </div>
+        {display ? (
+          <div
+            className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: renderInline(display) }}
+          />
+        ) : (
+          <div className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed text-muted-foreground italic">
+            Composing…
+          </div>
+        )}
       </div>
     );
   }
+
 
   // Prefer the structured beats[] array when the model provides it. Fall back
   // to splitting message text on legacy "\n---\n" markers for backward
@@ -1020,7 +1031,20 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
     // button leaves a real trace in the console instead of silently no-oping.
     console.info("[ai-action] click", { type: a.type, label: a.label, prefill: a.prefill, currentCaseId: caseId });
     try {
-      // --------- Pure navigation actions (work scoped or unscoped) ---------
+      // Label-based override: any action whose label talks about the
+      // Activity Timeline must route to the case's timeline tab, regardless
+      // of the structured action type the model picked. Previously the model
+      // sometimes emitted `open_resources` for these, sending users to the
+      // Resources page by mistake.
+      if (/\btimeline\b/i.test(a.label)) {
+        const target = pickCaseId(a) ?? caseId;
+        if (target) {
+          navigate({ to: "/cases/$caseId", params: { caseId: target },
+            search: { tab: "timeline" } } as any);
+          return;
+        }
+      }
+
       if (a.type === "open_file") {
         const target = pickCaseId(a);
         if (!target) { toast.error("No File specified."); return; }
