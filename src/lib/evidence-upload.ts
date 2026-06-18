@@ -66,5 +66,46 @@ export async function uploadEvidence(params: {
     toast.error(dbErr.message);
     return null;
   }
+
+  // Achievement: first lease (rental) or offer letter (employment) uploaded to this case.
+  try {
+    const lower = file.name.toLowerCase();
+    const looksLikeLease = lower.includes("lease");
+    const looksLikeOffer = lower.includes("offer") || lower.includes("contract") || lower.includes("employment");
+    if (looksLikeLease || looksLikeOffer) {
+      const { data: caseRow } = await supabase
+        .from("cases")
+        .select("module, dispute_type")
+        .eq("id", caseId)
+        .maybeSingle();
+      const mod = (caseRow?.module || caseRow?.dispute_type || "") as string;
+      const isRenting = mod === "landlord_tenant";
+      const isEmployment = mod === "employer_employee";
+      const { data: prior } = await supabase
+        .from("documents")
+        .select("id, file_name, detected_type")
+        .eq("case_id", caseId)
+        .neq("id", insertedDoc!.id);
+      const matcher = (d: { file_name: string | null; detected_type: string | null }) => {
+        const n = (d.file_name || "").toLowerCase();
+        const t = (d.detected_type || "").toLowerCase();
+        if (isRenting) return n.includes("lease") || t.includes("lease");
+        if (isEmployment) return n.includes("offer") || n.includes("contract") || n.includes("employment")
+          || t.includes("offer") || t.includes("contract") || t.includes("employment");
+        return false;
+      };
+      const alreadyHad = (prior ?? []).some(matcher);
+      if (!alreadyHad) {
+        if (isRenting && looksLikeLease) {
+          showAchievement("lease-uploaded", "Lease uploaded. Your companion's already looked it over.");
+        } else if (isEmployment && looksLikeOffer) {
+          showAchievement("offer-uploaded", "Offer letter uploaded. Your companion's already looked it over.");
+        }
+      }
+    }
+  } catch {
+    // achievement is best-effort
+  }
+
   return insertedDoc ? { id: insertedDoc.id } : null;
 }
