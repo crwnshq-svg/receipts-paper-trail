@@ -24,6 +24,8 @@ import {
   Award,
   FileText,
   Clock,
+  Check,
+  Circle,
 } from "lucide-react";
 
 import { toast } from "sonner";
