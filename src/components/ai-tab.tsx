@@ -957,7 +957,7 @@ function StaggeredBeats({ beats }: { beats: string[] }) {
       {beats.slice(0, visible).map((b, i) => (
         <div
           key={i}
-          className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-bottom-1 duration-300"
+          className="rounded-2xl bg-secondary px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-bottom-1 duration-300"
           dangerouslySetInnerHTML={{ __html: renderInline(b) }}
         />
       ))}
