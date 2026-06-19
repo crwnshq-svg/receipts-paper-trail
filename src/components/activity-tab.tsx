@@ -91,6 +91,8 @@ export function ActivityTab({
   const navigate = useNavigate();
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [editIncident, setEditIncident] = useState<Incident | null>(null);
+  const [viewIncident, setViewIncident] = useState<Incident | null>(null);
+  const [confirmDeleteIncident, setConfirmDeleteIncident] = useState<Incident | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
