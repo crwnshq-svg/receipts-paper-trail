@@ -22,8 +22,10 @@ import {
   ArrowRight,
   Lightbulb,
   Award,
-
+  FileText,
+  Clock,
 } from "lucide-react";
+
 import { toast } from "sonner";
 import { showAchievement } from "@/lib/achievements";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
