@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { ArrowLeft } from "lucide-react";
-import { DocumentGenerator } from "@/components/document-generator";
+import { ArrowLeft, Check } from "lucide-react";
+import { DocumentGenerator, type GeneratorStep } from "@/components/document-generator";
 import { setPrefill } from "@/lib/prefill";
+import { cn } from "@/lib/utils";
 
 type GenerateSearch = {
   type?: string;
@@ -30,15 +31,19 @@ export const Route = createFileRoute("/_authenticated/cases/$caseId/generate")({
   component: GenerateDocumentPage,
 });
 
+const STEPS: { key: GeneratorStep; label: string }[] = [
+  { key: "type", label: "Choose type" },
+  { key: "recipient", label: "Recipient" },
+  { key: "build", label: "Build" },
+  { key: "result", label: "Review" },
+];
+
 function GenerateDocumentPage() {
   const { caseId } = Route.useParams();
   const search = Route.useSearch();
-  const navigate = useNavigate();
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [step, setStep] = useState<GeneratorStep>("type");
 
-  // Seed prefill from search params (set by AI action navigation) so the
-  // generator pre-selects the right type and pre-fills known details. Runs
-  // before DocumentGenerator's mount-time popPrefill via layout ordering.
   useEffect(() => {
     if (!search.type && !search.recipient && !search.to && !search.facts) return;
     setPrefill("document", {
@@ -80,11 +85,13 @@ function GenerateDocumentPage() {
   }
 
   const label = caseRow.opposing_party?.trim() || caseRow.title;
+  const activeIndex = STEPS.findIndex((s) => s.key === step);
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div>
+      <div className="space-y-8">
+        {/* Header */}
+        <header className="border-b pb-6">
           <Link
             to="/cases/$caseId"
             params={{ caseId }}
@@ -93,16 +100,64 @@ function GenerateDocumentPage() {
             <ArrowLeft className="h-3.5 w-3.5" /> Back to {label}
           </Link>
           <h1 className="mt-3 font-serif text-3xl font-semibold">Generate a document</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Drafted from the events and evidence on <strong>{label}</strong>.
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Generate a document from your file — drafted using the events and evidence on{" "}
+            <strong className="text-foreground">{label}</strong>.
           </p>
-        </div>
+        </header>
 
-        <DocumentGenerator
-          caseId={caseId}
-          isPaid={isPaid}
-          onLocked={() => setShowUpgrade(true)}
-        />
+        {/* Step indicator */}
+        <nav aria-label="Progress">
+          <ol className="flex items-center w-full gap-2 sm:gap-3">
+            {STEPS.map((s, i) => {
+              const isDone = i < activeIndex;
+              const isCurrent = i === activeIndex;
+              return (
+                <li key={s.key} className="flex-1 flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div
+                      className={cn(
+                        "h-6 w-6 shrink-0 rounded-full border flex items-center justify-center text-[11px] font-medium",
+                        isDone && "bg-accent border-accent text-accent-foreground",
+                        isCurrent && "border-accent text-accent",
+                        !isDone && !isCurrent && "border-muted-foreground/30 text-muted-foreground",
+                      )}
+                    >
+                      {isDone ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                    </div>
+                    <span
+                      className={cn(
+                        "text-xs sm:text-sm truncate",
+                        isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div
+                      className={cn(
+                        "flex-1 h-px",
+                        i < activeIndex ? "bg-accent" : "bg-border",
+                      )}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        {/* Step content — full width, no embedded card */}
+        <section className="min-h-[400px]">
+          <DocumentGenerator
+            caseId={caseId}
+            isPaid={isPaid}
+            onLocked={() => setShowUpgrade(true)}
+            chromeless
+            onStepChange={setStep}
+          />
+        </section>
 
         <Disclaimer className="pt-4" />
 
