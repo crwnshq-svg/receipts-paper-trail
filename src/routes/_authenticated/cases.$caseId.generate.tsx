@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Disclaimer } from "@/components/app-shell";
@@ -10,9 +10,23 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft } from "lucide-react";
 import { DocumentGenerator } from "@/components/document-generator";
+import { setPrefill } from "@/lib/prefill";
+
+type GenerateSearch = {
+  type?: string;
+  recipient?: string;
+  to?: string;
+  facts?: string;
+};
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId/generate")({
   head: () => ({ meta: [{ title: "Generate a document — Pull Up Receipts" }] }),
+  validateSearch: (search: Record<string, unknown>): GenerateSearch => ({
+    type: typeof search.type === "string" ? search.type : undefined,
+    recipient: typeof search.recipient === "string" ? search.recipient : undefined,
+    to: typeof search.to === "string" ? search.to : undefined,
+    facts: typeof search.facts === "string" ? search.facts : undefined,
+  }),
   component: GenerateDocumentPage,
 });
 
