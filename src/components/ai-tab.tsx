@@ -614,29 +614,34 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
     : "What's going on? Describe a new situation, mention an existing File, or drop in evidence.";
 
   return (
-    <Card className="overflow-hidden">
-      <div className="border-b p-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
-          <div>
-            <div className="font-medium text-sm">RECEIPTS AI</div>
-            <div className="text-xs text-muted-foreground">
-              {caseId ? "File-specific guidance from your evidence" : "Unscoped — start anywhere"}
-            </div>
+    <Card className="overflow-hidden border bg-card">
+      <div className="px-4 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Sparkles className="h-4 w-4 text-accent shrink-0" />
+          <div className="min-w-0 truncate text-sm">
+            {anchorLabel ? (
+              <>
+                <span className="text-muted-foreground">on:</span>{" "}
+                <span className="font-medium">{anchorLabel}</span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">Companion — start anywhere</span>
+            )}
           </div>
         </div>
-        <div className="text-xs text-muted-foreground">
-          {isPaid ? "Unlimited" : `${remaining} of ${FREE_AI_QUESTIONS} questions remaining`}
+        <div className="text-xs text-muted-foreground shrink-0">
+          {isPaid ? "Unlimited" : `${remaining} of ${FREE_AI_QUESTIONS} left`}
         </div>
       </div>
 
       {historyLabel && messages.length > 0 && (
-        <div className="px-4 py-1.5 border-b bg-secondary/40 text-[10px] uppercase tracking-wide text-muted-foreground text-center">
+        <div className="px-4 py-1 text-[10px] uppercase tracking-wide text-muted-foreground/70 text-center">
           {historyLabel} · {messages.length} message{messages.length === 1 ? "" : "s"}
         </div>
       )}
 
-      <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
+      <div ref={scrollRef} className="h-[480px] overflow-y-auto px-4 pt-2 pb-4 space-y-4">
+
         {empty && !ask && (
           <div className="text-center text-sm text-muted-foreground py-10">
             {emptyTitle}
