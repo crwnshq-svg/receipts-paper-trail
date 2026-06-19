@@ -128,26 +128,6 @@ export function CaseOverviewHeader({
   // Module-specific required-fields completeness check.
   const isRentingCase = caseRow.module === "landlord_tenant";
   const isEmploymentCase = caseRow.module === "employer_employee";
-  const profileComplete = useMemo(() => {
-    if (isRentingCase) {
-      return Boolean(
-        caseRow.landlord_name &&
-          caseRow.property_management_company &&
-          caseRow.monthly_rent != null &&
-          caseRow.lease_end_date &&
-          caseRow.lease_status,
-      );
-    }
-    if (isEmploymentCase) {
-      return Boolean(
-        caseRow.employment_type &&
-          caseRow.supervisor_name &&
-          caseRow.work_location &&
-          caseRow.has_written_contract !== null,
-      );
-    }
-    return false;
-  }, [caseRow, isRentingCase, isEmploymentCase]);
 
   // First-time celebration: fires once when all required fields are filled.
   useEffect(() => {
