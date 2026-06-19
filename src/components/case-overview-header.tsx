@@ -530,8 +530,49 @@ export function CaseOverviewHeader({
         </Button>
       </div>
 
+      {/* Profile checklist (persistent) */}
+      {checklist.length > 0 && (
+        <Card className="p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-sm font-medium">File profile</div>
+            <div className="text-xs text-muted-foreground">
+              {checklistDone} of {checklist.length} complete
+            </div>
+          </div>
+          <ul className="space-y-1">
+            {checklist.map((item) => (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={item.done ? undefined : item.onClick}
+                  disabled={item.done}
+                  className={
+                    item.done
+                      ? "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground"
+                      : "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
+                  }
+                >
+                  {item.done ? (
+                    <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className={item.done ? "flex-1 line-through" : "flex-1"}>
+                    {item.label}
+                  </span>
+                  {!item.done && (
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
 
       {/* Insights carousel */}
+
       {insights && insights.length > 0 && (
         <div className="-mx-1 overflow-x-auto">
           <div className="flex gap-2 px-1 pb-1">
