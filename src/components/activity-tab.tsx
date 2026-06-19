@@ -91,6 +91,8 @@ export function ActivityTab({
   const navigate = useNavigate();
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [editIncident, setEditIncident] = useState<Incident | null>(null);
+  const [viewIncident, setViewIncident] = useState<Incident | null>(null);
+  const [confirmDeleteIncident, setConfirmDeleteIncident] = useState<Incident | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [answerQ, setAnswerQ] = useState<{ incidentId: string; question: string } | null>(null);
@@ -140,11 +142,12 @@ export function ActivityTab({
   }, [incidents, notes]);
 
   async function removeIncident(id: string) {
-    if (!confirm("Delete this event?")) return;
     const { error } = await supabase.from("incidents").delete().eq("id", id);
     if (error) toast.error(error.message);
     else {
       toast.success("Deleted");
+      setConfirmDeleteIncident(null);
+      setViewIncident(null);
       onChange();
     }
   }
@@ -265,81 +268,68 @@ export function ActivityTab({
           {feed.map((f) =>
             f.kind === "incident" ? (
               <li key={`i-${f.data.id}`} className="space-y-2">
-                <Card className="border-l-4 border-l-red-500 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
-                        <AlertCircle className="h-3 w-3" /> Event
-                        <span className="font-normal text-muted-foreground">
-                          · {safeDate(f.data.occurred_at, f.data.created_at)}
+                <Card
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setViewIncident(f.data)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setViewIncident(f.data);
+                    }
+                  }}
+                  className="cursor-pointer border-l-4 border-l-red-500 p-4 transition-colors hover:bg-card/80"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+                      <AlertCircle className="h-3 w-3" /> Event
+                      <span className="font-normal text-muted-foreground">
+                        · {safeDate(f.data.occurred_at, f.data.created_at)}
+                      </span>
+                      {analyzingIds.has(f.data.id) && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal normal-case text-muted-foreground">
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" /> Analyzing…
                         </span>
-                        {analyzingIds.has(f.data.id) && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal normal-case text-muted-foreground">
-                            <Loader2 className="h-2.5 w-2.5 animate-spin" /> Analyzing…
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 font-medium">{f.data.title}</div>
-                      {f.data.who_involved && (
-                        <div className="mt-1.5 text-sm">
-                          <span className="text-muted-foreground">Who: </span>
-                          {f.data.who_involved}
-                        </div>
                       )}
-                      <div className="mt-1 text-sm whitespace-pre-wrap">
-                        {f.data.what_happened}
-                      </div>
-                      {f.data.location && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          Location: {f.data.location}
-                        </div>
-                      )}
-                      {f.data.notes && (
-                        <div className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">
-                          {f.data.notes}
-                        </div>
-                      )}
-                      <AttachedDocsRow
-                        caseId={caseId}
-                        ids={toIds(f.data.document_ids)}
-                      />
-                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-                        <button
-                          onClick={() =>
-                            navigate({
-                              to: "/cases/$caseId",
-                              params: { caseId },
-                              search: { tab: "ai", ask: `event:${f.data.id}` } as any,
-                            })
-                          }
-                          className="inline-flex items-center gap-1 text-accent hover:underline"
-                        >
-                          <MessageCircle className="h-3 w-3" /> Ask about this
-                        </button>
-                        <button
-                          onClick={() => setEditIncident(f.data)}
-                          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-                          aria-label="Edit event"
-                        >
-                          <Pencil className="h-3 w-3" /> Edit
-                        </button>
-                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeIncident(f.data.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="mt-1 font-medium">{f.data.title}</div>
+                    {f.data.who_involved && (
+                      <div className="mt-1.5 text-sm">
+                        <span className="text-muted-foreground">Who: </span>
+                        {f.data.who_involved}
+                      </div>
+                    )}
+                    <div className="mt-1 text-sm whitespace-pre-wrap line-clamp-3">
+                      {f.data.what_happened}
+                    </div>
+                    {f.data.location && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Location: {f.data.location}
+                      </div>
+                    )}
+                    <AttachedDocsRow
+                      caseId={caseId}
+                      ids={toIds(f.data.document_ids)}
+                    />
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate({
+                            to: "/cases/$caseId",
+                            params: { caseId },
+                            search: { tab: "ai", ask: `event:${f.data.id}` } as any,
+                          });
+                        }}
+                        className="inline-flex items-center gap-1 text-accent hover:underline"
+                      >
+                        <MessageCircle className="h-3 w-3" /> Ask about this
+                      </button>
+                    </div>
                   </div>
                 </Card>
-
-                {/* Per-event clarifying-question card removed.
-                    A single live clarifying question is rendered ABOVE the feed
-                    (one live question per File at a time). */}
               </li>
+
 
 
             ) : (
@@ -407,6 +397,89 @@ export function ActivityTab({
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Event detail dialog — tap any event row to open */}
+      {viewIncident && (() => {
+        const live = incidents.find((i) => i.id === viewIncident.id) ?? viewIncident;
+        return (
+          <Dialog open onOpenChange={(v) => { if (!v) setViewIncident(null); }}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="pr-6">{live.title}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                <div className="text-xs text-muted-foreground">
+                  {safeDate(live.occurred_at, live.created_at)}
+                </div>
+                {live.who_involved && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Who was involved</div>
+                    <div className="mt-0.5 whitespace-pre-wrap">{live.who_involved}</div>
+                  </div>
+                )}
+                {live.location && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Location</div>
+                    <div className="mt-0.5">{live.location}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">What happened</div>
+                  <div className="mt-0.5 whitespace-pre-wrap">{live.what_happened}</div>
+                </div>
+                {live.notes && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Notes</div>
+                    <div className="mt-0.5 whitespace-pre-wrap text-muted-foreground">{live.notes}</div>
+                  </div>
+                )}
+                <AttachedDocsRow caseId={caseId} ids={toIds(live.document_ids)} />
+              </div>
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setConfirmDeleteIncident(live)}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive sm:mr-auto"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" /> Delete
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setViewIncident(null); setEditIncident(live); }}
+                >
+                  <Pencil className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
+
+      {/* Delete confirmation */}
+      <Dialog
+        open={!!confirmDeleteIncident}
+        onOpenChange={(v) => { if (!v) setConfirmDeleteIncident(null); }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete this event?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            "{confirmDeleteIncident?.title}" will be removed from your file. This can't be undone.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setConfirmDeleteIncident(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmDeleteIncident && removeIncident(confirmDeleteIncident.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
