@@ -175,6 +175,7 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
   const [used, setUsed] = useState(questionsUsed);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const remaining = Math.max(0, FREE_AI_QUESTIONS - used);
+  const navigateAi = useNavigate();
 
   // Realtime subscription to profiles so the counter stays accurate across tabs.
   useEffect(() => {
@@ -206,19 +207,14 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
     if (!isPaid && remaining === 0) setShowUpgrade(true);
   }, [isPaid, remaining]);
 
-  // React to the `?generate=<docType>` search param: when present, seed the
-  // document prefill bus so the DocumentGenerator pops it (on fresh mount via
-  // its useEffect, or live via PREFILL_EVENT when already mounted). Then clear
-  // the param from the URL so re-clicking the same generate action re-fires
-  // even if the docType is identical.
-  const navigateAi = useNavigate();
+  // Legacy ?generate=<docType> URL — redirect to the dedicated generate
+  // page so the chat panel is never responsible for document generation.
   useEffect(() => {
     if (!caseId || !generate) return;
     setPrefill("document", { documentType: generate });
     navigateAi({
-      to: "/cases/$caseId",
+      to: "/cases/$caseId/generate",
       params: { caseId },
-      search: { tab: "ai" },
       replace: true,
     } as any);
   }, [caseId, generate, navigateAi]);
@@ -233,10 +229,6 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
         onConsumed={(newUsed) => setUsed(newUsed)}
         onLimitHit={() => setShowUpgrade(true)}
       />
-
-      {caseId && (
-        <DocumentGenerator caseId={caseId} isPaid={isPaid} onLocked={() => setShowUpgrade(true)} />
-      )}
 
       <Dialog open={showUpgrade} onOpenChange={setShowUpgrade}>
         <DialogContent>
@@ -261,6 +253,7 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
     </div>
   );
 }
+
 
 // ============================== Chat ==============================
 
