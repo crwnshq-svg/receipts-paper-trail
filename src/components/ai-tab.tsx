@@ -868,7 +868,7 @@ function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
             dangerouslySetInnerHTML={{ __html: renderInline(display) }}
           />
         ) : (
-          <div className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed text-muted-foreground italic">
+          <div className="rounded-2xl bg-secondary px-3.5 py-2.5 leading-relaxed text-muted-foreground italic">
             Composing…
           </div>
         )}
