@@ -62,6 +62,8 @@ type CaseRow = {
   supervisor_name: string | null;
   work_location: string | null;
   has_written_contract: boolean | null;
+  description?: string | null;
+  intro_notes?: string | null;
   profile_complete_celebrated?: boolean | null;
 };
 
