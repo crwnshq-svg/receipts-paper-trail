@@ -26,6 +26,7 @@ import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedNotificationsNotificationIdRouteImport } from './routes/_authenticated/notifications.$notificationId'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases_.new'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
+import { Route as AuthenticatedCasesCaseIdGenerateRouteImport } from './routes/_authenticated/cases.$caseId.generate'
 import { Route as AuthenticatedCasesCaseIdDocumentsDocIdRouteImport } from './routes/_authenticated/cases.$caseId.documents.$docId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -115,6 +116,12 @@ const AuthenticatedCasesCaseIdRoute =
     path: '/cases/$caseId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCasesCaseIdGenerateRoute =
+  AuthenticatedCasesCaseIdGenerateRouteImport.update({
+    id: '/generate',
+    path: '/generate',
+    getParentRoute: () => AuthenticatedCasesCaseIdRoute,
+  } as any)
 const AuthenticatedCasesCaseIdDocumentsDocIdRoute =
   AuthenticatedCasesCaseIdDocumentsDocIdRouteImport.update({
     id: '/documents/$docId',
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/notifications/$notificationId': typeof AuthenticatedNotificationsNotificationIdRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
+  '/cases/$caseId/generate': typeof AuthenticatedCasesCaseIdGenerateRoute
   '/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
 export interface FileRoutesByTo {
@@ -158,6 +166,7 @@ export interface FileRoutesByTo {
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/notifications/$notificationId': typeof AuthenticatedNotificationsNotificationIdRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
+  '/cases/$caseId/generate': typeof AuthenticatedCasesCaseIdGenerateRoute
   '/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
 export interface FileRoutesById {
@@ -179,6 +188,7 @@ export interface FileRoutesById {
   '/_authenticated/cases_/new': typeof AuthenticatedCasesNewRoute
   '/_authenticated/notifications/$notificationId': typeof AuthenticatedNotificationsNotificationIdRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
+  '/_authenticated/cases/$caseId/generate': typeof AuthenticatedCasesCaseIdGenerateRoute
   '/_authenticated/cases/$caseId/documents/$docId': typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
 export interface FileRouteTypes {
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/cases/new'
     | '/notifications/$notificationId'
     | '/cases/'
+    | '/cases/$caseId/generate'
     | '/cases/$caseId/documents/$docId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/cases/new'
     | '/notifications/$notificationId'
     | '/cases'
+    | '/cases/$caseId/generate'
     | '/cases/$caseId/documents/$docId'
   id:
     | '__root__'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases_/new'
     | '/_authenticated/notifications/$notificationId'
     | '/_authenticated/cases/'
+    | '/_authenticated/cases/$caseId/generate'
     | '/_authenticated/cases/$caseId/documents/$docId'
   fileRoutesById: FileRoutesById
 }
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesCaseIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cases/$caseId/generate': {
+      id: '/_authenticated/cases/$caseId/generate'
+      path: '/generate'
+      fullPath: '/cases/$caseId/generate'
+      preLoaderRoute: typeof AuthenticatedCasesCaseIdGenerateRouteImport
+      parentRoute: typeof AuthenticatedCasesCaseIdRoute
+    }
     '/_authenticated/cases/$caseId/documents/$docId': {
       id: '/_authenticated/cases/$caseId/documents/$docId'
       path: '/documents/$docId'
@@ -398,11 +418,14 @@ const AuthenticatedNotificationsRouteWithChildren =
   )
 
 interface AuthenticatedCasesCaseIdRouteChildren {
+  AuthenticatedCasesCaseIdGenerateRoute: typeof AuthenticatedCasesCaseIdGenerateRoute
   AuthenticatedCasesCaseIdDocumentsDocIdRoute: typeof AuthenticatedCasesCaseIdDocumentsDocIdRoute
 }
 
 const AuthenticatedCasesCaseIdRouteChildren: AuthenticatedCasesCaseIdRouteChildren =
   {
+    AuthenticatedCasesCaseIdGenerateRoute:
+      AuthenticatedCasesCaseIdGenerateRoute,
     AuthenticatedCasesCaseIdDocumentsDocIdRoute:
       AuthenticatedCasesCaseIdDocumentsDocIdRoute,
   }

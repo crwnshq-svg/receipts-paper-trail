@@ -8,23 +8,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  Send, Sparkles, Lock, FileText, Download, Mail, Loader2, ArrowLeft,
-  ArrowRight, ExternalLink, Phone, FileSearch, Paperclip, Check,
+  Send, Sparkles, Loader2, ArrowRight,
+  ExternalLink, Phone, FileSearch, Paperclip, Check, Mail, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
-import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
+import { consumeAiQuestion } from "@/lib/ai.functions";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { loadConversation, saveConversation } from "@/lib/conversation.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
-import { setPrefill, popPrefill, PREFILL_EVENT } from "@/lib/prefill";
+import { setPrefill } from "@/lib/prefill";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
+import { DOCUMENT_TYPES } from "@/components/document-generator";
+
 
 const DISCLAIMER_LINE =
   "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
