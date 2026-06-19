@@ -142,11 +142,12 @@ export function ActivityTab({
   }, [incidents, notes]);
 
   async function removeIncident(id: string) {
-    if (!confirm("Delete this event?")) return;
     const { error } = await supabase.from("incidents").delete().eq("id", id);
     if (error) toast.error(error.message);
     else {
       toast.success("Deleted");
+      setConfirmDeleteIncident(null);
+      setViewIncident(null);
       onChange();
     }
   }
