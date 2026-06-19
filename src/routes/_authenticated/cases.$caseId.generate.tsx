@@ -32,8 +32,23 @@ export const Route = createFileRoute("/_authenticated/cases/$caseId/generate")({
 
 function GenerateDocumentPage() {
   const { caseId } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const [showUpgrade, setShowUpgrade] = useState(false);
+
+  // Seed prefill from search params (set by AI action navigation) so the
+  // generator pre-selects the right type and pre-fills known details. Runs
+  // before DocumentGenerator's mount-time popPrefill via layout ordering.
+  useEffect(() => {
+    if (!search.type && !search.recipient && !search.to && !search.facts) return;
+    setPrefill("document", {
+      ...(search.type ? { documentType: search.type } : {}),
+      ...(search.recipient ? { recipientType: search.recipient } : {}),
+      ...(search.to ? { recipientName: search.to } : {}),
+      ...(search.facts ? { keyFacts: search.facts } : {}),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: caseRow, isLoading } = useQuery({
     queryKey: ["case", caseId],
