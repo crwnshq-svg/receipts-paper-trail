@@ -301,6 +301,41 @@ export function CaseOverviewHeader({
     } as any);
   }
 
+  // ----- Profile checklist (persistent, per module) -----
+  type ChecklistItem = {
+    key: string;
+    label: string;
+    done: boolean;
+    onClick: () => void;
+  };
+  const checklist = useMemo<ChecklistItem[]>(() => {
+    if (isRenting) {
+      return [
+        { key: "lease_doc", label: "Upload your lease", done: hasLease, onClick: () => setUploadOpen(true) },
+        { key: "landlord_name", label: "Add your landlord's name", done: !!caseRow.landlord_name, onClick: () => goAi("collect:landlord_name") },
+        { key: "property_management_company", label: "Add property management company", done: !!caseRow.property_management_company, onClick: () => goAi("collect:property_management_company") },
+        { key: "monthly_rent", label: "Add monthly rent", done: caseRow.monthly_rent != null, onClick: () => goAi("collect:monthly_rent") },
+        { key: "lease_status", label: "Add lease status", done: !!caseRow.lease_status, onClick: () => goAi("collect:lease_status") },
+        { key: "lease_end_date", label: "Add lease end date", done: !!caseRow.lease_end_date, onClick: () => goAi("collect:lease_end_date") },
+      ];
+    }
+    if (isEmployment) {
+      return [
+        { key: "contract_doc", label: "Upload your contract or offer letter", done: hasOffer, onClick: () => setUploadOpen(true) },
+        { key: "employment_type", label: "Add employment type", done: !!caseRow.employment_type, onClick: () => goAi("collect:employment_type") },
+        { key: "supervisor_name", label: "Add your supervisor's name", done: !!caseRow.supervisor_name, onClick: () => goAi("collect:supervisor_name") },
+        { key: "work_location", label: "Add work location", done: !!caseRow.work_location, onClick: () => goAi("collect:work_location") },
+        { key: "has_written_contract", label: "Confirm written contract status", done: caseRow.has_written_contract !== null, onClick: () => goAi("collect:has_written_contract") },
+      ];
+    }
+    return [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRenting, isEmployment, hasLease, hasOffer, caseRow]);
+  const checklistDone = checklist.filter((c) => c.done).length;
+  const profileComplete = checklist.length > 0 && checklistDone === checklist.length;
+
+
+
 
   // Next-step descriptor
   const nextStep = useMemo(() => {
