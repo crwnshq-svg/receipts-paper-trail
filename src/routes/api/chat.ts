@@ -112,6 +112,82 @@ export const Route = createFileRoute("/api/chat")({
             profile: profRes.data ?? null,
             activeCases: cases,
           });
+
+          // Vision evidence for the unscoped path. Only attach images once the
+          // conversation has identified a specific active File — otherwise the
+          // companion should first ask which file the user means. Identification
+          // = a single active case whose id or label has been referenced in the
+          // conversation so far (by user or assistant).
+          const convoText = (messages as any[])
+            .map((m) => {
+              if (typeof m?.content === "string") return m.content;
+              const parts = Array.isArray(m?.parts) ? m.parts : [];
+              return parts
+                .map((p: any) => (typeof p?.text === "string" ? p.text : ""))
+                .join(" ");
+            })
+            .join("\n")
+            .toLowerCase();
+
+          const matched = cases.filter((c) => {
+            if (convoText.includes(c.id.toLowerCase())) return true;
+            const label = (c.label ?? "").trim().toLowerCase();
+            return label.length >= 3 && convoText.includes(label);
+          });
+          const identifiedCaseId = matched.length === 1 ? matched[0].id : null;
+
+          let unscopedImageParts: any[] = [];
+          if (identifiedCaseId) {
+            const { data: imgDocs } = await supabase
+              .from("documents")
+              .select("id,storage_path,file_name,display_name,mime_type")
+              .eq("case_id", identifiedCaseId);
+            const IMAGE_MIMES = new Set([
+              "image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif",
+            ]);
+            const imageDocs = (imgDocs ?? [])
+              .filter((d: any) => IMAGE_MIMES.has((d.mime_type ?? "").toLowerCase()))
+              .slice(0, 12);
+            for (const d of imageDocs) {
+              try {
+                const { data: signed } = await supabase.storage
+                  .from("case-documents")
+                  .createSignedUrl(d.storage_path, 600);
+                if (signed?.signedUrl) {
+                  unscopedImageParts.push({ type: "text", text: `[Evidence id=${d.id} · ${d.display_name || d.file_name}]` });
+                  unscopedImageParts.push({ type: "image", image: signed.signedUrl });
+                }
+              } catch (err) {
+                console.warn("chat(unscoped): signed url failed for", d.id, err);
+              }
+            }
+          }
+
+          const coreUnscopedMessages = await convertToModelMessages(messages);
+          const finalUnscopedMessages = unscopedImageParts.length > 0
+            ? [
+                {
+                  role: "user" as const,
+                  content: [
+                    { type: "text" as const, text: `Visual evidence attached to the File this conversation is about. You can see each of these images directly; reference them by name when relevant.` },
+                    ...unscopedImageParts,
+                  ],
+                },
+                {
+                  role: "assistant" as const,
+                  content: `Got it — I've reviewed every image attached to that File and can reference them directly.`,
+                },
+                ...coreUnscopedMessages,
+              ]
+            : coreUnscopedMessages;
+
+          const unscopedResult = streamText({
+            model: gateway(CHAT_MODEL),
+            system,
+            messages: finalUnscopedMessages as any,
+          });
+          return unscopedResult.toUIMessageStreamResponse({ originalMessages: messages });
+
         } else {
           const [caseRes, incRes, docRes] = await Promise.all([
             supabase.from("cases").select("*").eq("id", caseId).eq("user_id", userId).maybeSingle(),
