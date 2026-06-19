@@ -270,13 +270,6 @@ export const Route = createFileRoute("/api/chat")({
           return result.toUIMessageStreamResponse({ originalMessages: messages });
         }
 
-        const result = streamText({
-          model: gateway(CHAT_MODEL),
-          system,
-          messages: await convertToModelMessages(messages),
-        });
-
-        return result.toUIMessageStreamResponse({ originalMessages: messages });
 
       },
     },
