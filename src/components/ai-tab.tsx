@@ -864,7 +864,7 @@ function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
       <div className="max-w-[95%] text-sm space-y-2">
         {display ? (
           <div
-            className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap"
+            className="rounded-2xl bg-secondary px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap"
             dangerouslySetInnerHTML={{ __html: renderInline(display) }}
           />
         ) : (
