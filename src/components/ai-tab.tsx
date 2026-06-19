@@ -985,7 +985,11 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
   }
 
   function pickCaseId(a: StructuredAction): string | null {
-    const pref = a.prefill?.caseId ?? a.prefill?.case_id ?? a.prefill?.fileId ?? a.prefill?.file_id;
+    const anyA = a as any;
+    const pref =
+      a.prefill?.caseId ?? a.prefill?.case_id ??
+      a.prefill?.fileId ?? a.prefill?.file_id ??
+      anyA.caseId ?? anyA.case_id;
     return (typeof pref === "string" && pref) ? pref : caseId;
   }
 
@@ -1056,7 +1060,9 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
 
       // generate_document and specialized doc actions both route to the
       // dedicated generate page — chat is no longer responsible for the
-      // generation flow.
+      // generation flow. Pass prefill via search params so the destination
+      // can pre-select the document type and pre-fill known details
+      // without depending on sessionStorage.
       const specializedDocType: Record<string, string> = {
         send_preservation_demand: "Preservation Demand Letter",
         create_written_record: "Contemporaneous Written Record",
@@ -1072,16 +1078,50 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
           navigate({ to: "/cases" } as any);
           return;
         }
+        const pre = (a.prefill ?? {}) as Record<string, any>;
+        const anyA = a as any;
         const docType =
           specializedDocType[a.type] ??
           matchDocType(a.label) ??
-          (typeof a.prefill?.documentType === "string" ? a.prefill.documentType : null);
+          (typeof pre.documentType === "string" ? pre.documentType : null) ??
+          (typeof pre.document_type === "string" ? pre.document_type : null) ??
+          (typeof anyA.document_type === "string" ? anyA.document_type : null);
+        const recipientType =
+          (typeof pre.recipientType === "string" ? pre.recipientType : null) ??
+          (typeof pre.recipient_type === "string" ? pre.recipient_type : null) ??
+          (typeof anyA.recipient_type === "string" ? anyA.recipient_type : null);
+        const recipientName =
+          (typeof pre.recipientName === "string" ? pre.recipientName : null) ??
+          (typeof pre.recipient_name === "string" ? pre.recipient_name : null);
+        const keyFacts =
+          (typeof pre.keyFacts === "string" ? pre.keyFacts : null) ??
+          (typeof pre.key_facts === "string" ? pre.key_facts : null) ??
+          (typeof pre.body === "string" ? pre.body : null) ??
+          (typeof pre.description === "string" ? pre.description : null);
+
+        // Also stash full prefill (incident_ids/document_ids etc.) for the
+        // destination — search params only carry the headline fields.
         setPrefill("document", {
-          ...(a.prefill ?? {}),
+          ...pre,
           ...(docType ? { documentType: docType } : {}),
+          ...(recipientType ? { recipientType } : {}),
+          ...(recipientName ? { recipientName } : {}),
+          ...(keyFacts ? { keyFacts } : {}),
           actionLabel: a.label,
         });
-        navigate({ to: "/cases/$caseId/generate", params: { caseId: target } } as any);
+
+        const search: Record<string, string> = {};
+        if (docType) search.type = docType;
+        if (recipientType) search.recipient = recipientType;
+        if (recipientName) search.to = recipientName;
+        if (keyFacts) search.facts = keyFacts;
+
+        console.info("[ai-action] -> navigate /cases/$caseId/generate", { target, search });
+        navigate({
+          to: "/cases/$caseId/generate",
+          params: { caseId: target },
+          search,
+        } as any);
         return;
       }
 

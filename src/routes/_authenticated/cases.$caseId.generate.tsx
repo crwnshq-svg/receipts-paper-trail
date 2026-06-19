@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Disclaimer } from "@/components/app-shell";
@@ -10,16 +10,45 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft } from "lucide-react";
 import { DocumentGenerator } from "@/components/document-generator";
+import { setPrefill } from "@/lib/prefill";
+
+type GenerateSearch = {
+  type?: string;
+  recipient?: string;
+  to?: string;
+  facts?: string;
+};
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId/generate")({
   head: () => ({ meta: [{ title: "Generate a document — Pull Up Receipts" }] }),
+  validateSearch: (search: Record<string, unknown>): GenerateSearch => ({
+    type: typeof search.type === "string" ? search.type : undefined,
+    recipient: typeof search.recipient === "string" ? search.recipient : undefined,
+    to: typeof search.to === "string" ? search.to : undefined,
+    facts: typeof search.facts === "string" ? search.facts : undefined,
+  }),
   component: GenerateDocumentPage,
 });
 
 function GenerateDocumentPage() {
   const { caseId } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const [showUpgrade, setShowUpgrade] = useState(false);
+
+  // Seed prefill from search params (set by AI action navigation) so the
+  // generator pre-selects the right type and pre-fills known details. Runs
+  // before DocumentGenerator's mount-time popPrefill via layout ordering.
+  useEffect(() => {
+    if (!search.type && !search.recipient && !search.to && !search.facts) return;
+    setPrefill("document", {
+      ...(search.type ? { documentType: search.type } : {}),
+      ...(search.recipient ? { recipientType: search.recipient } : {}),
+      ...(search.to ? { recipientName: search.to } : {}),
+      ...(search.facts ? { keyFacts: search.facts } : {}),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: caseRow, isLoading } = useQuery({
     queryKey: ["case", caseId],
