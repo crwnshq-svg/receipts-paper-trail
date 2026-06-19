@@ -985,7 +985,11 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
   }
 
   function pickCaseId(a: StructuredAction): string | null {
-    const pref = a.prefill?.caseId ?? a.prefill?.case_id ?? a.prefill?.fileId ?? a.prefill?.file_id;
+    const anyA = a as any;
+    const pref =
+      a.prefill?.caseId ?? a.prefill?.case_id ??
+      a.prefill?.fileId ?? a.prefill?.file_id ??
+      anyA.caseId ?? anyA.case_id;
     return (typeof pref === "string" && pref) ? pref : caseId;
   }
 
