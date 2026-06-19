@@ -35,10 +35,15 @@ export const DOCUMENT_TYPES = [
 
 const RECIPIENTS = ["Court", "HR Department", "Labor Board", "Housing Authority", "Other"];
 
-export function DocumentGenerator({ caseId, isPaid, onLocked }: {
+export type GeneratorStep = "type" | "recipient" | "build" | "result";
+
+export function DocumentGenerator({ caseId, isPaid, onLocked, chromeless, onStepChange }: {
   caseId: string; isPaid: boolean; onLocked: () => void;
+  chromeless?: boolean;
+  onStepChange?: (step: GeneratorStep) => void;
 }) {
-  const [step, setStep] = useState<"type" | "recipient" | "build" | "result">("type");
+  const [step, setStep] = useState<GeneratorStep>("type");
+  useEffect(() => { onStepChange?.(step); }, [step, onStepChange]);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [customType, setCustomType] = useState("");
   const [recipientType, setRecipientType] = useState<string>("");
