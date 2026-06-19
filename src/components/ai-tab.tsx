@@ -1021,57 +1021,32 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
       search: { tab: "documents" } } as any);
   }
 
+  // Navigation actions are owned by real UI in the case overview now,
+  // not by the chat. Filter them out before rendering.
+  const NAV_TYPES = new Set<StructuredActionType>([
+    "open_file", "open_evidence_vault", "open_resources", "open_alert",
+  ]);
+  const visibleActions = actions.filter((a) => {
+    if (NAV_TYPES.has(a.type)) return false;
+    if (/\btimeline\b/i.test(a.label)) return false;
+    return true;
+  });
+
+  function isGenerate(a: StructuredAction) {
+    if (a.type === "generate_document") return true;
+    return [
+      "send_preservation_demand",
+      "create_written_record",
+      "draft_followup_email",
+      "generate_police_report",
+      "generate_footage_request",
+      "log_spoliation",
+    ].includes(a.type);
+  }
+
   async function handle(a: StructuredAction) {
-    // Dev visibility: any action click prints what it received so a dead
-    // button leaves a real trace in the console instead of silently no-oping.
     console.info("[ai-action] click", { type: a.type, label: a.label, prefill: a.prefill, currentCaseId: caseId });
     try {
-      // Label-based override: any action whose label talks about the
-      // Activity Timeline must route to the case's timeline tab, regardless
-      // of the structured action type the model picked. Previously the model
-      // sometimes emitted `open_resources` for these, sending users to the
-      // Resources page by mistake.
-      if (/\btimeline\b/i.test(a.label)) {
-        const target = pickCaseId(a) ?? caseId;
-        if (target) {
-          navigate({ to: "/cases/$caseId", params: { caseId: target },
-            search: { tab: "timeline" } } as any);
-          return;
-        }
-      }
-
-      if (a.type === "open_file") {
-        const target = pickCaseId(a);
-        if (!target) { toast.error("No File specified."); return; }
-        const tab = typeof a.prefill?.tab === "string" ? a.prefill.tab : undefined;
-        navigate({ to: "/cases/$caseId", params: { caseId: target },
-          search: tab ? { tab } : {} } as any);
-        return;
-      }
-      if (a.type === "open_evidence_vault") {
-        const target = pickCaseId(a);
-        if (target) {
-          navigate({ to: "/cases/$caseId", params: { caseId: target },
-            search: { tab: "documents" } } as any);
-        } else {
-          navigate({ to: "/cases" } as any);
-        }
-        return;
-      }
-      if (a.type === "open_resources") {
-        navigate({ to: "/resources" } as any);
-        return;
-      }
-      if (a.type === "open_alert") {
-        const id = a.prefill?.notificationId ?? a.prefill?.alertId ?? a.prefill?.id;
-        if (typeof id === "string" && id) {
-          navigate({ to: "/notifications/$notificationId",
-            params: { notificationId: id } } as any);
-        } else {
-          navigate({ to: "/notifications" } as any);
-        }
-        return;
-      }
       if (a.type === "attach_evidence_to_file") {
         const target = pickCaseId(a);
         if (!target) { toast.error("Pick a File to attach to."); return; }
@@ -1079,35 +1054,40 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         return;
       }
 
-      // --------- generate_document is allowed from both scoped and unscoped ---------
-      if (a.type === "generate_document") {
+      // generate_document and specialized doc actions both route to the
+      // dedicated generate page — chat is no longer responsible for the
+      // generation flow.
+      const specializedDocType: Record<string, string> = {
+        send_preservation_demand: "Preservation Demand Letter",
+        create_written_record: "Contemporaneous Written Record",
+        draft_followup_email: "Follow-Up Email",
+        generate_police_report: "Police Report Summary",
+        generate_footage_request: "Business Footage Request Letter",
+        log_spoliation: "Spoliation of Evidence Notice",
+      };
+      if (isGenerate(a)) {
         const target = pickCaseId(a);
-        const docType = matchDocType(a.label) ?? (typeof a.prefill?.documentType === "string" ? a.prefill.documentType : null);
         if (!target) {
-          // No File context at all — AI failed to route. Send the user to
-          // their files list to pick one rather than silently no-oping.
           toast.message("Pick a File to draft this for.");
           navigate({ to: "/cases" } as any);
           return;
         }
-        // Always seed prefill BEFORE navigating so the DocumentGenerator that
-        // mounts on the target route can pop it. Set it even when fields are
-        // missing — at minimum we want the document type pre-selected.
+        const docType =
+          specializedDocType[a.type] ??
+          matchDocType(a.label) ??
+          (typeof a.prefill?.documentType === "string" ? a.prefill.documentType : null);
         setPrefill("document", {
           ...(a.prefill ?? {}),
-          ...(docType && !a.prefill?.documentType ? { documentType: docType } : {}),
+          ...(docType ? { documentType: docType } : {}),
           actionLabel: a.label,
         });
-        navigate({ to: "/cases/$caseId", params: { caseId: target },
-          search: { tab: "ai", generate: docType ?? "1" } } as any);
+        navigate({ to: "/cases/$caseId/generate", params: { caseId: target } } as any);
         return;
       }
 
-      // --------- File-scoped actions: need a caseId ---------
+      // File-scoped actions: need a caseId
       const target = pickCaseId(a);
       if (!target) {
-        // Unscoped chat surfaced a file-scoped action without a caseId.
-        // Send the user to their files list so they can pick one.
         toast.message("Pick a File to continue.");
         navigate({ to: "/cases" } as any);
         return;
@@ -1129,26 +1109,6 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         navigate({ to: "/resources" } as any);
         return;
       }
-
-      const specializedDocType: Record<string, string> = {
-        send_preservation_demand: "Preservation Demand Letter",
-        create_written_record: "Contemporaneous Written Record",
-        draft_followup_email: "Follow-Up Email",
-        generate_police_report: "Police Report Summary",
-        generate_footage_request: "Business Footage Request Letter",
-        log_spoliation: "Spoliation of Evidence Notice",
-      };
-      if (a.type in specializedDocType) {
-        const docType = specializedDocType[a.type];
-        setPrefill("document", {
-          ...(a.prefill ?? {}),
-          documentType: docType,
-          actionLabel: a.label,
-        });
-        navigate({ to: "/cases/$caseId", params: { caseId: target },
-          search: { tab: "ai", generate: docType } } as any);
-        return;
-      }
       if (a.type === "log_witness") {
         setPrefill("incident", {
           title: "Witness account",
@@ -1159,25 +1119,47 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         return;
       }
       console.warn("[ai-action] unhandled action type", a);
-      toast.error(`Unknown action: ${a.type}`);
     } catch (err: any) {
       console.error("[ai-action] failed", { action: a, error: err });
       toast.error(err?.message ?? "Action failed");
     }
   }
 
+  if (visibleActions.length === 0) return null;
+
   return (
-    <div className="grid gap-2">
-      {actions.map((a, i) => (
-        <button key={i} onClick={() => handle(a)}
-          className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left">
-          <span>{a.label}</span>
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      ))}
+    <div className="grid gap-1">
+      {visibleActions.map((a, i) => {
+        if (isGenerate(a)) {
+          // Quiet, muted row — distinguishes a lightweight suggestion from a
+          // real button-style action elsewhere in the app.
+          return (
+            <button
+              key={i}
+              onClick={() => handle(a)}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition"
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1 truncate">{a.label}</span>
+              <ArrowRight className="h-3 w-3 opacity-60" />
+            </button>
+          );
+        }
+        return (
+          <button
+            key={i}
+            onClick={() => handle(a)}
+            className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left"
+          >
+            <span>{a.label}</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        );
+      })}
     </div>
   );
 }
+
 
 function ResourceCard({ resource }: { resource: StructuredResource }) {
   return (
