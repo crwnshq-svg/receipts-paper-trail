@@ -773,7 +773,7 @@ function ChatComposer({
         if (f && !disabled && !uploading) void handleFile(f);
       }}
       className={cn(
-        "border-t p-3 transition-colors",
+        "px-3 pt-2 pb-3 transition-colors",
         dragOver && "bg-accent/10 ring-2 ring-accent/40 ring-inset",
       )}
     >
@@ -787,38 +787,37 @@ function ChatComposer({
         }}
         accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg"
       />
-      <div className="flex gap-2">
-        <Button
+      <div className="flex items-end gap-1.5">
+        <button
           type="button"
-          variant="outline"
-          size="icon"
           disabled={uploading || disabled}
           onClick={() => fileRef.current?.click()}
           title="Attach evidence"
+          className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-50 transition"
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-        </Button>
+        </button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={dragOver ? "Drop to attach evidence…" : placeholder}
           disabled={disabled}
           autoFocus
+          className="flex-1 border-0 bg-secondary/60 focus-visible:ring-1 focus-visible:ring-ring shadow-none"
         />
-        <Button
+        <button
           type="submit"
           disabled={isLoading || !input.trim() || disabled}
-          className="bg-primary text-primary-foreground hover:bg-accent"
+          className="h-9 w-9 inline-flex items-center justify-center rounded-md bg-sky-600 text-white hover:bg-sky-600/90 disabled:opacity-40 transition"
+          aria-label="Send"
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
+        </button>
       </div>
-      <p className="mt-1.5 pl-1 text-[11px] text-muted-foreground">
-        Tap the paperclip or drop a file here to attach evidence.
-      </p>
     </form>
   );
 }
+
 
 // ============================== Structured message renderer ==============================
 
