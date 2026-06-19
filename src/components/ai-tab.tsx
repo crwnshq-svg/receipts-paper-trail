@@ -8,40 +8,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  Send, Sparkles, Lock, FileText, Download, Mail, Loader2, ArrowLeft,
-  ArrowRight, ExternalLink, Phone, FileSearch, Paperclip, Check,
+  Send, Sparkles, Loader2, ArrowRight,
+  ExternalLink, Phone, FileSearch, Paperclip, Check, Mail, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
-import { consumeAiQuestion, generateDocument } from "@/lib/ai.functions";
+import { consumeAiQuestion } from "@/lib/ai.functions";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { loadConversation, saveConversation } from "@/lib/conversation.functions";
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
-import { setPrefill, popPrefill, PREFILL_EVENT } from "@/lib/prefill";
+import { setPrefill } from "@/lib/prefill";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
+import { DOCUMENT_TYPES } from "@/components/document-generator";
 
-const DISCLAIMER_LINE =
-  "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
 
-const DOCUMENT_TYPES = [
-  "Demand Letter",
-  "Formal Complaint",
-  "Response to Written Warning",
-  "Exit/Resignation Letter",
-  "Raise or Compensation Request",
-  "Lease Violation Notice",
-  "Repair Request Letter",
-  "Cease and Desist",
-  "HR Escalation Letter",
-];
 
-const RECIPIENTS = ["Court", "HR Department", "Labor Board", "Housing Authority", "Other"];
 
 // ============================== Structured response types ==============================
 
@@ -177,6 +160,7 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
   const [used, setUsed] = useState(questionsUsed);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const remaining = Math.max(0, FREE_AI_QUESTIONS - used);
+  const navigateAi = useNavigate();
 
   // Realtime subscription to profiles so the counter stays accurate across tabs.
   useEffect(() => {
@@ -208,19 +192,14 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
     if (!isPaid && remaining === 0) setShowUpgrade(true);
   }, [isPaid, remaining]);
 
-  // React to the `?generate=<docType>` search param: when present, seed the
-  // document prefill bus so the DocumentGenerator pops it (on fresh mount via
-  // its useEffect, or live via PREFILL_EVENT when already mounted). Then clear
-  // the param from the URL so re-clicking the same generate action re-fires
-  // even if the docType is identical.
-  const navigateAi = useNavigate();
+  // Legacy ?generate=<docType> URL — redirect to the dedicated generate
+  // page so the chat panel is never responsible for document generation.
   useEffect(() => {
     if (!caseId || !generate) return;
     setPrefill("document", { documentType: generate });
     navigateAi({
-      to: "/cases/$caseId",
+      to: "/cases/$caseId/generate",
       params: { caseId },
-      search: { tab: "ai" },
       replace: true,
     } as any);
   }, [caseId, generate, navigateAi]);
@@ -235,10 +214,6 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
         onConsumed={(newUsed) => setUsed(newUsed)}
         onLimitHit={() => setShowUpgrade(true)}
       />
-
-      {caseId && (
-        <DocumentGenerator caseId={caseId} isPaid={isPaid} onLocked={() => setShowUpgrade(true)} />
-      )}
 
       <Dialog open={showUpgrade} onOpenChange={setShowUpgrade}>
         <DialogContent>
@@ -263,6 +238,7 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
     </div>
   );
 }
+
 
 // ============================== Chat ==============================
 
@@ -301,13 +277,10 @@ function ChatPanel(props: {
 
   if (!loaded) {
     return (
-      <Card className="overflow-hidden">
-        <div className="border-b p-4 flex items-center gap-2">
+      <Card className="overflow-hidden border-none shadow-none bg-transparent">
+        <div className="p-4 flex items-center gap-2">
           <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
-          <div>
-            <div className="font-medium text-sm">RECEIPTS AI</div>
-            <div className="text-xs text-muted-foreground">Loading conversation…</div>
-          </div>
+          <div className="text-xs text-muted-foreground">Loading conversation…</div>
         </div>
         <div className="h-[480px] flex items-center justify-center text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -315,6 +288,7 @@ function ChatPanel(props: {
       </Card>
     );
   }
+
 
   return <ChatPanelInner {...props} initialMessages={initial} startedAt={startedAt} />;
 }
@@ -395,6 +369,23 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   const pendingCollectRef = useRef<{ field: string } | null>(null);
   const navigateCollect = useNavigate();
   const qcCollect = useQueryClient();
+
+  // Pull case title so the chat header can name what the conversation is anchored to.
+  const { data: caseRow } = useQuery({
+    queryKey: ["case-header", caseId],
+    queryFn: async () => {
+      if (!caseId) return null;
+      const { data } = await supabase
+        .from("cases")
+        .select("title,opposing_party")
+        .eq("id", caseId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!caseId,
+  });
+  const anchorLabel = (caseRow?.opposing_party?.trim() || caseRow?.title || "").trim();
+
 
   // (Insight follow-up is now handled via ?ask=insight:<id> in the auto-fire
   // effect below so it sends immediately instead of pre-filling the input.)
@@ -623,29 +614,34 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
     : "What's going on? Describe a new situation, mention an existing File, or drop in evidence.";
 
   return (
-    <Card className="overflow-hidden">
-      <div className="border-b p-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="rounded-md bg-accent/10 p-1.5"><Sparkles className="h-4 w-4 text-accent" /></div>
-          <div>
-            <div className="font-medium text-sm">RECEIPTS AI</div>
-            <div className="text-xs text-muted-foreground">
-              {caseId ? "File-specific guidance from your evidence" : "Unscoped — start anywhere"}
-            </div>
+    <Card className="overflow-hidden border bg-card">
+      <div className="px-4 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Sparkles className="h-4 w-4 text-accent shrink-0" />
+          <div className="min-w-0 truncate text-sm">
+            {anchorLabel ? (
+              <>
+                <span className="text-muted-foreground">on:</span>{" "}
+                <span className="font-medium">{anchorLabel}</span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">Companion — start anywhere</span>
+            )}
           </div>
         </div>
-        <div className="text-xs text-muted-foreground">
-          {isPaid ? "Unlimited" : `${remaining} of ${FREE_AI_QUESTIONS} questions remaining`}
+        <div className="text-xs text-muted-foreground shrink-0">
+          {isPaid ? "Unlimited" : `${remaining} of ${FREE_AI_QUESTIONS} left`}
         </div>
       </div>
 
       {historyLabel && messages.length > 0 && (
-        <div className="px-4 py-1.5 border-b bg-secondary/40 text-[10px] uppercase tracking-wide text-muted-foreground text-center">
+        <div className="px-4 py-1 text-[10px] uppercase tracking-wide text-muted-foreground/70 text-center">
           {historyLabel} · {messages.length} message{messages.length === 1 ? "" : "s"}
         </div>
       )}
 
-      <div ref={scrollRef} className="h-[480px] overflow-y-auto p-4 space-y-4 bg-secondary/30">
+      <div ref={scrollRef} className="h-[480px] overflow-y-auto px-4 pt-2 pb-4 space-y-4">
+
         {empty && !ask && (
           <div className="text-center text-sm text-muted-foreground py-10">
             {emptyTitle}
@@ -777,7 +773,7 @@ function ChatComposer({
         if (f && !disabled && !uploading) void handleFile(f);
       }}
       className={cn(
-        "border-t p-3 transition-colors",
+        "px-3 pt-2 pb-3 transition-colors",
         dragOver && "bg-accent/10 ring-2 ring-accent/40 ring-inset",
       )}
     >
@@ -791,38 +787,37 @@ function ChatComposer({
         }}
         accept="image/*,application/pdf,.doc,.docx,.txt,.eml,.msg"
       />
-      <div className="flex gap-2">
-        <Button
+      <div className="flex items-end gap-1.5">
+        <button
           type="button"
-          variant="outline"
-          size="icon"
           disabled={uploading || disabled}
           onClick={() => fileRef.current?.click()}
           title="Attach evidence"
+          className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-50 transition"
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-        </Button>
+        </button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={dragOver ? "Drop to attach evidence…" : placeholder}
           disabled={disabled}
           autoFocus
+          className="flex-1 border-0 bg-secondary/60 focus-visible:ring-1 focus-visible:ring-ring shadow-none"
         />
-        <Button
+        <button
           type="submit"
           disabled={isLoading || !input.trim() || disabled}
-          className="bg-primary text-primary-foreground hover:bg-accent"
+          className="h-9 w-9 inline-flex items-center justify-center rounded-md bg-sky-600 text-white hover:bg-sky-600/90 disabled:opacity-40 transition"
+          aria-label="Send"
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
+        </button>
       </div>
-      <p className="mt-1.5 pl-1 text-[11px] text-muted-foreground">
-        Tap the paperclip or drop a file here to attach evidence.
-      </p>
     </form>
   );
 }
+
 
 // ============================== Structured message renderer ==============================
 
@@ -846,7 +841,7 @@ function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
     }
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl bg-primary text-primary-foreground px-4 py-2 text-sm whitespace-pre-wrap">
+        <div className="max-w-[85%] rounded-2xl bg-sky-600 text-white px-4 py-2 text-sm whitespace-pre-wrap shadow-sm">
           {text}
         </div>
       </div>
@@ -869,11 +864,11 @@ function ChatMessage({ message, caseId, onTapSuggestion, pendingUploadRef }: {
       <div className="max-w-[95%] text-sm space-y-2">
         {display ? (
           <div
-            className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap"
+            className="rounded-2xl bg-secondary px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap"
             dangerouslySetInnerHTML={{ __html: renderInline(display) }}
           />
         ) : (
-          <div className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed text-muted-foreground italic">
+          <div className="rounded-2xl bg-secondary px-3.5 py-2.5 leading-relaxed text-muted-foreground italic">
             Composing…
           </div>
         )}
@@ -962,7 +957,7 @@ function StaggeredBeats({ beats }: { beats: string[] }) {
       {beats.slice(0, visible).map((b, i) => (
         <div
           key={i}
-          className="rounded-2xl bg-card border px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-bottom-1 duration-300"
+          className="rounded-2xl bg-secondary px-3.5 py-2.5 leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-bottom-1 duration-300"
           dangerouslySetInnerHTML={{ __html: renderInline(b) }}
         />
       ))}
@@ -1026,57 +1021,32 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
       search: { tab: "documents" } } as any);
   }
 
+  // Navigation actions are owned by real UI in the case overview now,
+  // not by the chat. Filter them out before rendering.
+  const NAV_TYPES = new Set<StructuredActionType>([
+    "open_file", "open_evidence_vault", "open_resources", "open_alert",
+  ]);
+  const visibleActions = actions.filter((a) => {
+    if (NAV_TYPES.has(a.type)) return false;
+    if (/\btimeline\b/i.test(a.label)) return false;
+    return true;
+  });
+
+  function isGenerate(a: StructuredAction) {
+    if (a.type === "generate_document") return true;
+    return [
+      "send_preservation_demand",
+      "create_written_record",
+      "draft_followup_email",
+      "generate_police_report",
+      "generate_footage_request",
+      "log_spoliation",
+    ].includes(a.type);
+  }
+
   async function handle(a: StructuredAction) {
-    // Dev visibility: any action click prints what it received so a dead
-    // button leaves a real trace in the console instead of silently no-oping.
     console.info("[ai-action] click", { type: a.type, label: a.label, prefill: a.prefill, currentCaseId: caseId });
     try {
-      // Label-based override: any action whose label talks about the
-      // Activity Timeline must route to the case's timeline tab, regardless
-      // of the structured action type the model picked. Previously the model
-      // sometimes emitted `open_resources` for these, sending users to the
-      // Resources page by mistake.
-      if (/\btimeline\b/i.test(a.label)) {
-        const target = pickCaseId(a) ?? caseId;
-        if (target) {
-          navigate({ to: "/cases/$caseId", params: { caseId: target },
-            search: { tab: "timeline" } } as any);
-          return;
-        }
-      }
-
-      if (a.type === "open_file") {
-        const target = pickCaseId(a);
-        if (!target) { toast.error("No File specified."); return; }
-        const tab = typeof a.prefill?.tab === "string" ? a.prefill.tab : undefined;
-        navigate({ to: "/cases/$caseId", params: { caseId: target },
-          search: tab ? { tab } : {} } as any);
-        return;
-      }
-      if (a.type === "open_evidence_vault") {
-        const target = pickCaseId(a);
-        if (target) {
-          navigate({ to: "/cases/$caseId", params: { caseId: target },
-            search: { tab: "documents" } } as any);
-        } else {
-          navigate({ to: "/cases" } as any);
-        }
-        return;
-      }
-      if (a.type === "open_resources") {
-        navigate({ to: "/resources" } as any);
-        return;
-      }
-      if (a.type === "open_alert") {
-        const id = a.prefill?.notificationId ?? a.prefill?.alertId ?? a.prefill?.id;
-        if (typeof id === "string" && id) {
-          navigate({ to: "/notifications/$notificationId",
-            params: { notificationId: id } } as any);
-        } else {
-          navigate({ to: "/notifications" } as any);
-        }
-        return;
-      }
       if (a.type === "attach_evidence_to_file") {
         const target = pickCaseId(a);
         if (!target) { toast.error("Pick a File to attach to."); return; }
@@ -1084,35 +1054,40 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         return;
       }
 
-      // --------- generate_document is allowed from both scoped and unscoped ---------
-      if (a.type === "generate_document") {
+      // generate_document and specialized doc actions both route to the
+      // dedicated generate page — chat is no longer responsible for the
+      // generation flow.
+      const specializedDocType: Record<string, string> = {
+        send_preservation_demand: "Preservation Demand Letter",
+        create_written_record: "Contemporaneous Written Record",
+        draft_followup_email: "Follow-Up Email",
+        generate_police_report: "Police Report Summary",
+        generate_footage_request: "Business Footage Request Letter",
+        log_spoliation: "Spoliation of Evidence Notice",
+      };
+      if (isGenerate(a)) {
         const target = pickCaseId(a);
-        const docType = matchDocType(a.label) ?? (typeof a.prefill?.documentType === "string" ? a.prefill.documentType : null);
         if (!target) {
-          // No File context at all — AI failed to route. Send the user to
-          // their files list to pick one rather than silently no-oping.
           toast.message("Pick a File to draft this for.");
           navigate({ to: "/cases" } as any);
           return;
         }
-        // Always seed prefill BEFORE navigating so the DocumentGenerator that
-        // mounts on the target route can pop it. Set it even when fields are
-        // missing — at minimum we want the document type pre-selected.
+        const docType =
+          specializedDocType[a.type] ??
+          matchDocType(a.label) ??
+          (typeof a.prefill?.documentType === "string" ? a.prefill.documentType : null);
         setPrefill("document", {
           ...(a.prefill ?? {}),
-          ...(docType && !a.prefill?.documentType ? { documentType: docType } : {}),
+          ...(docType ? { documentType: docType } : {}),
           actionLabel: a.label,
         });
-        navigate({ to: "/cases/$caseId", params: { caseId: target },
-          search: { tab: "ai", generate: docType ?? "1" } } as any);
+        navigate({ to: "/cases/$caseId/generate", params: { caseId: target } } as any);
         return;
       }
 
-      // --------- File-scoped actions: need a caseId ---------
+      // File-scoped actions: need a caseId
       const target = pickCaseId(a);
       if (!target) {
-        // Unscoped chat surfaced a file-scoped action without a caseId.
-        // Send the user to their files list so they can pick one.
         toast.message("Pick a File to continue.");
         navigate({ to: "/cases" } as any);
         return;
@@ -1134,26 +1109,6 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         navigate({ to: "/resources" } as any);
         return;
       }
-
-      const specializedDocType: Record<string, string> = {
-        send_preservation_demand: "Preservation Demand Letter",
-        create_written_record: "Contemporaneous Written Record",
-        draft_followup_email: "Follow-Up Email",
-        generate_police_report: "Police Report Summary",
-        generate_footage_request: "Business Footage Request Letter",
-        log_spoliation: "Spoliation of Evidence Notice",
-      };
-      if (a.type in specializedDocType) {
-        const docType = specializedDocType[a.type];
-        setPrefill("document", {
-          ...(a.prefill ?? {}),
-          documentType: docType,
-          actionLabel: a.label,
-        });
-        navigate({ to: "/cases/$caseId", params: { caseId: target },
-          search: { tab: "ai", generate: docType } } as any);
-        return;
-      }
       if (a.type === "log_witness") {
         setPrefill("incident", {
           title: "Witness account",
@@ -1164,25 +1119,47 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         return;
       }
       console.warn("[ai-action] unhandled action type", a);
-      toast.error(`Unknown action: ${a.type}`);
     } catch (err: any) {
       console.error("[ai-action] failed", { action: a, error: err });
       toast.error(err?.message ?? "Action failed");
     }
   }
 
+  if (visibleActions.length === 0) return null;
+
   return (
-    <div className="grid gap-2">
-      {actions.map((a, i) => (
-        <button key={i} onClick={() => handle(a)}
-          className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left">
-          <span>{a.label}</span>
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      ))}
+    <div className="grid gap-1">
+      {visibleActions.map((a, i) => {
+        if (isGenerate(a)) {
+          // Quiet, muted row — distinguishes a lightweight suggestion from a
+          // real button-style action elsewhere in the app.
+          return (
+            <button
+              key={i}
+              onClick={() => handle(a)}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition"
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1 truncate">{a.label}</span>
+              <ArrowRight className="h-3 w-3 opacity-60" />
+            </button>
+          );
+        }
+        return (
+          <button
+            key={i}
+            onClick={() => handle(a)}
+            className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left"
+          >
+            <span>{a.label}</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        );
+      })}
     </div>
   );
 }
+
 
 function ResourceCard({ resource }: { resource: StructuredResource }) {
   return (
@@ -1255,457 +1232,6 @@ function DocumentRefList({ caseId, ids }: { caseId: string; ids: string[] }) {
           <span className="truncate font-medium">{d.file_name}</span>
         </button>
       ))}
-    </div>
-  );
-}
-
-// ============================== Document Generator ==============================
-
-function DocumentGenerator({ caseId, isPaid, onLocked }: {
-  caseId: string; isPaid: boolean; onLocked: () => void;
-}) {
-  // step: pick type -> pick recipient -> build (selection) -> result
-  const [step, setStep] = useState<"type" | "recipient" | "build" | "result">("type");
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [customType, setCustomType] = useState("");
-  const [recipientType, setRecipientType] = useState<string>("");
-  const [recipientName, setRecipientName] = useState("");
-  const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
-  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
-  const [keyFacts, setKeyFacts] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
-  const generateFn = useServerFn(generateDocument);
-
-  // Apply AI-supplied prefill: jump straight to the right step. Runs on mount
-  // AND whenever the prefill bus signals a new document prefill (so tapping a
-  // "Generate Document" action while this component is already mounted on the
-  // AI tab still picks up the new prefill instead of silently no-oping).
-  function applyDocumentPrefill() {
-    const pre = popPrefill<Record<string, any>>("document");
-    if (!pre) return;
-    const marks: Record<string, boolean> = {};
-    let nextStep: typeof step = "type";
-    if (typeof pre.documentType === "string") {
-      if (!isPaid) { onLocked(); return; }
-      setSelectedType(pre.documentType);
-      marks.documentType = true;
-      nextStep = "recipient";
-    }
-    if (typeof pre.recipientType === "string") {
-      setRecipientType(pre.recipientType);
-      marks.recipientType = true;
-      if (nextStep === "recipient") nextStep = "build";
-    }
-    if (typeof pre.recipientName === "string") {
-      setRecipientName(pre.recipientName);
-      marks.recipientName = true;
-    } else if (typeof pre.recipient_name === "string") {
-      setRecipientName(pre.recipient_name);
-      marks.recipientName = true;
-    }
-    if (typeof pre.keyFacts === "string" || typeof pre.body === "string" || typeof pre.description === "string") {
-      setKeyFacts(pre.keyFacts ?? pre.body ?? pre.description);
-      marks.keyFacts = true;
-    }
-    if (Array.isArray(pre.incident_ids)) {
-      setSelectedIncidents(pre.incident_ids.filter((x: any) => typeof x === "string"));
-      marks.incidents = true;
-    }
-    if (Array.isArray(pre.document_ids)) {
-      setSelectedDocs(pre.document_ids.filter((x: any) => typeof x === "string"));
-      marks.documents = true;
-    }
-    setPrefilled(marks);
-    setResult(null);
-    setStep(nextStep);
-    // Scroll the generator into view so the user can see the pre-filled form.
-    requestAnimationFrame(() => {
-      generatorRootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
-  const generatorRootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    applyDocumentPrefill();
-    function onPrefill(e: Event) {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.scope === "document") applyDocumentPrefill();
-    }
-    window.addEventListener(PREFILL_EVENT, onPrefill);
-    return () => window.removeEventListener(PREFILL_EVENT, onPrefill);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-
-
-  function pickType(t: string) {
-    if (!isPaid) { onLocked(); return; }
-    setSelectedType(t);
-    setStep("recipient");
-  }
-
-  function pickCustom() {
-    if (!isPaid) { onLocked(); return; }
-    if (!customType.trim()) { toast.error("Enter a document type"); return; }
-    setSelectedType(customType.trim());
-    setStep("recipient");
-  }
-
-  function reset() {
-    setStep("type");
-    setSelectedType(null);
-    setRecipientType("");
-    setRecipientName("");
-    setSelectedIncidents([]);
-    setSelectedDocs([]);
-    setKeyFacts("");
-    setResult(null);
-  }
-
-  async function handleGenerate() {
-    if (!selectedType || !recipientType) return;
-    if (selectedIncidents.length === 0 && selectedDocs.length === 0) return;
-    setGenerating(true);
-    try {
-      const res = await generateFn({ data: {
-        caseId, documentType: selectedType, recipientType,
-        recipientName: recipientName.trim() || undefined,
-        incidentIds: selectedIncidents,
-        documentIds: selectedDocs,
-        keyFacts: keyFacts.trim() || undefined,
-      }});
-      setResult(res.content);
-      setStep("result");
-    } catch (err: any) {
-      toast.error(err?.message ?? "Generation failed");
-    } finally { setGenerating(false); }
-  }
-
-  function downloadPdf() {
-    if (!result) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<html><head><title>${selectedType}</title>
-      <style>body{font-family:Georgia,serif;max-width:680px;margin:40px auto;padding:0 24px;white-space:pre-wrap;line-height:1.6;color:#1a1a2e}</style>
-      </head><body>${result.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!))}</body></html>`);
-    w.document.close();
-    setTimeout(() => w.print(), 300);
-  }
-
-  async function emailToMe() {
-    const { data } = await supabase.auth.getUser();
-    const email = data.user?.email;
-    if (!email || !result) return;
-    const subject = encodeURIComponent(`Pull Up Receipts — ${selectedType}`);
-    const body = encodeURIComponent(result);
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-  }
-
-  return (
-    <div ref={generatorRootRef}>
-    <Card className="p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <FileText className="h-4 w-4 text-accent" />
-        <h3 className="font-medium">Generate a document</h3>
-      </div>
-      <p className="text-xs text-muted-foreground mb-4">
-        Pick a document type. We'll draft it using your file context.
-      </p>
-
-      {step === "result" && result && (
-        <ResultEditor
-          docType={selectedType ?? "Document"}
-          value={result}
-          onChange={setResult}
-          onBack={reset}
-          onDownload={downloadPdf}
-          onEmail={emailToMe}
-        />
-      )}
-
-      {step === "recipient" && selectedType && (
-        <RecipientPicker
-          docType={selectedType}
-          recipientType={recipientType}
-          setRecipientType={setRecipientType}
-          recipientName={recipientName}
-          setRecipientName={setRecipientName}
-          onBack={() => setStep("type")}
-          onNext={() => setStep("build")}
-        />
-      )}
-
-      {step === "build" && selectedType && (
-        <BuildYourDocument
-          caseId={caseId}
-          docType={selectedType}
-          recipientType={recipientType}
-          recipientName={recipientName}
-          selectedIncidents={selectedIncidents}
-          setSelectedIncidents={setSelectedIncidents}
-          selectedDocs={selectedDocs}
-          setSelectedDocs={setSelectedDocs}
-          keyFacts={keyFacts}
-          setKeyFacts={setKeyFacts}
-          onBack={() => setStep("recipient")}
-          onGenerate={handleGenerate}
-          generating={generating}
-        />
-      )}
-
-      {step === "type" && (
-        <>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {DOCUMENT_TYPES.map((t) => (
-              <button key={t} onClick={() => pickType(t)}
-                className="group relative rounded-lg border bg-background p-3 text-left text-sm hover:border-accent transition">
-                <div className="flex items-start gap-2">
-                  {!isPaid && <Lock className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />}
-                  <span className="font-medium">{t}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-4 pt-4 border-t">
-            <Label className="text-xs">Custom document type</Label>
-            <div className="mt-1.5 flex gap-2">
-              <Input value={customType} onChange={(e) => setCustomType(e.target.value)}
-                placeholder="e.g. Settlement Proposal" />
-              <Button onClick={pickCustom} variant="outline">
-                {!isPaid && <Lock className="h-3.5 w-3.5 mr-1" />}Use
-              </Button>
-            </div>
-          </div>
-
-          {!isPaid && (
-            <p className="mt-4 text-xs text-muted-foreground text-center">
-              Document generation is included with the paid plan.
-            </p>
-          )}
-        </>
-      )}
-    </Card>
-    </div>
-  );
-}
-
-function RecipientPicker(props: {
-  docType: string; recipientType: string; setRecipientType: (s: string) => void;
-  recipientName: string; setRecipientName: (s: string) => void;
-  onBack: () => void; onNext: () => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <button onClick={props.onBack} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-3 w-3" /> Pick a different document
-      </button>
-      <div className="rounded-md bg-secondary px-3 py-2 text-sm">
-        Drafting: <strong>{props.docType}</strong>
-      </div>
-      <div className="space-y-1.5">
-        <Label>Recipient</Label>
-        <Select value={props.recipientType} onValueChange={props.setRecipientType}>
-          <SelectTrigger><SelectValue placeholder="Who is this addressed to?" /></SelectTrigger>
-          <SelectContent>
-            {RECIPIENTS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label>Recipient name (optional)</Label>
-        <Input value={props.recipientName} onChange={(e) => props.setRecipientName(e.target.value)}
-          placeholder="e.g. ABC Property Management" />
-      </div>
-      <Button onClick={props.onNext} disabled={!props.recipientType}
-        className="bg-primary text-primary-foreground hover:bg-accent w-full">
-        Next: Build your document <ArrowRight className="h-4 w-4 ml-1" />
-      </Button>
-    </div>
-  );
-}
-
-function BuildYourDocument(props: {
-  caseId: string;
-  docType: string; recipientType: string; recipientName: string;
-  selectedIncidents: string[]; setSelectedIncidents: (ids: string[]) => void;
-  selectedDocs: string[]; setSelectedDocs: (ids: string[]) => void;
-  keyFacts: string; setKeyFacts: (s: string) => void;
-  onBack: () => void; onGenerate: () => void; generating: boolean;
-}) {
-  const { data: incidents } = useQuery({
-    queryKey: ["build-incidents", props.caseId],
-    queryFn: async () => {
-      const { data } = await supabase.from("incidents").select("id,title,occurred_at,what_happened,location")
-        .eq("case_id", props.caseId).order("occurred_at", { ascending: false });
-      return data ?? [];
-    },
-  });
-  const { data: docs } = useQuery({
-    queryKey: ["build-docs", props.caseId],
-    queryFn: async () => {
-      const { data } = await supabase.from("documents").select("id,file_name,mime_type,ai_summary")
-        .eq("case_id", props.caseId).order("created_at", { ascending: false });
-      return data ?? [];
-    },
-  });
-
-  function toggleIncident(id: string) {
-    props.setSelectedIncidents(
-      props.selectedIncidents.includes(id)
-        ? props.selectedIncidents.filter((x) => x !== id)
-        : [...props.selectedIncidents, id],
-    );
-  }
-  function toggleDoc(id: string) {
-    props.setSelectedDocs(
-      props.selectedDocs.includes(id)
-        ? props.selectedDocs.filter((x) => x !== id)
-        : [...props.selectedDocs, id],
-    );
-  }
-
-  const incCount = props.selectedIncidents.length;
-  const docCount = props.selectedDocs.length;
-  const hasSelection = incCount + docCount > 0;
-
-  return (
-    <div className="space-y-5">
-      <button onClick={props.onBack} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-3 w-3" /> Back
-      </button>
-
-      <div>
-        <h4 className="font-serif text-xl font-semibold">Build Your Document</h4>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Drafting <strong>{props.docType}</strong> for <strong>{props.recipientType}</strong>
-          {props.recipientName ? ` (${props.recipientName})` : ""}
-        </p>
-      </div>
-
-      {/* Events */}
-      <section>
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-          Events ({incCount}/{incidents?.length ?? 0})
-        </div>
-        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-          {(incidents ?? []).length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No events logged yet.</p>
-          )}
-          {(incidents ?? []).map((inc) => {
-            const checked = props.selectedIncidents.includes(inc.id);
-            return (
-              <label key={inc.id}
-                className={`flex items-start gap-2 rounded-md border p-2.5 cursor-pointer ${checked ? "border-accent bg-accent/5" : "bg-background hover:border-muted-foreground/30"}`}>
-                <Checkbox checked={checked} onCheckedChange={() => toggleIncident(inc.id)} className="mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                    <span>{new Date(inc.occurred_at).toLocaleDateString()}</span>
-                    {inc.location && <span>· {inc.location}</span>}
-                  </div>
-                  <div className="text-sm font-medium truncate">{inc.title}</div>
-                  <div className="text-xs text-muted-foreground line-clamp-1">{inc.what_happened}</div>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Evidence */}
-      <section>
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-          Evidence ({docCount}/{docs?.length ?? 0})
-        </div>
-        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-          {(docs ?? []).length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No evidence uploaded yet.</p>
-          )}
-          {(docs ?? []).map((d) => {
-            const checked = props.selectedDocs.includes(d.id);
-            const firstSentence = d.ai_summary?.split(/(?<=[.!?])\s/)[0] ?? "";
-            return (
-              <label key={d.id}
-                className={`flex items-start gap-2 rounded-md border p-2.5 cursor-pointer ${checked ? "border-accent bg-accent/5" : "bg-background hover:border-muted-foreground/30"}`}>
-                <Checkbox checked={checked} onCheckedChange={() => toggleDoc(d.id)} className="mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate">{d.file_name}</div>
-                  <div className="text-[11px] text-muted-foreground">{d.mime_type ?? "file"}</div>
-                  {firstSentence && (
-                    <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{firstSentence}</div>
-                  )}
-                </div>
-              </label>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Key facts */}
-      <section className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Key Facts
-        </Label>
-        <Textarea
-          value={props.keyFacts}
-          onChange={(e) => props.setKeyFacts(e.target.value)}
-          placeholder="Add any context the AI should know — party names, amounts owed, specific demands, key dates, anything not captured in your events or evidence."
-          rows={4}
-        />
-      </section>
-
-      {/* Summary + generate */}
-      <div className="border-t pt-4 space-y-2">
-        <div className="text-xs text-center text-muted-foreground">
-          Generating from <strong>{incCount}</strong> event{incCount === 1 ? "" : "s"} and <strong>{docCount}</strong> piece{docCount === 1 ? "" : "s"} of evidence.
-        </div>
-        {!hasSelection && (
-          <p className="text-xs text-center text-muted-foreground italic">
-            Select at least one event or piece of evidence to include.
-          </p>
-        )}
-        <Button onClick={props.onGenerate} disabled={!hasSelection || props.generating}
-          className="bg-primary text-primary-foreground hover:bg-accent w-full">
-          {props.generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating…</> : "Generate document"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function ResultEditor(props: {
-  docType: string; value: string; onChange: (s: string) => void;
-  onBack: () => void; onDownload: () => void; onEmail: () => void;
-}) {
-  // Ensure non-removable disclaimer footer
-  const FOOTER_MARKER = "---\nPull Up Receipts is a document preparation tool";
-  const hasFooter = props.value.includes(FOOTER_MARKER);
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <button onClick={props.onBack} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-3 w-3" /> New document
-        </button>
-        <span className="text-xs text-muted-foreground">{props.docType}</span>
-      </div>
-      <Textarea value={props.value} onChange={(e) => props.onChange(e.target.value)}
-        className="min-h-[400px] font-mono text-xs leading-relaxed" />
-      {!hasFooter && (
-        <p className="text-[11px] text-muted-foreground italic">
-          {DISCLAIMER_LINE}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <Button onClick={props.onDownload} variant="outline" className="flex-1">
-          <Download className="h-4 w-4 mr-1" /> Download PDF
-        </Button>
-        <Button onClick={props.onEmail} variant="outline" className="flex-1">
-          <Mail className="h-4 w-4 mr-1" /> Email to myself
-        </Button>
-      </div>
     </div>
   );
 }

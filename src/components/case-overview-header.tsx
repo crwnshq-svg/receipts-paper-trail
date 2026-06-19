@@ -22,8 +22,10 @@ import {
   ArrowRight,
   Lightbulb,
   Award,
-
+  FileText,
+  Clock,
 } from "lucide-react";
+
 import { toast } from "sonner";
 import { showAchievement } from "@/lib/achievements";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
@@ -302,6 +304,21 @@ export function CaseOverviewHeader({
       replace: true,
     } as any);
   }
+  function goTimeline() {
+    navigate({
+      to: "/cases/$caseId",
+      params: { caseId },
+      search: { tab: "timeline" } as any,
+      replace: true,
+    } as any);
+  }
+  function goGenerate() {
+    navigate({
+      to: "/cases/$caseId/generate",
+      params: { caseId },
+    } as any);
+  }
+
 
   // Next-step descriptor
   const nextStep = useMemo(() => {
@@ -471,6 +488,26 @@ export function CaseOverviewHeader({
           <span className="text-xs">View files</span>
         </Button>
       </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="outline"
+          onClick={goGenerate}
+          className="h-auto flex-col gap-1 py-3"
+        >
+          <FileText className="h-4 w-4" />
+          <span className="text-xs">Generate a document</span>
+        </Button>
+        <Button
+          variant="outline"
+          onClick={goTimeline}
+          className="h-auto flex-col gap-1 py-3"
+        >
+          <Clock className="h-4 w-4" />
+          <span className="text-xs">View Activity Timeline</span>
+        </Button>
+      </div>
+
 
       {/* Insights carousel */}
       {insights && insights.length > 0 && (
