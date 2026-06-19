@@ -24,22 +24,7 @@ import { ClarifyingQuestion } from "@/components/clarifying-question";
 import { DOCUMENT_TYPES } from "@/components/document-generator";
 
 
-const DISCLAIMER_LINE =
-  "Pull Up Receipts is a document preparation tool and does not provide legal advice. Nothing generated constitutes legal advice or creates an attorney-client relationship. For legal representation consult a licensed attorney.";
 
-const DOCUMENT_TYPES = [
-  "Demand Letter",
-  "Formal Complaint",
-  "Response to Written Warning",
-  "Exit/Resignation Letter",
-  "Raise or Compensation Request",
-  "Lease Violation Notice",
-  "Repair Request Letter",
-  "Cease and Desist",
-  "HR Escalation Letter",
-];
-
-const RECIPIENTS = ["Court", "HR Department", "Labor Board", "Housing Authority", "Other"];
 
 // ============================== Structured response types ==============================
 
