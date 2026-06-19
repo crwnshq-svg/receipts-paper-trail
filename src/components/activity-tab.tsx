@@ -397,6 +397,89 @@ export function ActivityTab({
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Event detail dialog — tap any event row to open */}
+      {viewIncident && (() => {
+        const live = incidents.find((i) => i.id === viewIncident.id) ?? viewIncident;
+        return (
+          <Dialog open onOpenChange={(v) => { if (!v) setViewIncident(null); }}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="pr-6">{live.title}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                <div className="text-xs text-muted-foreground">
+                  {safeDate(live.occurred_at, live.created_at)}
+                </div>
+                {live.who_involved && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Who was involved</div>
+                    <div className="mt-0.5 whitespace-pre-wrap">{live.who_involved}</div>
+                  </div>
+                )}
+                {live.location && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Location</div>
+                    <div className="mt-0.5">{live.location}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">What happened</div>
+                  <div className="mt-0.5 whitespace-pre-wrap">{live.what_happened}</div>
+                </div>
+                {live.notes && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Notes</div>
+                    <div className="mt-0.5 whitespace-pre-wrap text-muted-foreground">{live.notes}</div>
+                  </div>
+                )}
+                <AttachedDocsRow caseId={caseId} ids={toIds(live.document_ids)} />
+              </div>
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setConfirmDeleteIncident(live)}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive sm:mr-auto"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" /> Delete
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setViewIncident(null); setEditIncident(live); }}
+                >
+                  <Pencil className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
+
+      {/* Delete confirmation */}
+      <Dialog
+        open={!!confirmDeleteIncident}
+        onOpenChange={(v) => { if (!v) setConfirmDeleteIncident(null); }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete this event?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            "{confirmDeleteIncident?.title}" will be removed from your file. This can't be undone.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setConfirmDeleteIncident(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmDeleteIncident && removeIncident(confirmDeleteIncident.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
