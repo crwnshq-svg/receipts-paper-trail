@@ -317,6 +317,28 @@ export function CaseOverviewHeader({
   const checklistDone = checklist.filter((c) => c.done).length;
   const profileComplete = checklist.length > 0 && checklistDone === checklist.length;
 
+  // First-time celebration: fires once when every checklist item is checked.
+  useEffect(() => {
+    if (!profileComplete) return;
+    if (caseRow.profile_complete_celebrated) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase
+        .from("cases")
+        .update({ profile_complete_celebrated: true } as any)
+        .eq("id", caseId)
+        .eq("profile_complete_celebrated", false);
+      if (cancelled) return;
+      if (!error) {
+        setShowCelebrate(true);
+        qc.invalidateQueries({ queryKey: ["case", caseId] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileComplete, caseRow.profile_complete_celebrated, caseId, qc]);
+
 
 
 
