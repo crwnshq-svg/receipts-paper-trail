@@ -24,6 +24,8 @@ import {
   Award,
   FileText,
   Clock,
+  Check,
+  Circle,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -126,48 +128,11 @@ export function CaseOverviewHeader({
   // Module-specific required-fields completeness check.
   const isRentingCase = caseRow.module === "landlord_tenant";
   const isEmploymentCase = caseRow.module === "employer_employee";
-  const profileComplete = useMemo(() => {
-    if (isRentingCase) {
-      return Boolean(
-        caseRow.landlord_name &&
-          caseRow.property_management_company &&
-          caseRow.monthly_rent != null &&
-          caseRow.lease_end_date &&
-          caseRow.lease_status,
-      );
-    }
-    if (isEmploymentCase) {
-      return Boolean(
-        caseRow.employment_type &&
-          caseRow.supervisor_name &&
-          caseRow.work_location &&
-          caseRow.has_written_contract !== null,
-      );
-    }
-    return false;
-  }, [caseRow, isRentingCase, isEmploymentCase]);
 
-  // First-time celebration: fires once when all required fields are filled.
-  useEffect(() => {
-    if (!profileComplete) return;
-    if (caseRow.profile_complete_celebrated) return;
-    let cancelled = false;
-    (async () => {
-      const { error } = await supabase
-        .from("cases")
-        .update({ profile_complete_celebrated: true } as any)
-        .eq("id", caseId)
-        .eq("profile_complete_celebrated", false);
-      if (cancelled) return;
-      if (!error) {
-        setShowCelebrate(true);
-        qc.invalidateQueries({ queryKey: ["case", caseId] });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [profileComplete, caseRow.profile_complete_celebrated, caseId, qc]);
+  // First-time celebration effect is defined further down, after the
+  // checklist computes `profileComplete`.
+
+
 
 
   async function transitionToOngoing() {
@@ -318,6 +283,63 @@ export function CaseOverviewHeader({
       params: { caseId },
     } as any);
   }
+
+  // ----- Profile checklist (persistent, per module) -----
+  type ChecklistItem = {
+    key: string;
+    label: string;
+    done: boolean;
+    onClick: () => void;
+  };
+  const checklist = useMemo<ChecklistItem[]>(() => {
+    if (isRenting) {
+      return [
+        { key: "lease_doc", label: "Upload your lease", done: hasLease, onClick: () => setUploadOpen(true) },
+        { key: "landlord_name", label: "Add your landlord's name", done: !!caseRow.landlord_name, onClick: () => goAi("collect:landlord_name") },
+        { key: "property_management_company", label: "Add property management company", done: !!caseRow.property_management_company, onClick: () => goAi("collect:property_management_company") },
+        { key: "monthly_rent", label: "Add monthly rent", done: caseRow.monthly_rent != null, onClick: () => goAi("collect:monthly_rent") },
+        { key: "lease_status", label: "Add lease status", done: !!caseRow.lease_status, onClick: () => goAi("collect:lease_status") },
+        { key: "lease_end_date", label: "Add lease end date", done: !!caseRow.lease_end_date, onClick: () => goAi("collect:lease_end_date") },
+      ];
+    }
+    if (isEmployment) {
+      return [
+        { key: "contract_doc", label: "Upload your contract or offer letter", done: hasOffer, onClick: () => setUploadOpen(true) },
+        { key: "employment_type", label: "Add employment type", done: !!caseRow.employment_type, onClick: () => goAi("collect:employment_type") },
+        { key: "supervisor_name", label: "Add your supervisor's name", done: !!caseRow.supervisor_name, onClick: () => goAi("collect:supervisor_name") },
+        { key: "work_location", label: "Add work location", done: !!caseRow.work_location, onClick: () => goAi("collect:work_location") },
+        { key: "has_written_contract", label: "Confirm written contract status", done: caseRow.has_written_contract !== null, onClick: () => goAi("collect:has_written_contract") },
+      ];
+    }
+    return [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRenting, isEmployment, hasLease, hasOffer, caseRow]);
+  const checklistDone = checklist.filter((c) => c.done).length;
+  const profileComplete = checklist.length > 0 && checklistDone === checklist.length;
+
+  // First-time celebration: fires once when every checklist item is checked.
+  useEffect(() => {
+    if (!profileComplete) return;
+    if (caseRow.profile_complete_celebrated) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase
+        .from("cases")
+        .update({ profile_complete_celebrated: true } as any)
+        .eq("id", caseId)
+        .eq("profile_complete_celebrated", false);
+      if (cancelled) return;
+      if (!error) {
+        setShowCelebrate(true);
+        qc.invalidateQueries({ queryKey: ["case", caseId] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileComplete, caseRow.profile_complete_celebrated, caseId, qc]);
+
+
 
 
   // Next-step descriptor
@@ -508,8 +530,49 @@ export function CaseOverviewHeader({
         </Button>
       </div>
 
+      {/* Profile checklist (persistent) */}
+      {checklist.length > 0 && (
+        <Card className="p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-sm font-medium">File profile</div>
+            <div className="text-xs text-muted-foreground">
+              {checklistDone} of {checklist.length} complete
+            </div>
+          </div>
+          <ul className="space-y-1">
+            {checklist.map((item) => (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={item.done ? undefined : item.onClick}
+                  disabled={item.done}
+                  className={
+                    item.done
+                      ? "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground"
+                      : "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
+                  }
+                >
+                  {item.done ? (
+                    <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className={item.done ? "flex-1 line-through" : "flex-1"}>
+                    {item.label}
+                  </span>
+                  {!item.done && (
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
 
       {/* Insights carousel */}
+
       {insights && insights.length > 0 && (
         <div className="-mx-1 overflow-x-auto">
           <div className="flex gap-2 px-1 pb-1">
