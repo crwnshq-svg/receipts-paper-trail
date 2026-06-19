@@ -304,6 +304,21 @@ export function CaseOverviewHeader({
       replace: true,
     } as any);
   }
+  function goTimeline() {
+    navigate({
+      to: "/cases/$caseId",
+      params: { caseId },
+      search: { tab: "timeline" } as any,
+      replace: true,
+    } as any);
+  }
+  function goGenerate() {
+    navigate({
+      to: "/cases/$caseId/generate",
+      params: { caseId },
+    } as any);
+  }
+
 
   // Next-step descriptor
   const nextStep = useMemo(() => {
