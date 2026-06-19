@@ -159,64 +159,71 @@ export function DocumentGenerator({ caseId, isPaid, onLocked, chromeless, onStep
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   }
 
-  return (
-    <div ref={generatorRootRef}>
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-1">
-          <FileText className="h-4 w-4 text-accent" />
-          <h3 className="font-medium">Generate a document</h3>
-        </div>
-        <p className="text-xs text-muted-foreground mb-4">
-          Pick a document type. We'll draft it using your file context.
-        </p>
+  const body = (
+    <>
+      {!chromeless && (
+        <>
+          <div className="flex items-center gap-2 mb-1">
+            <FileText className="h-4 w-4 text-accent" />
+            <h3 className="font-medium">Generate a document</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Pick a document type. We'll draft it using your file context.
+          </p>
+        </>
+      )}
 
-        {step === "result" && result && (
-          <ResultEditor
-            docType={selectedType ?? "Document"}
-            value={result}
-            onChange={setResult}
-            onBack={reset}
-            onDownload={downloadPdf}
-            onEmail={emailToMe}
-          />
-        )}
+      {step === "result" && result && (
+        <ResultEditor
+          docType={selectedType ?? "Document"}
+          value={result}
+          onChange={setResult}
+          onBack={reset}
+          onDownload={downloadPdf}
+          onEmail={emailToMe}
+        />
+      )}
 
-        {step === "recipient" && selectedType && (
-          <RecipientPicker
-            docType={selectedType}
-            recipientType={recipientType}
-            setRecipientType={setRecipientType}
-            recipientName={recipientName}
-            setRecipientName={setRecipientName}
-            onBack={() => setStep("type")}
-            onNext={() => setStep("build")}
-          />
-        )}
+      {step === "recipient" && selectedType && (
+        <RecipientPicker
+          docType={selectedType}
+          recipientType={recipientType}
+          setRecipientType={setRecipientType}
+          recipientName={recipientName}
+          setRecipientName={setRecipientName}
+          onBack={() => setStep("type")}
+          onNext={() => setStep("build")}
+        />
+      )}
 
-        {step === "build" && selectedType && (
-          <BuildYourDocument
-            caseId={caseId}
-            docType={selectedType}
-            recipientType={recipientType}
-            recipientName={recipientName}
-            selectedIncidents={selectedIncidents}
-            setSelectedIncidents={setSelectedIncidents}
-            selectedDocs={selectedDocs}
-            setSelectedDocs={setSelectedDocs}
-            keyFacts={keyFacts}
-            setKeyFacts={setKeyFacts}
-            onBack={() => setStep("recipient")}
-            onGenerate={handleGenerate}
-            generating={generating}
-          />
-        )}
+      {step === "build" && selectedType && (
+        <BuildYourDocument
+          caseId={caseId}
+          docType={selectedType}
+          recipientType={recipientType}
+          recipientName={recipientName}
+          selectedIncidents={selectedIncidents}
+          setSelectedIncidents={setSelectedIncidents}
+          selectedDocs={selectedDocs}
+          setSelectedDocs={setSelectedDocs}
+          keyFacts={keyFacts}
+          setKeyFacts={setKeyFacts}
+          onBack={() => setStep("recipient")}
+          onGenerate={handleGenerate}
+          generating={generating}
+        />
+      )}
 
-        {step === "type" && (
-          <>
+      {step === "type" && (
+        <div className="space-y-6">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              Choose a document type
+            </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {DOCUMENT_TYPES.map((t) => (
                 <button key={t} onClick={() => pickType(t)}
-                  className="group relative rounded-lg border bg-background p-3 text-left text-sm hover:border-accent transition">
+                  className="group relative rounded-lg border bg-background p-4 text-left text-sm hover:border-accent transition">
                   <div className="flex items-start gap-2">
                     {!isPaid && <Lock className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />}
                     <span className="font-medium">{t}</span>
@@ -224,26 +231,32 @@ export function DocumentGenerator({ caseId, isPaid, onLocked, chromeless, onStep
                 </button>
               ))}
             </div>
+          </div>
 
-            <div className="mt-4 pt-4 border-t">
-              <Label className="text-xs">Custom document type</Label>
-              <div className="mt-1.5 flex gap-2">
-                <Input value={customType} onChange={(e) => setCustomType(e.target.value)}
-                  placeholder="e.g. Settlement Proposal" />
-                <Button onClick={pickCustom} variant="outline">
-                  {!isPaid && <Lock className="h-3.5 w-3.5 mr-1" />}Use
-                </Button>
-              </div>
+          <div className="pt-4 border-t">
+            <Label className="text-xs">Custom document type</Label>
+            <div className="mt-1.5 flex gap-2">
+              <Input value={customType} onChange={(e) => setCustomType(e.target.value)}
+                placeholder="e.g. Settlement Proposal" />
+              <Button onClick={pickCustom} variant="outline">
+                {!isPaid && <Lock className="h-3.5 w-3.5 mr-1" />}Use
+              </Button>
             </div>
+          </div>
 
-            {!isPaid && (
-              <p className="mt-4 text-xs text-muted-foreground text-center">
-                Document generation is included with the paid plan.
-              </p>
-            )}
-          </>
-        )}
-      </Card>
+          {!isPaid && (
+            <p className="text-xs text-muted-foreground text-center">
+              Document generation is included with the paid plan.
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <div ref={generatorRootRef}>
+      {chromeless ? body : <Card className="p-5">{body}</Card>}
     </div>
   );
 }
