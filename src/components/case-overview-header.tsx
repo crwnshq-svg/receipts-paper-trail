@@ -313,9 +313,19 @@ export function CaseOverviewHeader({
         { key: "has_written_contract", label: "Confirm written contract status", done: caseRow.has_written_contract !== null, onClick: () => goAi("collect:has_written_contract") },
       ];
     }
-    return [];
+    // Default checklist for Other / custom module types.
+    const hasAnyEvidence = (docs ?? []).length > 0;
+    const hasAnyEvent = (incidents ?? []).length > 0;
+    const desc = (caseRow.description ?? "").trim();
+    const intro = (caseRow.intro_notes ?? "").trim();
+    const hasDescription = desc.length > 0 || intro.length > 0;
+    return [
+      { key: "upload_any_doc", label: "Upload supporting documents", done: hasAnyEvidence, onClick: () => setUploadOpen(true) },
+      { key: "log_first_event", label: "Log your first event", done: hasAnyEvent, onClick: () => goActivity(true) },
+      { key: "add_description", label: "Add a description of the situation", done: hasDescription, onClick: () => goAi("collect:description") },
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRenting, isEmployment, hasLease, hasOffer, caseRow]);
+  }, [isRenting, isEmployment, hasLease, hasOffer, caseRow, docs, incidents]);
   const checklistDone = checklist.filter((c) => c.done).length;
   const profileComplete = checklist.length > 0 && checklistDone === checklist.length;
 
