@@ -489,6 +489,26 @@ export function CaseOverviewHeader({
         </Button>
       </div>
 
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="outline"
+          onClick={goGenerate}
+          className="h-auto flex-col gap-1 py-3"
+        >
+          <FileText className="h-4 w-4" />
+          <span className="text-xs">Generate a document</span>
+        </Button>
+        <Button
+          variant="outline"
+          onClick={goTimeline}
+          className="h-auto flex-col gap-1 py-3"
+        >
+          <Clock className="h-4 w-4" />
+          <span className="text-xs">View Activity Timeline</span>
+        </Button>
+      </div>
+
+
       {/* Insights carousel */}
       {insights && insights.length > 0 && (
         <div className="-mx-1 overflow-x-auto">
