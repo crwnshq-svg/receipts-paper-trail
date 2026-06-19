@@ -370,6 +370,23 @@ function ChatPanelInner({ caseId, isPaid, remaining, ask, onConsumed, onLimitHit
   const navigateCollect = useNavigate();
   const qcCollect = useQueryClient();
 
+  // Pull case title so the chat header can name what the conversation is anchored to.
+  const { data: caseRow } = useQuery({
+    queryKey: ["case-header", caseId],
+    queryFn: async () => {
+      if (!caseId) return null;
+      const { data } = await supabase
+        .from("cases")
+        .select("title,opposing_party")
+        .eq("id", caseId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!caseId,
+  });
+  const anchorLabel = (caseRow?.opposing_party?.trim() || caseRow?.title || "").trim();
+
+
   // (Insight follow-up is now handled via ?ask=insight:<id> in the auto-fire
   // effect below so it sends immediately instead of pre-filling the input.)
 
