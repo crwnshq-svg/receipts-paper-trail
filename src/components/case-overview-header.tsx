@@ -129,27 +129,10 @@ export function CaseOverviewHeader({
   const isRentingCase = caseRow.module === "landlord_tenant";
   const isEmploymentCase = caseRow.module === "employer_employee";
 
-  // First-time celebration: fires once when all required fields are filled.
-  useEffect(() => {
-    if (!profileComplete) return;
-    if (caseRow.profile_complete_celebrated) return;
-    let cancelled = false;
-    (async () => {
-      const { error } = await supabase
-        .from("cases")
-        .update({ profile_complete_celebrated: true } as any)
-        .eq("id", caseId)
-        .eq("profile_complete_celebrated", false);
-      if (cancelled) return;
-      if (!error) {
-        setShowCelebrate(true);
-        qc.invalidateQueries({ queryKey: ["case", caseId] });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [profileComplete, caseRow.profile_complete_celebrated, caseId, qc]);
+  // First-time celebration effect is defined further down, after the
+  // checklist computes `profileComplete`.
+
+
 
 
   async function transitionToOngoing() {
