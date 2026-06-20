@@ -595,32 +595,56 @@ export function CaseOverviewHeader({
             </div>
           </div>
           <ul className="space-y-1">
-            {checklist.map((item) => (
-              <li key={item.key}>
-                <button
-                  type="button"
-                  onClick={item.done ? undefined : item.onClick}
-                  disabled={item.done}
-                  className={
-                    item.done
-                      ? "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground"
-                      : "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
-                  }
-                >
-                  {item.done ? (
-                    <Check className="h-4 w-4 shrink-0 text-emerald-500" />
-                  ) : (
-                    <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+            {checklist.map((item) => {
+              const isActive = activeChecklistKey === item.key;
+              const handleClick = () => {
+                if (item.done) return;
+                if (item.inline) {
+                  setActiveChecklistKey(isActive ? null : item.key);
+                } else if (item.onClick) {
+                  item.onClick();
+                }
+              };
+              return (
+                <li key={item.key}>
+                  <button
+                    type="button"
+                    onClick={handleClick}
+                    disabled={item.done}
+                    className={
+                      item.done
+                        ? "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground"
+                        : "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
+                    }
+                  >
+                    {item.done ? (
+                      <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+                    ) : (
+                      <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className={item.done ? "flex-1 line-through" : "flex-1"}>
+                      {item.label}
+                    </span>
+                    {!item.done && (
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    )}
+                  </button>
+                  {isActive && item.inline && (
+                    <div className="mt-1.5 ml-6">
+                      <ClarifyingQuestion
+                        question={item.inline.question}
+                        options={item.inline.options}
+                        onAnswer={async (ans) => {
+                          if (savingChecklist) return;
+                          await saveChecklistAnswer(item, ans);
+                        }}
+                        onDismiss={() => setActiveChecklistKey(null)}
+                      />
+                    </div>
                   )}
-                  <span className={item.done ? "flex-1 line-through" : "flex-1"}>
-                    {item.label}
-                  </span>
-                  {!item.done && (
-                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                  )}
-                </button>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </Card>
       )}
