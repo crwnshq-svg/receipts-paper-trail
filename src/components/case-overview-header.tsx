@@ -281,10 +281,15 @@ export function CaseOverviewHeader({
     } as any);
   }
   function goGenerate() {
-    navigate({
-      to: "/cases/$caseId/generate",
-      params: { caseId },
-    } as any);
+    console.log('[generate-button] clicked, caseId:', caseId);
+    try {
+      navigate({
+        to: "/cases/$caseId/generate",
+        params: { caseId },
+      } as any);
+    } catch (err) {
+      console.error('[generate-button] navigate failed:', err);
+    }
   }
 
   // ----- Profile checklist (persistent, per module) -----
