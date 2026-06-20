@@ -122,7 +122,6 @@ export function DocumentGenerator({ caseId, isPaid, onLocked, chromeless, onStep
 
   async function handleGenerate() {
     if (!selectedType || !recipientType) return;
-    if (selectedIncidents.length === 0 && selectedDocs.length === 0) return;
     setGenerating(true);
     try {
       const res = await generateFn({ data: {
@@ -338,7 +337,6 @@ function BuildYourDocument(props: {
 
   const incCount = props.selectedIncidents.length;
   const docCount = props.selectedDocs.length;
-  const hasSelection = incCount + docCount > 0;
 
   return (
     <div className="space-y-5">
