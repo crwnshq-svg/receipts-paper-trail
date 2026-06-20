@@ -411,6 +411,39 @@ export function CaseOverviewHeader({
     };
   }, [profileComplete, caseRow.profile_complete_celebrated, caseId, qc]);
 
+  // Collapsible state for the profile checklist once complete.
+  const [checklistExpanded, setChecklistExpanded] = useState(false);
+
+  // Compute and persist file strength_score whenever inputs change.
+  const computedStrength = useMemo(() => {
+    const events = incidents?.length ?? 0;
+    const evidence = docs?.length ?? 0;
+    const eventScore = Math.min(events / 5, 1) * 35;
+    const evidenceScore = Math.min(evidence / 5, 1) * 35;
+    const profilePct = checklist.length > 0 ? checklistDone / checklist.length : 0;
+    const profileScore = profilePct * 30;
+    return Math.round(eventScore + evidenceScore + profileScore);
+  }, [incidents, docs, checklistDone, checklist.length]);
+
+  useEffect(() => {
+    if (incidents === undefined || docs === undefined) return;
+    const current = caseRow.strength_score ?? 0;
+    if (current === computedStrength) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase
+        .from("cases")
+        .update({ strength_score: computedStrength } as any)
+        .eq("id", caseId);
+      if (cancelled || error) return;
+      qc.invalidateQueries({ queryKey: ["case", caseId] });
+      qc.invalidateQueries({ queryKey: ["cases"] });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [computedStrength, caseRow.strength_score, caseId, qc, incidents, docs]);
+
 
 
 
