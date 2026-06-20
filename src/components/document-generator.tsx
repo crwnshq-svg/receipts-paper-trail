@@ -424,12 +424,7 @@ function BuildYourDocument(props: {
         <div className="text-xs text-center text-muted-foreground">
           Generating from <strong>{incCount}</strong> event{incCount === 1 ? "" : "s"} and <strong>{docCount}</strong> piece{docCount === 1 ? "" : "s"} of evidence.
         </div>
-        {!hasSelection && (
-          <p className="text-xs text-center text-muted-foreground italic">
-            Select at least one event or piece of evidence to include.
-          </p>
-        )}
-        <Button onClick={props.onGenerate} disabled={!hasSelection || props.generating}
+        <Button onClick={props.onGenerate} disabled={props.generating}
           className="bg-primary text-primary-foreground hover:bg-accent w-full">
           {props.generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating…</> : "Generate document"}
         </Button>
