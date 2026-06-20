@@ -315,7 +315,7 @@ export function CaseOverviewHeader({
         { key: "landlord_name", label: "Add your landlord's name", done: !!caseRow.landlord_name, inline: { question: "What's your landlord's name?", field: "landlord_name" } },
         { key: "property_management_company", label: "Add property management company", done: !!caseRow.property_management_company, inline: { question: "Which property management company manages it? (Type 'none' if not applicable.)", field: "property_management_company" } },
         { key: "monthly_rent", label: "Add monthly rent", done: caseRow.monthly_rent != null, inline: { question: "What's the monthly rent? (just the number)", field: "monthly_rent", transform: (r) => { const n = Number(r.replace(/[^0-9.]/g, "")); return Number.isFinite(n) && n > 0 ? n : null; } } },
-        { key: "lease_status", label: "Add lease status", done: !!caseRow.lease_status, inline: { question: "What's the lease status right now?", options: ["Active", "Month-to-month", "Ending soon", "Ended"], field: "lease_status" } },
+        { key: "lease_status", label: "Add lease status", done: !!caseRow.lease_status, inline: { question: "What's the lease status right now?", options: ["Active", "Month-to-month", "Ending soon", "Ended"], field: "lease_status", transform: (r) => { const m: Record<string, string> = { "Active": "written", "Ending soon": "written", "Month-to-month": "month_to_month", "Ended": "none" }; return m[r] ?? "unknown"; } } },
         { key: "lease_end_date", label: "Add lease end date", done: !!caseRow.lease_end_date, inline: { question: "When does the lease end? (YYYY-MM-DD)", field: "lease_end_date", transform: (r) => { const d = new Date(r); return Number.isNaN(+d) ? null : d.toISOString().slice(0, 10); } } },
       ];
     }
