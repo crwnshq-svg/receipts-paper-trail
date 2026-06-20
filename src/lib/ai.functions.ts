@@ -123,6 +123,9 @@ export const generateDocument = createServerFn({ method: "POST" })
       recipient_type: data.recipientType,
       recipient_address: data.recipientName ?? null,
       content: finalText,
+      selected_incident_ids: data.incidentIds,
+      selected_document_ids: data.documentIds,
+      status: "draft",
     }).select().single();
     if (saveErr) throw saveErr;
 
