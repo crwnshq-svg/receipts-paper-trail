@@ -971,11 +971,8 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
   const navigate = useNavigate();
   const analyze = useServerFn(analyzeDocument);
 
-  function matchDocType(label: string): string | null {
-    const lower = label.toLowerCase();
-    const found = DOCUMENT_TYPES.find((t) => lower.includes(t.toLowerCase()));
-    return found ?? null;
-  }
+
+
 
   function pickCaseId(a: StructuredAction): string | null {
     const anyA = a as any;
