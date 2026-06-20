@@ -22,7 +22,7 @@ import {
   ArrowRight,
   Lightbulb,
   Award,
-  FileText,
+  
   Clock,
   Check,
   Circle,
@@ -279,17 +279,6 @@ export function CaseOverviewHeader({
       search: { tab: "timeline" } as any,
       replace: true,
     } as any);
-  }
-  function goGenerate() {
-    console.log('[generate-button] clicked, caseId:', caseId);
-    try {
-      navigate({
-        to: "/cases/$caseId/generate",
-        params: { caseId },
-      } as any);
-    } catch (err) {
-      console.error('[generate-button] navigate failed:', err);
-    }
   }
 
   // ----- Profile checklist (persistent, per module) -----
@@ -566,15 +555,7 @@ export function CaseOverviewHeader({
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          variant="outline"
-          onClick={goGenerate}
-          className="h-auto flex-col gap-1 py-3"
-        >
-          <FileText className="h-4 w-4" />
-          <span className="text-xs">Generate a document</span>
-        </Button>
+      <div className="grid grid-cols-1 gap-2">
         <Button
           variant="outline"
           onClick={goTimeline}
