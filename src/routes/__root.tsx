@@ -60,6 +60,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Document disputes with landlords, employers, or neighbors. Build a clear, timestamped file you can rely on." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Pull Up Receipts — Your Personal Paper Trail" },
+      { name: "twitter:description", content: "Document disputes with landlords, employers, or neighbors. Build a clear, timestamped file you can rely on." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f3b29869-9dcc-47b9-a1b2-2789a36f3b78/id-preview-d25e1211--5d8af80e-3a9b-4f6b-b4df-1a710bcb4142.lovable.app-1781971746961.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f3b29869-9dcc-47b9-a1b2-2789a36f3b78/id-preview-d25e1211--5d8af80e-3a9b-4f6b-b4df-1a710bcb4142.lovable.app-1781971746961.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
