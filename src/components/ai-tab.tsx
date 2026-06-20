@@ -977,17 +977,43 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
 }) {
   const navigate = useNavigate();
   const analyze = useServerFn(analyzeDocument);
-
-
-
+  const [caseChooser, setCaseChooser] = useState<{
+    cases: { id: string; label: string }[];
+    prefill: Record<string, any> | null;
+  } | null>(null);
 
   function pickCaseId(a: StructuredAction): string | null {
     const anyA = a as any;
+    const p: any = a.prefill ?? {};
     const pref =
-      a.prefill?.caseId ?? a.prefill?.case_id ??
-      a.prefill?.fileId ?? a.prefill?.file_id ??
+      p.caseId ?? p.case_id ?? p.fileId ?? p.file_id ?? p.case ?? p.file ??
       anyA.caseId ?? anyA.case_id;
     return (typeof pref === "string" && pref) ? pref : caseId;
+  }
+
+  async function resolveCaseForDoc(a: StructuredAction, prefill: Record<string, any>): Promise<string | null> {
+    const direct = pickCaseId(a);
+    if (direct) return direct;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Sign in required."); return null; }
+    const { data: rows } = await supabase
+      .from("cases")
+      .select("id,title,opposing_party,updated_at,status")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false });
+    const list = (rows ?? []).map((c: any) => ({
+      id: c.id,
+      label: (c.opposing_party && c.opposing_party.trim()) || c.title || "Untitled File",
+    }));
+    if (list.length === 1) return list[0].id;
+    if (list.length === 0) {
+      toast.message("Create a File first to generate a document.");
+      navigate({ to: "/cases" } as any);
+      return null;
+    }
+    setCaseChooser({ cases: list, prefill });
+    return null;
   }
 
   async function attachPendingToFile(targetCaseId: string) {
