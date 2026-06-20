@@ -1029,17 +1029,6 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
     return true;
   });
 
-  function isGenerate(a: StructuredAction) {
-    if (a.type === "generate_document") return true;
-    return [
-      "send_preservation_demand",
-      "create_written_record",
-      "draft_followup_email",
-      "generate_police_report",
-      "generate_footage_request",
-      "log_spoliation",
-    ].includes(a.type);
-  }
 
   async function handle(a: StructuredAction) {
     console.info("[ai-action] click", { type: a.type, label: a.label, prefill: a.prefill, currentCaseId: caseId });
