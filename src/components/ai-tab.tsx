@@ -21,7 +21,7 @@ import { loadConversation, saveConversation } from "@/lib/conversation.functions
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
 import { setPrefill } from "@/lib/prefill";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
-import { DOCUMENT_TYPES } from "@/components/document-generator";
+
 
 
 
