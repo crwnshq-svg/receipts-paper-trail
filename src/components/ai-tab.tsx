@@ -1085,33 +1085,16 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
 
   return (
     <div className="grid gap-1">
-      {visibleActions.map((a, i) => {
-        if (isGenerate(a)) {
-          // Quiet, muted row — distinguishes a lightweight suggestion from a
-          // real button-style action elsewhere in the app.
-          return (
-            <button
-              key={i}
-              onClick={() => handle(a)}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition"
-            >
-              <FileText className="h-3.5 w-3.5 shrink-0" />
-              <span className="flex-1 truncate">{a.label}</span>
-              <ArrowRight className="h-3 w-3 opacity-60" />
-            </button>
-          );
-        }
-        return (
-          <button
-            key={i}
-            onClick={() => handle(a)}
-            className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left"
-          >
-            <span>{a.label}</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        );
-      })}
+      {visibleActions.map((a, i) => (
+        <button
+          key={i}
+          onClick={() => handle(a)}
+          className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left"
+        >
+          <span>{a.label}</span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      ))}
     </div>
   );
 }
