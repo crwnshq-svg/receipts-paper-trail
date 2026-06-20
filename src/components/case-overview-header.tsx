@@ -70,6 +70,7 @@ type CaseRow = {
   description?: string | null;
   intro_notes?: string | null;
   profile_complete_celebrated?: boolean | null;
+  strength_score?: number | null;
 };
 
 export function CaseOverviewHeader({
