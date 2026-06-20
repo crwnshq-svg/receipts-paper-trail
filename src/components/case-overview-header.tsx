@@ -24,6 +24,7 @@ import {
   Award,
   
   Clock,
+  FileText,
   Check,
   Circle,
 } from "lucide-react";
@@ -278,6 +279,12 @@ export function CaseOverviewHeader({
       params: { caseId },
       search: { tab: "timeline" } as any,
       replace: true,
+    } as any);
+  }
+  function goGenerateDoc() {
+    navigate({
+      to: "/cases/$caseId/generate",
+      params: { caseId },
     } as any);
   }
 
@@ -555,7 +562,7 @@ export function CaseOverviewHeader({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <Button
           variant="outline"
           onClick={goTimeline}
@@ -563,6 +570,14 @@ export function CaseOverviewHeader({
         >
           <Clock className="h-4 w-4" />
           <span className="text-xs">View Activity Timeline</span>
+        </Button>
+        <Button
+          variant="outline"
+          onClick={goGenerateDoc}
+          className="h-auto flex-col gap-1 py-3"
+        >
+          <FileText className="h-4 w-4" />
+          <span className="text-xs">Generate a document</span>
         </Button>
       </div>
 
