@@ -129,6 +129,12 @@ export function CaseOverviewHeader({
   const [transitioning, setTransitioning] = useState(false);
   const [activeInsight, setActiveInsight] = useState<InsightRow | null>(null);
   const [showCelebrate, setShowCelebrate] = useState(false);
+  const [showGenerateContainer, setShowGenerateContainer] = useState(false);
+  const routeSearch = useSearch({ strict: false }) as { generate?: string } | undefined;
+
+  useEffect(() => {
+    if (routeSearch?.generate) setShowGenerateContainer(true);
+  }, [routeSearch?.generate]);
 
   // Module-specific required-fields completeness check.
   const isRentingCase = caseRow.module === "landlord_tenant";
