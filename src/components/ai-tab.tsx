@@ -1071,7 +1071,33 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
       }
 
 
-      // File-scoped actions: need a caseId
+      // Document-generation actions can resolve a caseId via the unscoped
+      // fallback (single active File, or chooser), so handle them BEFORE the
+      // strict "need a caseId" guard below.
+      const DOC_ACTION_TYPES = new Set<StructuredActionType>([
+        "generate_document",
+        "send_preservation_demand",
+        "create_written_record",
+        "draft_followup_email",
+        "generate_police_report",
+        "generate_footage_request",
+        "log_spoliation",
+      ]);
+      if (DOC_ACTION_TYPES.has(a.type)) {
+        const pre: Record<string, any> = { ...(a.prefill ?? {}) };
+        if (typeof pre.document_type === "string" && !pre.documentType) pre.documentType = pre.document_type;
+        if (typeof pre.recipient_type === "string" && !pre.recipientType) pre.recipientType = pre.recipient_type;
+        if (typeof pre.recipient_name === "string" && !pre.recipientName) pre.recipientName = pre.recipient_name;
+        if (typeof pre.body === "string" && !pre.keyFacts) pre.keyFacts = pre.body;
+        if (typeof pre.key_facts === "string" && !pre.keyFacts) pre.keyFacts = pre.key_facts;
+        const docTarget = await resolveCaseForDoc(a, pre);
+        if (!docTarget) return; // chooser opened, or no cases at all
+        setPrefill("document", pre);
+        navigate({ to: "/cases/$caseId/generate", params: { caseId: docTarget } } as any);
+        return;
+      }
+
+      // Other file-scoped actions: need a caseId
       const target = pickCaseId(a);
       if (!target) {
         toast.message("Pick a File to continue.");
