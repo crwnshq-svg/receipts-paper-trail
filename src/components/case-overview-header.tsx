@@ -293,30 +293,39 @@ export function CaseOverviewHeader({
   }
 
   // ----- Profile checklist (persistent, per module) -----
+  type InlineQ = {
+    question: string;
+    options?: string[];
+    /** Convert the raw answer string into the value to persist. Return null to abort. */
+    transform?: (raw: string) => unknown;
+    /** Column name on `cases` to update. */
+    field: string;
+  };
   type ChecklistItem = {
     key: string;
     label: string;
     done: boolean;
-    onClick: () => void;
+    onClick?: () => void;
+    inline?: InlineQ;
   };
   const checklist = useMemo<ChecklistItem[]>(() => {
     if (isRenting) {
       return [
         { key: "lease_doc", label: "Upload your lease", done: hasLease, onClick: () => setUploadOpen(true) },
-        { key: "landlord_name", label: "Add your landlord's name", done: !!caseRow.landlord_name, onClick: () => goAi("collect:landlord_name") },
-        { key: "property_management_company", label: "Add property management company", done: !!caseRow.property_management_company, onClick: () => goAi("collect:property_management_company") },
-        { key: "monthly_rent", label: "Add monthly rent", done: caseRow.monthly_rent != null, onClick: () => goAi("collect:monthly_rent") },
-        { key: "lease_status", label: "Add lease status", done: !!caseRow.lease_status, onClick: () => goAi("collect:lease_status") },
-        { key: "lease_end_date", label: "Add lease end date", done: !!caseRow.lease_end_date, onClick: () => goAi("collect:lease_end_date") },
+        { key: "landlord_name", label: "Add your landlord's name", done: !!caseRow.landlord_name, inline: { question: "What's your landlord's name?", field: "landlord_name" } },
+        { key: "property_management_company", label: "Add property management company", done: !!caseRow.property_management_company, inline: { question: "Which property management company manages it? (Type 'none' if not applicable.)", field: "property_management_company" } },
+        { key: "monthly_rent", label: "Add monthly rent", done: caseRow.monthly_rent != null, inline: { question: "What's the monthly rent? (just the number)", field: "monthly_rent", transform: (r) => { const n = Number(r.replace(/[^0-9.]/g, "")); return Number.isFinite(n) && n > 0 ? n : null; } } },
+        { key: "lease_status", label: "Add lease status", done: !!caseRow.lease_status, inline: { question: "What's the lease status right now?", options: ["Active", "Month-to-month", "Ending soon", "Ended"], field: "lease_status" } },
+        { key: "lease_end_date", label: "Add lease end date", done: !!caseRow.lease_end_date, inline: { question: "When does the lease end? (YYYY-MM-DD)", field: "lease_end_date", transform: (r) => { const d = new Date(r); return Number.isNaN(+d) ? null : d.toISOString().slice(0, 10); } } },
       ];
     }
     if (isEmployment) {
       return [
         { key: "contract_doc", label: "Upload your contract or offer letter", done: hasOffer, onClick: () => setUploadOpen(true) },
-        { key: "employment_type", label: "Add employment type", done: !!caseRow.employment_type, onClick: () => goAi("collect:employment_type") },
-        { key: "supervisor_name", label: "Add your supervisor's name", done: !!caseRow.supervisor_name, onClick: () => goAi("collect:supervisor_name") },
-        { key: "work_location", label: "Add work location", done: !!caseRow.work_location, onClick: () => goAi("collect:work_location") },
-        { key: "has_written_contract", label: "Confirm written contract status", done: caseRow.has_written_contract !== null, onClick: () => goAi("collect:has_written_contract") },
+        { key: "employment_type", label: "Add employment type", done: !!caseRow.employment_type, inline: { question: "What's your employment type?", options: ["Full-time", "Part-time", "Contract", "Internship"], field: "employment_type" } },
+        { key: "supervisor_name", label: "Add your supervisor's name", done: !!caseRow.supervisor_name, inline: { question: "What's your supervisor's name?", field: "supervisor_name" } },
+        { key: "work_location", label: "Add work location", done: !!caseRow.work_location, inline: { question: "Where do you work? (city, or remote)", field: "work_location" } },
+        { key: "has_written_contract", label: "Confirm written contract status", done: caseRow.has_written_contract !== null, inline: { question: "Do you have a written contract?", options: ["Yes", "No"], field: "has_written_contract", transform: (r) => r.toLowerCase().startsWith("y") } },
       ];
     }
     // Default checklist for Other / custom module types.
@@ -328,12 +337,40 @@ export function CaseOverviewHeader({
     return [
       { key: "upload_any_doc", label: "Upload supporting documents", done: hasAnyEvidence, onClick: () => setUploadOpen(true) },
       { key: "log_first_event", label: "Log your first event", done: hasAnyEvent, onClick: () => goActivity(true) },
-      { key: "add_description", label: "Add a description of the situation", done: hasDescription, onClick: () => goAi("collect:description") },
+      { key: "add_description", label: "Add a description of the situation", done: hasDescription, inline: { question: "In one or two sentences, what's going on?", field: "description" } },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRenting, isEmployment, hasLease, hasOffer, caseRow, docs, incidents]);
   const checklistDone = checklist.filter((c) => c.done).length;
   const profileComplete = checklist.length > 0 && checklistDone === checklist.length;
+
+  const [activeChecklistKey, setActiveChecklistKey] = useState<string | null>(null);
+  const [savingChecklist, setSavingChecklist] = useState(false);
+
+  async function saveChecklistAnswer(item: ChecklistItem, raw: string) {
+    if (!item.inline) return;
+    const value = item.inline.transform ? item.inline.transform(raw) : raw.trim();
+    if (value === null || value === undefined || value === "") {
+      toast.error("That doesn't look right — try again.");
+      return;
+    }
+    setSavingChecklist(true);
+    try {
+      const { error } = await supabase
+        .from("cases")
+        .update({ [item.inline.field]: value } as any)
+        .eq("id", caseId);
+      if (error) throw error;
+      toast.success("Saved");
+      setActiveChecklistKey(null);
+      qc.invalidateQueries({ queryKey: ["case", caseId] });
+      qc.invalidateQueries({ queryKey: ["cases"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save");
+    } finally {
+      setSavingChecklist(false);
+    }
+  }
 
   // First-time celebration: fires once when every checklist item is checked.
   useEffect(() => {
