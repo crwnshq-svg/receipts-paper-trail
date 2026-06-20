@@ -1130,33 +1130,7 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
-      // All document-generation actions navigate to the dedicated /generate
-      // flow with whatever the chat already knows pre-filled. The chat itself
-      // does not generate; the page owns the entire question → selection →
-      // review → send flow.
-      const DOC_ACTION_TYPES = new Set<StructuredActionType>([
-        "generate_document",
-        "send_preservation_demand",
-        "create_written_record",
-        "draft_followup_email",
-        "generate_police_report",
-        "generate_footage_request",
-        "log_spoliation",
-      ]);
-      if (DOC_ACTION_TYPES.has(a.type)) {
-        const pre: Record<string, any> = { ...(a.prefill ?? {}) };
-        // Normalize common AI-side field names → page-side names.
-        if (typeof pre.document_type === "string" && !pre.documentType) pre.documentType = pre.document_type;
-        if (typeof pre.recipient_type === "string" && !pre.recipientType) pre.recipientType = pre.recipient_type;
-        if (typeof pre.recipient_name === "string" && !pre.recipientName) pre.recipientName = pre.recipient_name;
-        if (typeof pre.body === "string" && !pre.keyFacts) pre.keyFacts = pre.body;
-        if (typeof pre.key_facts === "string" && !pre.keyFacts) pre.keyFacts = pre.key_facts;
-        const docTarget = await resolveCaseForDoc(a, pre);
-        if (!docTarget) return; // chooser opened, or no cases at all
-        setPrefill("document", pre);
-        navigate({ to: "/cases/$caseId/generate", params: { caseId: docTarget } } as any);
-        return;
-      }
+      // (Document-generation actions are handled earlier in this function.)
       console.warn("[ai-action] unhandled action type", a);
     } catch (err: any) {
       console.error("[ai-action] failed", { action: a, error: err });
