@@ -599,6 +599,12 @@ export function CaseOverviewHeader({
         </Button>
       </div>
 
+      {showGenerateContainer && (
+        <InlineDocumentGenerator caseId={caseId} onClose={closeGenerator} />
+      )}
+
+
+
       {/* Profile checklist (persistent) */}
       {checklist.length > 0 && (
         <Card className="p-4">
