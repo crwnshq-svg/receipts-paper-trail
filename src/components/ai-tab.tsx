@@ -38,7 +38,14 @@ type StructuredActionType =
   | "open_evidence_vault"
   | "open_resources"
   | "open_alert"
-  | "attach_evidence_to_file";
+  | "attach_evidence_to_file"
+  | "generate_document"
+  | "send_preservation_demand"
+  | "create_written_record"
+  | "draft_followup_email"
+  | "generate_police_report"
+  | "generate_footage_request"
+  | "log_spoliation";
 
 type StructuredAction = {
   type: StructuredActionType;
