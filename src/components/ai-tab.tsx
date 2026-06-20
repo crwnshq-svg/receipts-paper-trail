@@ -1125,8 +1125,10 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         if (typeof pre.recipient_name === "string" && !pre.recipientName) pre.recipientName = pre.recipient_name;
         if (typeof pre.body === "string" && !pre.keyFacts) pre.keyFacts = pre.body;
         if (typeof pre.key_facts === "string" && !pre.keyFacts) pre.keyFacts = pre.key_facts;
+        const docTarget = await resolveCaseForDoc(a, pre);
+        if (!docTarget) return; // chooser opened, or no cases at all
         setPrefill("document", pre);
-        navigate({ to: "/cases/$caseId/generate", params: { caseId: target } } as any);
+        navigate({ to: "/cases/$caseId/generate", params: { caseId: docTarget } } as any);
         return;
       }
       console.warn("[ai-action] unhandled action type", a);
