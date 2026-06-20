@@ -977,17 +977,43 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
 }) {
   const navigate = useNavigate();
   const analyze = useServerFn(analyzeDocument);
-
-
-
+  const [caseChooser, setCaseChooser] = useState<{
+    cases: { id: string; label: string }[];
+    prefill: Record<string, any> | null;
+  } | null>(null);
 
   function pickCaseId(a: StructuredAction): string | null {
     const anyA = a as any;
+    const p: any = a.prefill ?? {};
     const pref =
-      a.prefill?.caseId ?? a.prefill?.case_id ??
-      a.prefill?.fileId ?? a.prefill?.file_id ??
+      p.caseId ?? p.case_id ?? p.fileId ?? p.file_id ?? p.case ?? p.file ??
       anyA.caseId ?? anyA.case_id;
     return (typeof pref === "string" && pref) ? pref : caseId;
+  }
+
+  async function resolveCaseForDoc(a: StructuredAction, prefill: Record<string, any>): Promise<string | null> {
+    const direct = pickCaseId(a);
+    if (direct) return direct;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Sign in required."); return null; }
+    const { data: rows } = await supabase
+      .from("cases")
+      .select("id,title,opposing_party,updated_at,status")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false });
+    const list = (rows ?? []).map((c: any) => ({
+      id: c.id,
+      label: (c.opposing_party && c.opposing_party.trim()) || c.title || "Untitled File",
+    }));
+    if (list.length === 1) return list[0].id;
+    if (list.length === 0) {
+      toast.message("Create a File first to generate a document.");
+      navigate({ to: "/cases" } as any);
+      return null;
+    }
+    setCaseChooser({ cases: list, prefill });
+    return null;
   }
 
   async function attachPendingToFile(targetCaseId: string) {
@@ -1045,7 +1071,33 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
       }
 
 
-      // File-scoped actions: need a caseId
+      // Document-generation actions can resolve a caseId via the unscoped
+      // fallback (single active File, or chooser), so handle them BEFORE the
+      // strict "need a caseId" guard below.
+      const DOC_ACTION_TYPES = new Set<StructuredActionType>([
+        "generate_document",
+        "send_preservation_demand",
+        "create_written_record",
+        "draft_followup_email",
+        "generate_police_report",
+        "generate_footage_request",
+        "log_spoliation",
+      ]);
+      if (DOC_ACTION_TYPES.has(a.type)) {
+        const pre: Record<string, any> = { ...(a.prefill ?? {}) };
+        if (typeof pre.document_type === "string" && !pre.documentType) pre.documentType = pre.document_type;
+        if (typeof pre.recipient_type === "string" && !pre.recipientType) pre.recipientType = pre.recipient_type;
+        if (typeof pre.recipient_name === "string" && !pre.recipientName) pre.recipientName = pre.recipient_name;
+        if (typeof pre.body === "string" && !pre.keyFacts) pre.keyFacts = pre.body;
+        if (typeof pre.key_facts === "string" && !pre.keyFacts) pre.keyFacts = pre.key_facts;
+        const docTarget = await resolveCaseForDoc(a, pre);
+        if (!docTarget) return; // chooser opened, or no cases at all
+        setPrefill("document", pre);
+        navigate({ to: "/cases/$caseId/generate", params: { caseId: docTarget } } as any);
+        return;
+      }
+
+      // Other file-scoped actions: need a caseId
       const target = pickCaseId(a);
       if (!target) {
         toast.message("Pick a File to continue.");
@@ -1078,31 +1130,7 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
           search: { tab: "incidents", action: "new" } } as any);
         return;
       }
-      // All document-generation actions navigate to the dedicated /generate
-      // flow with whatever the chat already knows pre-filled. The chat itself
-      // does not generate; the page owns the entire question → selection →
-      // review → send flow.
-      const DOC_ACTION_TYPES = new Set<StructuredActionType>([
-        "generate_document",
-        "send_preservation_demand",
-        "create_written_record",
-        "draft_followup_email",
-        "generate_police_report",
-        "generate_footage_request",
-        "log_spoliation",
-      ]);
-      if (DOC_ACTION_TYPES.has(a.type)) {
-        const pre: Record<string, any> = { ...(a.prefill ?? {}) };
-        // Normalize common AI-side field names → page-side names.
-        if (typeof pre.document_type === "string" && !pre.documentType) pre.documentType = pre.document_type;
-        if (typeof pre.recipient_type === "string" && !pre.recipientType) pre.recipientType = pre.recipient_type;
-        if (typeof pre.recipient_name === "string" && !pre.recipientName) pre.recipientName = pre.recipient_name;
-        if (typeof pre.body === "string" && !pre.keyFacts) pre.keyFacts = pre.body;
-        if (typeof pre.key_facts === "string" && !pre.keyFacts) pre.keyFacts = pre.key_facts;
-        setPrefill("document", pre);
-        navigate({ to: "/cases/$caseId/generate", params: { caseId: target } } as any);
-        return;
-      }
+      // (Document-generation actions are handled earlier in this function.)
       console.warn("[ai-action] unhandled action type", a);
     } catch (err: any) {
       console.error("[ai-action] failed", { action: a, error: err });
@@ -1110,7 +1138,7 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
     }
   }
 
-  if (visibleActions.length === 0) return null;
+  if (visibleActions.length === 0 && !caseChooser) return null;
 
   return (
     <div className="grid gap-1">
@@ -1124,6 +1152,30 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
           <ArrowRight className="h-4 w-4" />
         </button>
       ))}
+      <Dialog open={!!caseChooser} onOpenChange={(o) => { if (!o) setCaseChooser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Which file is this document for?</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2 py-2">
+            {caseChooser?.cases.map((c) => (
+              <Button
+                key={c.id}
+                variant="outline"
+                className="justify-start"
+                onClick={() => {
+                  const pre = caseChooser.prefill ?? {};
+                  setPrefill("document", pre);
+                  setCaseChooser(null);
+                  navigate({ to: "/cases/$caseId/generate", params: { caseId: c.id } } as any);
+                }}
+              >
+                {c.label}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
