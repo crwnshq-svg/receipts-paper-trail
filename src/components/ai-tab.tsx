@@ -1093,7 +1093,11 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         const docTarget = await resolveCaseForDoc(a, pre);
         if (!docTarget) return; // chooser opened, or no cases at all
         setPrefill("document", pre);
-        navigate({ to: "/cases/$caseId/generate", params: { caseId: docTarget } } as any);
+        navigate({
+          to: "/cases/$caseId",
+          params: { caseId: docTarget },
+          search: { generate: "1" } as any,
+        } as any);
         return;
       }
 
