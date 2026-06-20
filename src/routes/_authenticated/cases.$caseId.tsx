@@ -61,6 +61,7 @@ function CaseDetail() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
   const initialTab = search?.tab ?? "incidents";
 
   const { data: caseRow, isLoading } = useQuery({
