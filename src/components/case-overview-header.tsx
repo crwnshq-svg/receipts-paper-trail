@@ -28,6 +28,8 @@ import {
   FileText,
   Check,
   Circle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -68,6 +70,7 @@ type CaseRow = {
   description?: string | null;
   intro_notes?: string | null;
   profile_complete_celebrated?: boolean | null;
+  strength_score?: number | null;
 };
 
 export function CaseOverviewHeader({
@@ -408,6 +411,39 @@ export function CaseOverviewHeader({
     };
   }, [profileComplete, caseRow.profile_complete_celebrated, caseId, qc]);
 
+  // Collapsible state for the profile checklist once complete.
+  const [checklistExpanded, setChecklistExpanded] = useState(false);
+
+  // Compute and persist file strength_score whenever inputs change.
+  const computedStrength = useMemo(() => {
+    const events = incidents?.length ?? 0;
+    const evidence = docs?.length ?? 0;
+    const eventScore = Math.min(events / 5, 1) * 35;
+    const evidenceScore = Math.min(evidence / 5, 1) * 35;
+    const profilePct = checklist.length > 0 ? checklistDone / checklist.length : 0;
+    const profileScore = profilePct * 30;
+    return Math.round(eventScore + evidenceScore + profileScore);
+  }, [incidents, docs, checklistDone, checklist.length]);
+
+  useEffect(() => {
+    if (incidents === undefined || docs === undefined) return;
+    const current = caseRow.strength_score ?? 0;
+    if (current === computedStrength) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase
+        .from("cases")
+        .update({ strength_score: computedStrength } as any)
+        .eq("id", caseId);
+      if (cancelled || error) return;
+      qc.invalidateQueries({ queryKey: ["case", caseId] });
+      qc.invalidateQueries({ queryKey: ["cases"] });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [computedStrength, caseRow.strength_score, caseId, qc, incidents, docs]);
+
 
 
 
@@ -512,6 +548,33 @@ export function CaseOverviewHeader({
         </div>
       )}
 
+      {/* Insights carousel */}
+      {insights && insights.length > 0 && (
+        <div className="-mx-1 overflow-x-auto">
+          <div className="flex gap-2 px-1 pb-1">
+            {insights.map((ins) => (
+              <button
+                key={ins.id}
+                type="button"
+                onClick={() => setActiveInsight(ins)}
+                className="w-64 shrink-0 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-left transition-colors hover:bg-amber-500/10"
+              >
+                <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                  <Lightbulb className="h-3 w-3" />
+                  Insight
+                </div>
+                <div className="line-clamp-1 text-sm font-medium">{ins.insight_title}</div>
+                <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {ins.brief_description}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+
+
 
       {/* Next step line */}
       <button
@@ -607,94 +670,96 @@ export function CaseOverviewHeader({
 
       {/* Profile checklist (persistent) */}
       {checklist.length > 0 && (
-        <Card className="p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-sm font-medium">File profile</div>
-            <div className="text-xs text-muted-foreground">
-              {checklistDone} of {checklist.length} complete
-            </div>
-          </div>
-          <ul className="space-y-1">
-            {checklist.map((item) => {
-              const isActive = activeChecklistKey === item.key;
-              const handleClick = () => {
-                if (item.done) return;
-                if (item.inline) {
-                  setActiveChecklistKey(isActive ? null : item.key);
-                } else if (item.onClick) {
-                  item.onClick();
-                }
-              };
-              return (
-                <li key={item.key}>
+        profileComplete && !checklistExpanded ? (
+          <Card className="p-3">
+            <button
+              type="button"
+              onClick={() => setChecklistExpanded(true)}
+              className="flex w-full items-center gap-2 text-left text-sm"
+            >
+              <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+              <span className="flex-1 font-medium">File profile complete</span>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                Show details <ChevronDown className="h-3.5 w-3.5" />
+              </span>
+            </button>
+          </Card>
+        ) : (
+          <Card className="p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-sm font-medium">File profile</div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-muted-foreground">
+                  {checklistDone} of {checklist.length} complete
+                </div>
+                {profileComplete && (
                   <button
                     type="button"
-                    onClick={handleClick}
-                    disabled={item.done}
-                    className={
-                      item.done
-                        ? "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground"
-                        : "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
-                    }
+                    onClick={() => setChecklistExpanded(false)}
+                    aria-label="Collapse"
+                    className="text-muted-foreground hover:text-foreground"
                   >
-                    {item.done ? (
-                      <Check className="h-4 w-4 shrink-0 text-emerald-500" />
-                    ) : (
-                      <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    )}
-                    <span className={item.done ? "flex-1 line-through" : "flex-1"}>
-                      {item.label}
-                    </span>
-                    {!item.done && (
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                    )}
+                    <ChevronUp className="h-4 w-4" />
                   </button>
-                  {isActive && item.inline && (
-                    <div className="mt-1.5 ml-6">
-                      <ClarifyingQuestion
-                        question={item.inline.question}
-                        options={item.inline.options}
-                        onAnswer={async (ans) => {
-                          if (savingChecklist) return;
-                          await saveChecklistAnswer(item, ans);
-                        }}
-                        onDismiss={() => setActiveChecklistKey(null)}
-                      />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
+                )}
+              </div>
+            </div>
+            <ul className="space-y-1">
+              {checklist.map((item) => {
+                const isActive = activeChecklistKey === item.key;
+                const handleClick = () => {
+                  if (item.done) return;
+                  if (item.inline) {
+                    setActiveChecklistKey(isActive ? null : item.key);
+                  } else if (item.onClick) {
+                    item.onClick();
+                  }
+                };
+                return (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      onClick={handleClick}
+                      disabled={item.done}
+                      className={
+                        item.done
+                          ? "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground"
+                          : "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
+                      }
+                    >
+                      {item.done ? (
+                        <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+                      ) : (
+                        <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className={item.done ? "flex-1 line-through" : "flex-1"}>
+                        {item.label}
+                      </span>
+                      {!item.done && (
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      )}
+                    </button>
+                    {isActive && item.inline && (
+                      <div className="mt-1.5 ml-6">
+                        <ClarifyingQuestion
+                          question={item.inline.question}
+                          options={item.inline.options}
+                          onAnswer={async (ans) => {
+                            if (savingChecklist) return;
+                            await saveChecklistAnswer(item, ans);
+                          }}
+                          onDismiss={() => setActiveChecklistKey(null)}
+                        />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        )
       )}
 
-
-      {/* Insights carousel */}
-
-      {insights && insights.length > 0 && (
-        <div className="-mx-1 overflow-x-auto">
-          <div className="flex gap-2 px-1 pb-1">
-            {insights.map((ins) => (
-              <button
-                key={ins.id}
-                type="button"
-                onClick={() => setActiveInsight(ins)}
-                className="w-64 shrink-0 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-left transition-colors hover:bg-amber-500/10"
-              >
-                <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
-                  <Lightbulb className="h-3 w-3" />
-                  Insight
-                </div>
-                <div className="line-clamp-1 text-sm font-medium">{ins.insight_title}</div>
-                <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                  {ins.brief_description}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Hidden file inputs */}
       <input
