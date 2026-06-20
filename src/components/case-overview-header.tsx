@@ -24,6 +24,7 @@ import {
   Award,
   
   Clock,
+  FileText,
   Check,
   Circle,
 } from "lucide-react";
