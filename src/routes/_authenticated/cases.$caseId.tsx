@@ -167,8 +167,8 @@ function CaseDetail() {
     <AppShell>
       <div className="space-y-6">
         <div>
-          <Link to="/cases" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to files
+          <Link to="/dashboard" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
           </Link>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
