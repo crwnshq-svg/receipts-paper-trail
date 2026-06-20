@@ -22,6 +22,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { showAchievement } from "@/lib/achievements";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
@@ -292,16 +293,27 @@ export function ActivityTab({
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 font-medium">{f.data.title}</div>
+                    {f.data.title && f.data.title.trim().length > 0 ? (
+                      <div className="mt-1 font-medium">{f.data.title}</div>
+                    ) : (
+                      <Skeleton className="mt-1 h-4 w-2/3" />
+                    )}
                     {f.data.who_involved && (
                       <div className="mt-1.5 text-sm">
                         <span className="text-muted-foreground">Who: </span>
                         {f.data.who_involved}
                       </div>
                     )}
-                    <div className="mt-1 text-sm whitespace-pre-wrap line-clamp-3">
-                      {f.data.what_happened}
-                    </div>
+                    {f.data.what_happened && f.data.what_happened.trim().length > 0 ? (
+                      <div className="mt-1 text-sm whitespace-pre-wrap line-clamp-3">
+                        {f.data.what_happened}
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-1.5">
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-5/6" />
+                      </div>
+                    )}
                     {f.data.location && (
                       <div className="mt-1 text-xs text-muted-foreground">
                         Location: {f.data.location}
