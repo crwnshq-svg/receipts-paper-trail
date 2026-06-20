@@ -416,6 +416,10 @@ export type Database = {
           id: string
           recipient_address: string | null
           recipient_type: string | null
+          selected_document_ids: string[]
+          selected_incident_ids: string[]
+          sent_at: string | null
+          status: string
           tracking_number: string | null
           updated_at: string
           user_id: string
@@ -429,6 +433,10 @@ export type Database = {
           id?: string
           recipient_address?: string | null
           recipient_type?: string | null
+          selected_document_ids?: string[]
+          selected_incident_ids?: string[]
+          sent_at?: string | null
+          status?: string
           tracking_number?: string | null
           updated_at?: string
           user_id: string
@@ -442,6 +450,10 @@ export type Database = {
           id?: string
           recipient_address?: string | null
           recipient_type?: string | null
+          selected_document_ids?: string[]
+          selected_incident_ids?: string[]
+          sent_at?: string | null
+          status?: string
           tracking_number?: string | null
           updated_at?: string
           user_id?: string
