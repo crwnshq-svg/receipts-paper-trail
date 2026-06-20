@@ -32,6 +32,7 @@ import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
 import { exportCaseZip } from "@/lib/case-export";
 import { CaseOverviewHeader } from "@/components/case-overview-header";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
