@@ -32,6 +32,7 @@ export function ClarifyingQuestion({
   const [busy, setBusy] = useState(false);
 
   async function submit(answer: string) {
+    console.log('[clarifying-question] submit called', { answer, busy });
     if (busy || !answer.trim()) return;
     setBusy(true);
     try { await onAnswer(answer.trim()); } finally { setBusy(false); }
