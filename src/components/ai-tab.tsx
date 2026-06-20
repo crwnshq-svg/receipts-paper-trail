@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Send, Sparkles, Loader2, ArrowRight,
-  ExternalLink, Phone, FileSearch, Paperclip, Check, Mail, FileText,
+  ExternalLink, Phone, FileSearch, Paperclip, Check, Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumeAiQuestion } from "@/lib/ai.functions";
