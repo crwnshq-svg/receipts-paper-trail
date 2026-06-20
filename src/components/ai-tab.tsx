@@ -1138,7 +1138,7 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
     }
   }
 
-  if (visibleActions.length === 0) return null;
+  if (visibleActions.length === 0 && !caseChooser) return null;
 
   return (
     <div className="grid gap-1">
@@ -1152,6 +1152,30 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
           <ArrowRight className="h-4 w-4" />
         </button>
       ))}
+      <Dialog open={!!caseChooser} onOpenChange={(o) => { if (!o) setCaseChooser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Which file is this document for?</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2 py-2">
+            {caseChooser?.cases.map((c) => (
+              <Button
+                key={c.id}
+                variant="outline"
+                className="justify-start"
+                onClick={() => {
+                  const pre = caseChooser.prefill ?? {};
+                  setPrefill("document", pre);
+                  setCaseChooser(null);
+                  navigate({ to: "/cases/$caseId/generate", params: { caseId: c.id } } as any);
+                }}
+              >
+                {c.label}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
