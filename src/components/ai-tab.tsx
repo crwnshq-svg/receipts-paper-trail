@@ -1171,7 +1171,11 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
                   const pre = caseChooser.prefill ?? {};
                   setPrefill("document", pre);
                   setCaseChooser(null);
-                  navigate({ to: "/cases/$caseId/generate", params: { caseId: c.id } } as any);
+                  navigate({
+                    to: "/cases/$caseId",
+                    params: { caseId: c.id },
+                    search: { generate: "1" } as any,
+                  } as any);
                 }}
               >
                 {c.label}
