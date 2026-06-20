@@ -33,6 +33,7 @@ import { showAchievement } from "@/lib/achievements";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
 import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { InsightModal, type InsightRow } from "@/components/insight-modal";
+import { ClarifyingQuestion } from "@/components/clarifying-question";
 
 function toQuestions(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
