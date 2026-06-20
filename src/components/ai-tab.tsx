@@ -29,18 +29,11 @@ import { DOCUMENT_TYPES } from "@/components/document-generator";
 // ============================== Structured response types ==============================
 
 type StructuredActionType =
-  | "generate_document"
   | "upload_evidence"
   | "log_incident"
   | "file_complaint"
   | "find_resource"
-  | "send_preservation_demand"
   | "log_witness"
-  | "create_written_record"
-  | "draft_followup_email"
-  | "generate_police_report"
-  | "generate_footage_request"
-  | "log_spoliation"
   | "open_file"
   | "open_evidence_vault"
   | "open_resources"
