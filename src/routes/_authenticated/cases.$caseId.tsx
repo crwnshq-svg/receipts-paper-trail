@@ -32,6 +32,7 @@ import { analyzeDocument } from "@/lib/document-intelligence.functions";
 import { uploadEvidence, EVIDENCE_ACCEPT } from "@/lib/evidence-upload";
 import { exportCaseZip } from "@/lib/case-export";
 import { CaseOverviewHeader } from "@/components/case-overview-header";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +61,7 @@ function CaseDetail() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
   const initialTab = search?.tab ?? "incidents";
 
   const { data: caseRow, isLoading } = useQuery({
@@ -130,6 +132,32 @@ function CaseDetail() {
 
   if (isLoading) return <AppShell><Card className="p-8 text-center text-sm text-muted-foreground">Loading…</Card></AppShell>;
   if (!caseRow) return <AppShell><Card className="p-8 text-center">File not found.</Card></AppShell>;
+
+  // Mobile: open the companion as a dedicated full-screen chat view.
+  if (isMobile && initialTab === "ai") {
+    return (
+      <AppShell>
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => switchTab("incidents")}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to {caseRow.title}
+          </button>
+          <AiTab
+            caseId={caseId}
+            isPaid={isPaid}
+            questionsUsed={effectiveUsed}
+            ask={search?.ask ?? null}
+            generate={search?.generate ?? null}
+          />
+          <Disclaimer className="pt-2" />
+        </div>
+      </AppShell>
+    );
+  }
+
 
   const partyName = caseRow.opposing_party && caseRow.opposing_party.trim().length > 0
     ? caseRow.opposing_party
