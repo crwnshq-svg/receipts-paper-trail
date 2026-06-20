@@ -281,6 +281,12 @@ export function CaseOverviewHeader({
       replace: true,
     } as any);
   }
+  function goGenerateDoc() {
+    navigate({
+      to: "/cases/$caseId/generate",
+      params: { caseId },
+    } as any);
+  }
 
   // ----- Profile checklist (persistent, per module) -----
   type InlineQ = {
