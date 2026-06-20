@@ -283,10 +283,21 @@ export function CaseOverviewHeader({
     } as any);
   }
   function goGenerateDoc() {
-    navigate({
-      to: "/cases/$caseId/generate",
-      params: { caseId },
-    } as any);
+    setShowGenerateContainer(true);
+  }
+  function closeGenerator() {
+    setShowGenerateContainer(false);
+    if (routeSearch?.generate) {
+      navigate({
+        to: "/cases/$caseId",
+        params: { caseId },
+        search: ((): any => {
+          const { generate: _g, ...rest } = routeSearch as any;
+          return rest;
+        })(),
+        replace: true,
+      } as any);
+    }
   }
 
   // ----- Profile checklist (persistent, per module) -----
