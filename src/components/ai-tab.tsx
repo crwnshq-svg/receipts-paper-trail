@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Send, Sparkles, Loader2, ArrowRight,
-  ExternalLink, Phone, FileSearch, Paperclip, Check, Mail, FileText,
+  ExternalLink, Phone, FileSearch, Paperclip, Check, Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumeAiQuestion } from "@/lib/ai.functions";
@@ -21,7 +21,7 @@ import { loadConversation, saveConversation } from "@/lib/conversation.functions
 import { FREE_AI_QUESTIONS } from "@/lib/constants";
 import { setPrefill } from "@/lib/prefill";
 import { ClarifyingQuestion } from "@/components/clarifying-question";
-import { DOCUMENT_TYPES } from "@/components/document-generator";
+
 
 
 
@@ -29,18 +29,11 @@ import { DOCUMENT_TYPES } from "@/components/document-generator";
 // ============================== Structured response types ==============================
 
 type StructuredActionType =
-  | "generate_document"
   | "upload_evidence"
   | "log_incident"
   | "file_complaint"
   | "find_resource"
-  | "send_preservation_demand"
   | "log_witness"
-  | "create_written_record"
-  | "draft_followup_email"
-  | "generate_police_report"
-  | "generate_footage_request"
-  | "log_spoliation"
   | "open_file"
   | "open_evidence_vault"
   | "open_resources"
@@ -978,11 +971,8 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
   const navigate = useNavigate();
   const analyze = useServerFn(analyzeDocument);
 
-  function matchDocType(label: string): string | null {
-    const lower = label.toLowerCase();
-    const found = DOCUMENT_TYPES.find((t) => lower.includes(t.toLowerCase()));
-    return found ?? null;
-  }
+
+
 
   function pickCaseId(a: StructuredAction): string | null {
     const anyA = a as any;
@@ -1036,17 +1026,6 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
     return true;
   });
 
-  function isGenerate(a: StructuredAction) {
-    if (a.type === "generate_document") return true;
-    return [
-      "send_preservation_demand",
-      "create_written_record",
-      "draft_followup_email",
-      "generate_police_report",
-      "generate_footage_request",
-      "log_spoliation",
-    ].includes(a.type);
-  }
 
   async function handle(a: StructuredAction) {
     console.info("[ai-action] click", { type: a.type, label: a.label, prefill: a.prefill, currentCaseId: caseId });
@@ -1058,72 +1037,6 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         return;
       }
 
-      // generate_document and specialized doc actions both route to the
-      // dedicated generate page — chat is no longer responsible for the
-      // generation flow. Pass prefill via search params so the destination
-      // can pre-select the document type and pre-fill known details
-      // without depending on sessionStorage.
-      const specializedDocType: Record<string, string> = {
-        send_preservation_demand: "Preservation Demand Letter",
-        create_written_record: "Contemporaneous Written Record",
-        draft_followup_email: "Follow-Up Email",
-        generate_police_report: "Police Report Summary",
-        generate_footage_request: "Business Footage Request Letter",
-        log_spoliation: "Spoliation of Evidence Notice",
-      };
-      if (isGenerate(a)) {
-        const target = pickCaseId(a);
-        if (!target) {
-          toast.message("Pick a File to draft this for.");
-          navigate({ to: "/cases" } as any);
-          return;
-        }
-        const pre = (a.prefill ?? {}) as Record<string, any>;
-        const anyA = a as any;
-        const docType =
-          specializedDocType[a.type] ??
-          matchDocType(a.label) ??
-          (typeof pre.documentType === "string" ? pre.documentType : null) ??
-          (typeof pre.document_type === "string" ? pre.document_type : null) ??
-          (typeof anyA.document_type === "string" ? anyA.document_type : null);
-        const recipientType =
-          (typeof pre.recipientType === "string" ? pre.recipientType : null) ??
-          (typeof pre.recipient_type === "string" ? pre.recipient_type : null) ??
-          (typeof anyA.recipient_type === "string" ? anyA.recipient_type : null);
-        const recipientName =
-          (typeof pre.recipientName === "string" ? pre.recipientName : null) ??
-          (typeof pre.recipient_name === "string" ? pre.recipient_name : null);
-        const keyFacts =
-          (typeof pre.keyFacts === "string" ? pre.keyFacts : null) ??
-          (typeof pre.key_facts === "string" ? pre.key_facts : null) ??
-          (typeof pre.body === "string" ? pre.body : null) ??
-          (typeof pre.description === "string" ? pre.description : null);
-
-        // Also stash full prefill (incident_ids/document_ids etc.) for the
-        // destination — search params only carry the headline fields.
-        setPrefill("document", {
-          ...pre,
-          ...(docType ? { documentType: docType } : {}),
-          ...(recipientType ? { recipientType } : {}),
-          ...(recipientName ? { recipientName } : {}),
-          ...(keyFacts ? { keyFacts } : {}),
-          actionLabel: a.label,
-        });
-
-        const search: Record<string, string> = {};
-        if (docType) search.type = docType;
-        if (recipientType) search.recipient = recipientType;
-        if (recipientName) search.to = recipientName;
-        if (keyFacts) search.facts = keyFacts;
-
-        console.info("[ai-action] -> navigate /cases/$caseId/generate", { target, search });
-        navigate({
-          to: "/cases/$caseId/generate",
-          params: { caseId: target },
-          search,
-        } as any);
-        return;
-      }
 
       // File-scoped actions: need a caseId
       const target = pickCaseId(a);
@@ -1169,33 +1082,16 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
 
   return (
     <div className="grid gap-1">
-      {visibleActions.map((a, i) => {
-        if (isGenerate(a)) {
-          // Quiet, muted row — distinguishes a lightweight suggestion from a
-          // real button-style action elsewhere in the app.
-          return (
-            <button
-              key={i}
-              onClick={() => handle(a)}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition"
-            >
-              <FileText className="h-3.5 w-3.5 shrink-0" />
-              <span className="flex-1 truncate">{a.label}</span>
-              <ArrowRight className="h-3 w-3 opacity-60" />
-            </button>
-          );
-        }
-        return (
-          <button
-            key={i}
-            onClick={() => handle(a)}
-            className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left"
-          >
-            <span>{a.label}</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        );
-      })}
+      {visibleActions.map((a, i) => (
+        <button
+          key={i}
+          onClick={() => handle(a)}
+          className="flex items-center justify-between gap-3 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm font-medium hover:bg-primary/90 transition text-left"
+        >
+          <span>{a.label}</span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      ))}
     </div>
   );
 }
