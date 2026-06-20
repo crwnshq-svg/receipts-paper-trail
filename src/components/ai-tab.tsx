@@ -192,14 +192,15 @@ export function AiTab({ caseId, isPaid, questionsUsed, ask, generate }: {
     if (!isPaid && remaining === 0) setShowUpgrade(true);
   }, [isPaid, remaining]);
 
-  // Legacy ?generate=<docType> URL — redirect to the dedicated generate
-  // page so the chat panel is never responsible for document generation.
+  // Legacy ?generate=<docType> URL — open the inline document generator
+  // on the case overview with the type pre-filled.
   useEffect(() => {
     if (!caseId || !generate) return;
     setPrefill("document", { documentType: generate });
     navigateAi({
-      to: "/cases/$caseId/generate",
+      to: "/cases/$caseId",
       params: { caseId },
+      search: { generate: "1" } as any,
       replace: true,
     } as any);
   }, [caseId, generate, navigateAi]);
@@ -1093,7 +1094,11 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
         const docTarget = await resolveCaseForDoc(a, pre);
         if (!docTarget) return; // chooser opened, or no cases at all
         setPrefill("document", pre);
-        navigate({ to: "/cases/$caseId/generate", params: { caseId: docTarget } } as any);
+        navigate({
+          to: "/cases/$caseId",
+          params: { caseId: docTarget },
+          search: { generate: "1" } as any,
+        } as any);
         return;
       }
 
@@ -1167,7 +1172,11 @@ function ActionCards({ caseId, actions, pendingUploadRef }: {
                   const pre = caseChooser.prefill ?? {};
                   setPrefill("document", pre);
                   setCaseChooser(null);
-                  navigate({ to: "/cases/$caseId/generate", params: { caseId: c.id } } as any);
+                  navigate({
+                    to: "/cases/$caseId",
+                    params: { caseId: c.id },
+                    search: { generate: "1" } as any,
+                  } as any);
                 }}
               >
                 {c.label}

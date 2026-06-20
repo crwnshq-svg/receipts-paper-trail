@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { InlineDocumentGenerator } from "@/components/inline-document-generator";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,6 +129,12 @@ export function CaseOverviewHeader({
   const [transitioning, setTransitioning] = useState(false);
   const [activeInsight, setActiveInsight] = useState<InsightRow | null>(null);
   const [showCelebrate, setShowCelebrate] = useState(false);
+  const [showGenerateContainer, setShowGenerateContainer] = useState(false);
+  const routeSearch = useSearch({ strict: false }) as { generate?: string } | undefined;
+
+  useEffect(() => {
+    if (routeSearch?.generate) setShowGenerateContainer(true);
+  }, [routeSearch?.generate]);
 
   // Module-specific required-fields completeness check.
   const isRentingCase = caseRow.module === "landlord_tenant";
@@ -282,10 +289,21 @@ export function CaseOverviewHeader({
     } as any);
   }
   function goGenerateDoc() {
-    navigate({
-      to: "/cases/$caseId/generate",
-      params: { caseId },
-    } as any);
+    setShowGenerateContainer(true);
+  }
+  function closeGenerator() {
+    setShowGenerateContainer(false);
+    if (routeSearch?.generate) {
+      navigate({
+        to: "/cases/$caseId",
+        params: { caseId },
+        search: ((): any => {
+          const { generate: _g, ...rest } = routeSearch as any;
+          return rest;
+        })(),
+        replace: true,
+      } as any);
+    }
   }
 
   // ----- Profile checklist (persistent, per module) -----
@@ -580,6 +598,12 @@ export function CaseOverviewHeader({
           <span className="text-xs">Generate a document</span>
         </Button>
       </div>
+
+      {showGenerateContainer && (
+        <InlineDocumentGenerator caseId={caseId} onClose={closeGenerator} />
+      )}
+
+
 
       {/* Profile checklist (persistent) */}
       {checklist.length > 0 && (
