@@ -548,6 +548,33 @@ export function CaseOverviewHeader({
         </div>
       )}
 
+      {/* Insights carousel */}
+      {insights && insights.length > 0 && (
+        <div className="-mx-1 overflow-x-auto">
+          <div className="flex gap-2 px-1 pb-1">
+            {insights.map((ins) => (
+              <button
+                key={ins.id}
+                type="button"
+                onClick={() => setActiveInsight(ins)}
+                className="w-64 shrink-0 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-left transition-colors hover:bg-amber-500/10"
+              >
+                <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                  <Lightbulb className="h-3 w-3" />
+                  Insight
+                </div>
+                <div className="line-clamp-1 text-sm font-medium">{ins.insight_title}</div>
+                <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {ins.brief_description}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+
+
 
       {/* Next step line */}
       <button
