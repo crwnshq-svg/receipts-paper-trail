@@ -22,6 +22,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Trash2, StickyNote, AlertCircle, Bell, Loader2, Pencil, MessageCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { showAchievement } from "@/lib/achievements";
 import { AttachDocs, AttachedDocsRow } from "@/components/attach-docs";
