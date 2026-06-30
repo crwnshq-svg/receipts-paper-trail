@@ -339,9 +339,9 @@ export function CaseOverviewHeader({
     if (isEmployment) {
       return [
         { key: "contract_doc", label: "Upload your contract or offer letter", done: hasOffer, onClick: () => setUploadOpen(true) },
-        { key: "employment_type", label: "Add employment type", done: !!caseRow.employment_type, inline: { question: "What's your employment type?", options: ["Full-time", "Part-time", "Contract", "Internship"], field: "employment_type" } },
+        { key: "employment_type", label: "Add employment type", done: !!caseRow.employment_type, inline: { question: "What's your employment type?", options: ["Full-time", "Part-time", "Contract", "Internship"], field: "employment_type", transform: (r) => { const m: Record<string, string> = { "Full-time": "full_time", "Part-time": "part_time", "Contract": "contract", "Internship": "internship" }; return m[r] ?? "unknown"; } } },
         { key: "supervisor_name", label: "Add your supervisor's name", done: !!caseRow.supervisor_name, inline: { question: "What's your supervisor's name?", field: "supervisor_name" } },
-        { key: "work_location", label: "Add work location", done: !!caseRow.work_location, inline: { question: "Where do you work? (city, or remote)", field: "work_location" } },
+        { key: "work_location", label: "Add work location", done: !!caseRow.work_location, inline: { question: "Is this role in-person, remote, or hybrid?", options: ["In-person", "Remote", "Hybrid"], field: "work_location", transform: (r) => { const m: Record<string, string> = { "In-person": "in_person", "Remote": "remote", "Hybrid": "hybrid" }; return m[r] ?? "unknown"; } } },
         { key: "has_written_contract", label: "Confirm written contract status", done: caseRow.has_written_contract !== null, inline: { question: "Do you have a written contract?", options: ["Yes", "No"], field: "has_written_contract", transform: (r) => r.toLowerCase().startsWith("y") } },
       ];
     }

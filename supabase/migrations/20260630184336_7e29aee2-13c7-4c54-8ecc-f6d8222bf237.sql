@@ -1,0 +1,2 @@
+ALTER TABLE public.cases DROP CONSTRAINT IF EXISTS cases_employment_type_check;
+ALTER TABLE public.cases ADD CONSTRAINT cases_employment_type_check CHECK (employment_type = ANY (ARRAY['full_time'::text, 'part_time'::text, 'contract'::text, 'internship'::text, 'at_will'::text, 'unknown'::text]));
